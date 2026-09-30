@@ -17,6 +17,8 @@ const LEVEL_RATING := [
 	2700, 2780, 2850, 2920, 3000, 3080, 3160, 3250, 3350, 3500,
 	3600, 3700, 3800, 3900, 4000,
 ]
+const MAX_GAME_SWING := 100.0
+const FARM_MARGIN := 200.0
 const LEVEL_RD := 60.0 # the AI's own strength is considered well-known/stable
 # preload, а не class_name: headless-Godot не подхватывает новый class_name
 # без пересканирования проекта редактором.
@@ -326,9 +328,20 @@ func _load_last_user() -> String:
 
 # --- game/puzzle recording (operate on whichever user is currently active) ---
 
-func record_game_result(ai_level: int, score: float) -> void:
+# Чистая функция обновления внутреннего рейтинга — её же проверяет TestRatingRealism.
+static func rating_after(r: float, d: float, v: float, ai_level: int, score: float) -> Dictionary:
 	var opp_rating = float(LEVEL_RATING[clampi(ai_level, 1, LEVEL_RATING.size()) - 1])
-	var result = Glicko2.update(rating, rd, volatility, opp_rating, LEVEL_RD, score)
+	var u: Dictionary = Glicko2.update(r, d, v, opp_rating, LEVEL_RD, score)
+	# одна партия не двигает рейтинг больше чем на MAX_GAME_SWING: первая партия новичка
+	# (большая неопределённость) иначе давала скачок на сотни очков
+	u.rating = r + clampf(float(u.rating) - r, -MAX_GAME_SWING, MAX_GAME_SWING)
+	# победы над слабым соперником не разгоняют рейтинг выше его силы + FARM_MARGIN
+	if score > 0.5 and float(u.rating) > opp_rating + FARM_MARGIN:
+		u.rating = maxf(r, opp_rating + FARM_MARGIN)
+	return u
+
+func record_game_result(ai_level: int, score: float) -> void:
+	var result = rating_after(rating, rd, volatility, ai_level, score)
 	var old_rating = rating
 	rating = result.rating
 	rd = result.rd

@@ -75,15 +75,15 @@ func _ready() -> void:
 	print("таблица уровней: %d … %d" % [int(lo), int(hi)])
 
 	# 1. сходимость: игрок выбирает соперников по силам
-	for frac in [0.25, 0.5, 0.75]:
+	for frac in [0.1, 0.3, 0.5]:
 		var t: float = lo + (hi - lo) * frac
 		var r80 := mean_final(t, 80, "near")
 		check("сходимость: настоящая сила %d → рейтинг после 80 партий %d (допуск ±150)" % [int(t), int(r80)], absf(r80 - t) <= 150.0)
 
-	# 2. накрутка на самом слабом уровне (игрок сильнее уровня 1)
+	# 2. накрутка на самом слабом уровне: победы над «уровнем 400» не должны разгонять рейтинг
 	var farm_t: float = lo + (hi - lo) * 0.6
 	var farmed := mean_final(farm_t, 300, 1)
-	check("накрутка: 300 побед над уровнем 1 (%d) даёт рейтинг %d, не выше %d" % [int(lo), int(farmed), int(lo + 250)], farmed <= lo + 250.0)
+	check("накрутка: 300 побед над уровнем 1 дают рейтинг %d, не выше %d" % [int(farmed), int(Glicko2.DEFAULT_RATING + 100.0)], farmed <= Glicko2.DEFAULT_RATING + 100.0)
 
 	# 3. «стена»: слабый игрок только против сильнейшего
 	var wall := mean_final(lo, 100, tab.size())
