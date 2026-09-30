@@ -36,7 +36,7 @@ var mode := "mate" # "mate" (static curated bank), "fork", "pin" or "backrank" (
 # where they blundered (Profile.recent_blunders keeps fen + played move).
 # The task: find any move clearly stronger than the one played back then —
 # verified live by the engine. Fixing your own mistake beats any textbook.
-var blunder_ai := ChessAI.new(9) # solver only, never an opponent
+var blunder_ai := ChessAI.new(ChessAI.ANALYSIS_LEVEL) # solver only, never an opponent
 var current_blunder: Dictionary = {}
 var blunder_idx := 0
 var blunder_checking := false

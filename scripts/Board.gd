@@ -92,7 +92,7 @@ var predict_total := 0
 var xray_fog := false
 var xray_turn_start := 0
 
-# Rematch review: the player's worst moments this game (loss > 100cp),
+# Rematch review: the player's worst moments this game (loss > ChessAI.LOSS_MISTAKE cp),
 # so after a defeat we can show where the game broke and offer a replay
 # from right before that move.
 var worst_moments: Array = [] # {snapshot: ChessEngine, loss: float, notation: String, move_no: int, hist_len: int}
@@ -123,7 +123,7 @@ var clock_running := false
 
 var hint_from = null # Vector2i
 var hint_to = null # Vector2i
-var hint_ai: ChessAI = ChessAI.new(9) # only used for its search, never as an opponent
+var hint_ai: ChessAI = ChessAI.new(ChessAI.ANALYSIS_LEVEL) # only used for its search, never as an opponent
 
 # «Школа юного шахматиста» (Global.school_mode): режимы против игры наугад.
 # "spot": после хода ИИ фигуры на миг исчезают, подсветка хода прячется, и
@@ -471,7 +471,7 @@ func _focus_condition_met() -> bool:
 	for m in worst_moments:
 		match road:
 			"focus_blunders":
-				if m.loss > 300: return false
+				if m.loss > ChessAI.LOSS_BLUNDER: return false
 			"focus_opening":
 				if m.move_no <= 10: return false
 			"focus_middlegame":
@@ -1361,19 +1361,13 @@ func _analyze_move_quality(pre_move_state: ChessEngine, move: Dictionary) -> voi
 	var result := {"loss": 0.0}
 	await Global.run_bg(func(): result.loss = hint_ai.move_loss(pre_move_state, move, depth))
 	var loss = result.loss
-	var category = "good"
-	if loss > 300:
-		category = "blunder"
-	elif loss > 100:
-		category = "mistake"
-	elif loss > 30:
-		category = "inaccuracy"
+	var category = ChessAI.quality_category(loss)
 	var fen = pre_move_state.to_fen()
 	var notation = move_notation(pre_move_state, move)
 	Profile.record_move_quality(category, loss, fen, notation)
 	game_quality[category] = int(game_quality.get(category, 0)) + 1
 	_school_on_move_quality(category)
-	if loss > 100:
+	if loss > ChessAI.LOSS_MISTAKE:
 		worst_moments.append({
 			"snapshot": pre_move_state.clone(),
 			"loss": loss,

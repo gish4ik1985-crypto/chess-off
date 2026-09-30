@@ -13,5 +13,8 @@ Source: «Deploy from a branch», ветка `main`, папка `/docs`.
 Настройки → «Сохранить профиль» / «Загрузить профиль».
 
 ## Проверки
-Запускаются как сцены: `godot --headless --path . res://scenes/tools/<Имя>.tscn`
+Все сразу: `powershell -ExecutionPolicy Bypass -File run_tests.ps1` (флаги `-Quick`, `-Only <часть имени>`).
+Перед запуском скрипт копирует профили игроков и возвращает их после, а проверкам даёт временного игрока.
+
+По отдельности: Запускаются как сцены: `godot --headless --path . res://scenes/tools/<Имя>.tscn`
 (TestScenes, AuditUI, TestBots, TestFastSearch, HistoricValidator, ...).

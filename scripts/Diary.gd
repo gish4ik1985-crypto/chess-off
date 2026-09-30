@@ -20,8 +20,8 @@ var page_games: Control
 var overview_draw: Node2D
 
 # движки-аналитики (level 9 — сильный «тренерский» поиск, без зевков)
-var coach_moves := ChessAI.new(9)
-var coach_replay := ChessAI.new(9)
+var coach_moves := ChessAI.new(ChessAI.ANALYSIS_LEVEL)
+var coach_replay := ChessAI.new(ChessAI.ANALYSIS_LEVEL)
 
 # --- вкладка «Ходы» ---
 var moves_list_vbox: VBoxContainer
@@ -656,7 +656,7 @@ func _analyze_replay(my_color: String, req: int, states: Array, moves: Array, mo
 		var before: ChessEngine = states[i - 1]
 		var loss = coach_replay.move_loss(before, moves[i], 2)
 		var better_txt := ""
-		if loss > 30.0:
+		if loss > ChessAI.LOSS_INACCURACY:
 			var best = coach_replay.best_move_clean(before, 2)
 			if best != null and not (best.from == moves[i].from and best.to == moves[i].to):
 				var victim = before.board[best.to.y][best.to.x]
@@ -736,7 +736,7 @@ func _replay_seek(i: int) -> void:
 				if loss <= 15.0:
 					lines.append("✔ Отличный ход — лучший или почти лучший в позиции.")
 				else:
-					var cat = "неточность" if loss <= 100 else ("ошибка" if loss <= 300 else "зевок")
+					var cat = "неточность" if loss <= ChessAI.LOSS_MISTAKE else ("ошибка" if loss <= ChessAI.LOSS_BLUNDER else "зевок")
 					lines.append("▼ Это %s: потеряно %.1f пешки. %s" % [cat, loss / 100.0, str(replay_better.get(replay_cur, ""))])
 			elif _replay_thread != null and _replay_thread.is_alive():
 				lines.append("⏳ Тренер ещё считает этот ход...")

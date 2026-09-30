@@ -20,6 +20,25 @@ var move_time_ms: int = 6000
 
 const FastSearch = preload("res://scripts/FastSearch.gd")
 
+# --- Линейка качества хода (Дневник, «Ходы», подсказки) ---
+# Замер на партиях гроссмейстеров (scenes/tools/MeasureAccuracy.tscn) показал, что поиск
+# без взятий на горизонте (уровень ≤10) считает «ошибкой» каждую третью игру мастера
+# (43% сильных ходов, 6% зевков). С поиском взятий (уровень 12) и порогами ниже у мастеров
+# около 73% сильных ходов, 5% ошибок и <1% зевков. Глубина 4 почти не меняет картину, но в 6 раз дороже.
+const ANALYSIS_LEVEL := 12
+const LOSS_INACCURACY := 50.0 # потеря больше — «неточность», сантипешки
+const LOSS_MISTAKE := 150.0
+const LOSS_BLUNDER := 350.0
+
+static func quality_category(loss: float) -> String:
+	if loss > LOSS_BLUNDER:
+		return "blunder"
+	if loss > LOSS_MISTAKE:
+		return "mistake"
+	if loss > LOSS_INACCURACY:
+		return "inaccuracy"
+	return "good"
+
 const PIECE_VALUE := {"P": 100, "N": 320, "B": 330, "R": 500, "Q": 900, "K": 0}
 
 const PAWN_PST := [
