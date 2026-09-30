@@ -170,7 +170,7 @@ func _on_overview_draw() -> void:
 	# --- карточки статов ---
 	var card_w = (1200.0 - 3 * 16.0) / 4.0
 	var delta = Profile.last_rating_change
-	var delta_txt = "%+d за последнюю партию" % int(delta) if delta != 0.0 else "сыграйте партию!"
+	var delta_txt = "%+d за последнюю партию" % int(delta) if delta != 0.0 else ("изменение покажет следующая партия" if Profile.games_played > 0 else "сыграйте партию!")
 	_stat_card(Rect2(left, 8, card_w, 92), "РЕЙТИНГ", str(int(Profile.rating)),
 		delta_txt, Color(0.1, 0.95, 1), font)
 	_stat_card(Rect2(left + card_w + 16, 8, card_w, 92), "ПАРТИИ",
@@ -209,8 +209,9 @@ func _on_overview_draw() -> void:
 			var frac = ph[k] / max_v
 			var col = BAD_COL if k == worst_k else (GOOD_COL if k == best_k else Color(0.35, 0.75, 0.95))
 			overview_draw.draw_rect(Rect2(bx, by, bw, 18), Color(1, 1, 1, 0.08), true)
-			overview_draw.draw_rect(Rect2(bx, by, bw * frac, 18), col, true)
-			overview_draw.draw_string(font, Vector2(bx + bw * frac + 8, by + 14), "%.1f ош./партию" % ph[k], HORIZONTAL_ALIGNMENT_LEFT, 130, 11, Color(0.55, 0.6, 0.7))
+			var fw = (bw - 130.0) * frac # самая длинная полоса не занимает всю ширину: справа место под подпись
+			overview_draw.draw_rect(Rect2(bx, by, fw, 18), col, true)
+			overview_draw.draw_string(font, Vector2(bx + fw + 8, by + 14), "%.1f ош./партию" % ph[k], HORIZONTAL_ALIGNMENT_LEFT, 130, 11, Color(0.55, 0.6, 0.7))
 			by += 38
 
 	# --- качество ходов ---

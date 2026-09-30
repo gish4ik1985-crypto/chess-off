@@ -155,8 +155,9 @@ func _on_quit_pressed() -> void:
 func _on_bg_draw() -> void:
 	# decorative faded chessboard pattern behind the menu
 	var sq = 64.0
-	for r in range(6):
-		for f in range(10):
+	# на весь экран 1280×800 (раньше рисовалось только в левом верхнем углу)
+	for r in range(13):
+		for f in range(20):
 			if (r + f) % 2 == 0:
 				continue
 			var pos = Vector2(f * sq, r * sq)

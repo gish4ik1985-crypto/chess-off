@@ -337,6 +337,13 @@ func _resume_from_saved(saved: Dictionary) -> bool:
 	var fen: String = saved.get("fen", "")
 	if fen == "":
 		return false
+	# Сохранённая позиция уже закончена (мат/пат/ничья) — продолжать нечего. Раньше такая
+	# партия открывалась снова и результат записывался в профиль повторно.
+	var probe := ChessEngine.new()
+	probe.setup_from_fen(fen)
+	if probe.game_status() != "playing":
+		Profile.clear_game_state()
+		return false
 	Global.difficulty = saved.get("difficulty", Global.difficulty)
 	player_color = saved.get("player_color", player_color)
 	Global.player_color = player_color
@@ -359,6 +366,8 @@ func _current_game_state() -> Dictionary:
 	}
 
 func _autosave_game() -> void:
+	if game_over:
+		return # законченную партию не сохраняем: иначе она «воскресает» при следующем запуске и засчитывается второй раз
 	if road != "" or school != "" or attention > 0 or not tournament.is_empty() or not friendly.is_empty():
 		return # training/tournament games always restart fresh; don't clobber the real save
 	Profile.save_game_state(_current_game_state())

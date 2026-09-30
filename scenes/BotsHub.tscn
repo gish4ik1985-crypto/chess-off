@@ -69,7 +69,7 @@ grow_vertical = 2
 theme_override_constants/separation = 16
 
 [node name="LeaguePanel" type="PanelContainer" parent="Main"]
-custom_minimum_size = Vector2(250, 0)
+custom_minimum_size = Vector2(310, 0)
 layout_mode = 2
 
 [node name="LeagueVBox" type="VBoxContainer" parent="Main/LeaguePanel"]
