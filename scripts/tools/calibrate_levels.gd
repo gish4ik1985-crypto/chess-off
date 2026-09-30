@@ -17,7 +17,7 @@ const ANCHOR_TOP := 1500.0
 # цепочка сравниваемых уровней: пары, число партий
 const CHAIN := [
 	[1, 2, 40], [2, 3, 40], [3, 4, 40], [4, 5, 40], [5, 6, 40], [6, 7, 40], [7, 8, 40], [8, 9, 40], [9, 10, 40],
-	[10, 11, 24], [11, 12, 24], [12, 14, 20], [14, 18, 12], [18, 25, 12],
+	[10, 11, 30], [11, 12, 30], [12, 13, 30], [13, 14, 30], [14, 15, 30],
 ]
 
 func _ready() -> void:
@@ -40,11 +40,14 @@ func _ready() -> void:
 		var gain: float = maxf(float(s[2]), 0.0) # разницу не считаем отрицательной: уровень выше не слабее
 		for l in range(lo + 1, hi + 1):
 			ladder[l] = base + gain * float(l - lo) / float(hi - lo)
-	var top: float = ladder[25]
+	var top_level: int = 1
+	for k in ladder.keys():
+		top_level = maxi(top_level, int(k))
+	var top: float = ladder[top_level]
 	var table: Array = []
-	for l in range(1, 26):
-		table.append(int(round((ladder[l] - top + ANCHOR_TOP) / 10.0) * 10.0))
-	print("суммарная разница уровней 1 → 25: %.0f очков (погрешность ± %.0f)" % [top, sqrt(var_sum)])
-	print("LADDER (верх привязан к %d): %s" % [int(ANCHOR_TOP), str(table)])
+	for l in range(1, top_level + 1):
+		table.append(int(round(ladder[l] / 10.0) * 10.0))
+	print("суммарная разница уровней 1 → %d: %.0f очков (погрешность ± %.0f)" % [top_level, top, sqrt(var_sum)])
+	print("LADDER (относительно уровня 1): %s" % str(table))
 	print("всего %d с" % ((Time.get_ticks_msec() - t0) / 1000))
 	get_tree().quit()

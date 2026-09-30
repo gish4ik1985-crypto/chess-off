@@ -130,49 +130,56 @@ func _init(lvl: int = 5):
 	if OS.has_feature("web"):
 		move_time_ms = 2500 # без потоков ход идёт в основном потоке — держим паузу короткой
 
-func _search_depth() -> int:
-	# levels map to depth with quality scaling via noise/blunder (low levels)
-	# and quiescence (high levels) instead of pure depth, to stay fast in GDScript.
-	if level <= 2:
-		return 1
-	if level <= 6:
-		return 2
-	if level <= 14:
-		return 3
-	return 4
+# --- Параметры уровней ---
+# Каждый уровень: d — глубина поиска (полуходов), q — глубина поиска взятий на горизонте,
+# b — шанс сыграть случайный ход вместо лучшего, n — «шум» оценки в сантипешках.
+# Таблица подобрана ЗАМЕРАМИ партий уровней друг с другом (scenes/tools/CalibrateLevels.tscn),
+# чтобы каждый следующий уровень был заметно сильнее предыдущего; проверяет TestLevelLadder.
+static var PARAMS: Array = [
+	{"d": 1, "q": 0, "b": 0.55, "n": 130.0},
+	{"d": 1, "q": 0, "b": 0.42, "n": 100.0},
+	{"d": 1, "q": 0, "b": 0.30, "n": 60.0},
+	{"d": 2, "q": 0, "b": 0.40, "n": 90.0},
+	{"d": 2, "q": 0, "b": 0.30, "n": 60.0},
+	{"d": 2, "q": 0, "b": 0.20, "n": 40.0},
+	{"d": 2, "q": 0, "b": 0.12, "n": 25.0},
+	{"d": 3, "q": 0, "b": 0.12, "n": 35.0},
+	{"d": 3, "q": 0, "b": 0.07, "n": 20.0},
+	{"d": 3, "q": 0, "b": 0.04, "n": 10.0},
+	{"d": 3, "q": 1, "b": 0.10, "n": 20.0},
+	{"d": 3, "q": 2, "b": 0.07, "n": 15.0},
+	{"d": 3, "q": 2, "b": 0.04, "n": 8.0},
+	{"d": 3, "q": 3, "b": 0.02, "n": 4.0},
+	{"d": 3, "q": 3, "b": 0.0, "n": 0.0},
+	{"d": 4, "q": 2, "b": 0.10, "n": 20.0},
+	{"d": 4, "q": 3, "b": 0.07, "n": 12.0},
+	{"d": 4, "q": 3, "b": 0.04, "n": 6.0},
+	{"d": 4, "q": 3, "b": 0.02, "n": 3.0},
+	{"d": 4, "q": 3, "b": 0.0, "n": 0.0},
+	{"d": 5, "q": 2, "b": 0.10, "n": 20.0},
+	{"d": 5, "q": 2, "b": 0.06, "n": 10.0},
+	{"d": 5, "q": 2, "b": 0.03, "n": 5.0},
+	{"d": 5, "q": 2, "b": 0.01, "n": 2.0},
+	{"d": 5, "q": 2, "b": 0.0, "n": 0.0},
+]
 
-# capture-only lookahead at the leaves, levels 11+
+func _p() -> Dictionary:
+	return PARAMS[clampi(level, 1, PARAMS.size()) - 1]
+
+func _search_depth() -> int:
+	return int(_p().d)
+
+# поиск только взятий на горизонте: оценка берётся в «тихой» позиции
 func _quiescence_depth() -> int:
-	if level <= 10:
-		return 0
-	if level == 14:
-		# one step deeper right before the full-width search depth jumps
-		# 3->4 at level 15 — softens what would otherwise be the single
-		# biggest strength cliff on the whole ladder.
-		return 3
-	if level <= 16:
-		return 2
-	if level <= 20:
-		return 4
-	if level <= 22:
-		return 6
-	return 8
+	return int(_p().q)
 
 func _blunder_chance() -> float:
-	# chance to pick a random legal move instead of the best one
 	if custom_blunder >= 0.0:
 		return custom_blunder
-	if level == 11:
-		# 10->11 already turns on quiescence search in one step (see
-		# _quiescence_depth) — keep a tiny residual blunder chance here so
-		# blunders/noise/tactical vision don't all vanish/appear at once.
-		return 0.02
-	return clampf((11 - level) * 0.05, 0.0, 0.5)
+	return float(_p().b)
 
 func _eval_noise() -> float:
-	if level == 11:
-		return 2.0
-	return maxf(float(11 - level) * 8.0, 0.0)
+	return float(_p().n)
 
 # Оценка позиции в сантипешках (плюс — у белых): та же, что использует поиск.
 # Один экземпляр ядра на ИИ — чтобы не пересоздавать таблицы при оценке каждого хода партии.

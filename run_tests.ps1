@@ -34,6 +34,7 @@ $tests = @(
 	@{ Name = "Сцены компилируются (TestScenes)";        Scene = "TestScenes";       Pass = "ошибок 0 ===" },
 	@{ Name = "Правила шахмат (TestRules)";              Scene = "TestRules";        Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Рейтинг Glicko-2 (TestGlicko)";           Scene = "TestGlicko";       Pass = "ИТОГО ошибок: 0" },
+	@{ Name = "Помощь и рейтинг (TestHelpRating)";        Scene = "TestHelpRating";   Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Быстрый ИИ и эндшпиль (TestFastSearch)";  Scene = "TestFastSearch";   Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Честность линейки точности (TestQualityRuler)"; Scene = "TestQualityRuler"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Партии великих читаются (HistoricValidator)"; Scene = "HistoricValidator"; Pass = "ошибок 0" },

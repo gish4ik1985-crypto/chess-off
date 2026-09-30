@@ -72,6 +72,10 @@ var map_character: Dictionary = {}
 # "intervene" — a weak ally AI plays White alone, the player steps in
 # whenever the ally is about to blunder.
 var coop := ""
+# «Помощь» в этой партии: подсказки и откаты ходов. Партия с помощью — не показатель силы игрока,
+# поэтому в рейтинг она не идёт (в турнирах подсказок и откатов нет вовсе).
+var help_hints := 0
+var help_undos := 0
 var partner_ai: ChessAI
 var opp_ai_a: ChessAI
 var opp_ai_b: ChessAI
@@ -431,6 +435,19 @@ func _play_move_sfx(captured: bool) -> void:
 
 # Every finished game goes into the profile's game log; Profile regenerates
 # the HTML analysis report right after.
+# Почему эта партия не должна менять рейтинг (пустая строка — должна).
+func _rating_skip_reason() -> String:
+	var reasons: Array = []
+	if coop != "":
+		reasons.append("командная партия")
+	if Global.map_assist:
+		reasons.append("партия с форой")
+	if help_hints > 0:
+		reasons.append("были подсказки (%d)" % help_hints)
+	if help_undos > 0:
+		reasons.append("был откат хода")
+	return ", ".join(reasons)
+
 func _log_finished_game(score: float) -> void:
 	var worst_no := 0
 	var worst_notation := ""
@@ -463,6 +480,10 @@ func _log_finished_game(score: float) -> void:
 		"worst_move_no": worst_no,
 		"worst_notation": worst_notation,
 		"start_fen": initial_fen,
+		"help_hints": help_hints,
+		"help_undos": help_undos,
+		"assist": Global.map_assist,
+		"coop": coop,
 	})
 
 # Dynamic road stages ("focus_*"): winning is not enough — the stage also
@@ -600,11 +621,20 @@ func _show_game_over(text: String, score: float = -1.0) -> void:
 		# rating, same as tournaments already don't.
 		# партия с форой (материальный перевес игроку) показывает не силу игрока, а силу форы —
 		# в рейтинг она не идёт, иначе победы над «ослабленным» соперником завышали бы его
-		if road == "" and school == "" and not Global.map_assist:
-			Profile.record_game_result(Global.difficulty, score)
-			var delta = Profile.last_rating_change
-			var sign_str = "+" if delta >= 0 else ""
-			text += "\nРейтинг: %d (%s%d)" % [round(Profile.rating), sign_str, round(delta)]
+		if road == "" and school == "":
+			var no_count := _rating_skip_reason()
+			if no_count != "":
+				text += "\nРейтинг не меняется: " + no_count + "."
+			else:
+				var lvl: int = clampi(Global.difficulty, 1, Profile.LEVEL_RATING.size())
+				var opp_r := float(Profile.LEVEL_RATING[lvl - 1])
+				var expected := 1.0 / (1.0 + pow(10.0, (opp_r - Profile.rating) / 400.0))
+				Profile.record_game_result(Global.difficulty, score)
+				var delta = Profile.last_rating_change
+				var sign_str = "+" if delta >= 0 else ""
+				text += "\nРейтинг: %d (%s%d)" % [round(Profile.rating), sign_str, round(delta)]
+				text += "\nСоперник: %s. Ожидалось очков: %d%%, получено: %d%%." % [Global.difficulty_label(lvl), round(expected * 100.0), round(score * 100.0)]
+				text += "\nЗа партию: ошибок %d, зевков %d." % [int(game_quality.get("mistake", 0)), int(game_quality.get("blunder", 0))]
 		if not friendly.is_empty():
 			# Товарищеская партия — тоже партия с живым игроком базы, поэтому
 			# двигает и его постоянный рейтинг (турнирный рейтинг не трогаем).
@@ -1113,6 +1143,7 @@ func _on_hint_pressed() -> void:
 	var m = result.move
 	if m == null:
 		return
+	help_hints += 1
 	hint_from = m.from
 	hint_to = m.to
 	var piece_names = {"P": "Пешкой", "N": "Конём", "B": "Слоном", "R": "Ладьёй", "Q": "Ферзём", "K": "Королём"}
@@ -1137,6 +1168,7 @@ func _on_undo_pressed() -> void:
 		spot_total = maxi(spot_total - 1, 0)
 		if speech_panel != null:
 			speech_panel.visible = false
+	help_undos += 1
 	undo_stack.pop_back() # discard the AI's pre-move snapshot
 	engine = undo_stack.pop_back() # restore to right before the player's own move
 	if move_history.size() > 0:

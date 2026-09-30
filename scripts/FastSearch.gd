@@ -823,23 +823,38 @@ func _choose_iter(root: PackedInt32Array, order: PackedInt32Array, best_start: i
 	var best_i: int = best_start
 	for d in range(1, target_depth + 1):
 		var last: bool = d == target_depth
+		# С шумом последняя итерация считает ТОЧНУЮ оценку каждого хода (окно не сужается):
+		# иначе у «неудачных» ходов возвращается лишь граница, и шум выбирал среди них почти
+		# наугад — из-за этого уровень 11 (шум 2) проигрывал 10-му 23 партии из 24.
+		var exact: bool = last and noise > 0.0
 		var alpha: int = -INF
 		var iter_best: int = -1
 		var iter_score: float = -1.0e9
+		var best_true: int = -INF
 		for k in range(order.size()):
 			var i: int = order[k]
+			# ход, чья настоящая оценка хуже лучшей больше чем на 2·шум, не сможет её обогнать
+			# даже с шумом, — таким считать точно не нужно (сильно ускоряет слабые уровни)
+			var win_alpha: int = alpha
+			if exact and best_true > -INF:
+				win_alpha = best_true - int(2.0 * noise) - 1
 			make(root[i])
-			var s: int = -negamax(d - 1, -INF, -alpha, 1)
+			var s: int = -negamax(d - 1, -INF, -win_alpha, 1)
 			unmake(root[i])
 			if aborted:
 				break
+			if exact and best_true > -INF and s <= win_alpha:
+				continue
+			if exact:
+				best_true = maxi(best_true, s)
 			var sf: float = float(s)
-			if last and noise > 0.0:
+			if exact:
 				sf += rng.randf_range(-noise, noise)
 			if sf > iter_score:
 				iter_score = sf
 				iter_best = i
-			alpha = maxi(alpha, int(sf))
+			if not exact:
+				alpha = maxi(alpha, int(sf))
 		if aborted or iter_best < 0:
 			break
 		best_i = iter_best
