@@ -1,0 +1,126 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/School.gd" id="1"]
+[ext_resource type="Theme" path="res://theme/NeonTheme.tres" id="2"]
+
+[node name="School" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.02, 0.05, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center"]
+custom_minimum_size = Vector2(620, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 30
+text = "🎓 ШКОЛА ЮНОГО ШАХМАТИСТА"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+theme_override_font_sizes/font_size = 14
+text = "Режимы, которые учат смотреть на доску и думать перед ходом"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="Center/VBox"]
+layout_mode = 2
+
+[node name="SpotButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "🔍 Что изменилось? — исчезающие фигуры"
+
+[node name="SpotHint" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.68, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = ""
+autowrap_mode = 2
+
+[node name="Spacer" type="Control" parent="Center/VBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="PatienceButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_font_sizes/font_size = 19
+text = "🐢 Школа терпения — очки мудрости"
+
+[node name="PatienceHint" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.68, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = ""
+autowrap_mode = 2
+
+[node name="PauseRow" type="HBoxContainer" parent="Center/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PauseLabel" type="Label" parent="Center/VBox/PauseRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.68, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = "Пауза перед ходом:"
+
+[node name="Pause5" type="Button" parent="Center/VBox/PauseRow"]
+custom_minimum_size = Vector2(64, 34)
+layout_mode = 2
+toggle_mode = true
+text = "5 с"
+
+[node name="Pause10" type="Button" parent="Center/VBox/PauseRow"]
+custom_minimum_size = Vector2(64, 34)
+layout_mode = 2
+toggle_mode = true
+text = "10 с"
+
+[node name="Pause15" type="Button" parent="Center/VBox/PauseRow"]
+custom_minimum_size = Vector2(64, 34)
+layout_mode = 2
+toggle_mode = true
+text = "15 с"
+
+[node name="Spacer2" type="Control" parent="Center/VBox"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+
+[node name="MenuButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "◂ В меню"
+
+[connection signal="pressed" from="Center/VBox/SpotButton" to="." method="_on_spot_pressed"]
+[connection signal="pressed" from="Center/VBox/PatienceButton" to="." method="_on_patience_pressed"]
+[connection signal="pressed" from="Center/VBox/MenuButton" to="." method="_on_menu_pressed"]

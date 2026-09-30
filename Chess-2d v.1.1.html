@@ -1,0 +1,717 @@
+<title>Chess-2d v.1.1</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16140f;
+      --surface: #201c15;
+      --surface-2: #29241a;
+      --ink: #f1ebdd;
+      --ink-dim: #b6ab96;
+      --line: #3a3427;
+      --accent: #74b391;
+      --accent-ink: #0d1611;
+      --gold: #d6ac57;
+      --critical: #e57b62;
+      --critical-bg: #382019;
+      --warn: #dcb04c;
+      --warn-bg: #362c15;
+      --minor: #a89d87;
+      --minor-bg: #26221a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16140f;
+    --surface: #201c15;
+    --surface-2: #29241a;
+    --ink: #f1ebdd;
+    --ink-dim: #b6ab96;
+    --line: #3a3427;
+    --accent: #74b391;
+    --accent-ink: #0d1611;
+    --gold: #d6ac57;
+    --critical: #e57b62;
+    --critical-bg: #382019;
+    --warn: #dcb04c;
+    --warn-bg: #362c15;
+    --minor: #a89d87;
+    --minor-bg: #26221a;
+  }
+  :root {
+    --bg: #f6f1e6;
+    --surface: #fffdf8;
+    --surface-2: #efe7d6;
+    --ink: #241d13;
+    --ink-dim: #6f6552;
+    --line: #ddd2b8;
+    --accent: #2f4d3a;
+    --accent-ink: #f2f6f1;
+    --gold: #a9762f;
+    --critical: #a5402a;
+    --critical-bg: #f5e2da;
+    --warn: #8f6a17;
+    --warn-bg: #f4ecd6;
+    --minor: #6f6552;
+    --minor-bg: #efe9da;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    margin: 0;
+    padding: 56px 20px 90px;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: Iowan Old Style, "Palatino Linotype", Palatino, Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(34px, 6vw, 48px);
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .version {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .dek {
+    color: var(--ink-dim);
+    font-size: 16px;
+    max-width: 60ch;
+    margin: 14px 0 0;
+  }
+
+  .meta {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    font-size: 13.5px;
+    color: var(--ink-dim);
+  }
+  .meta b { color: var(--ink); font-weight: 600; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 34px 0 8px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+  }
+  .stat .n {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .stat .n.critical { color: var(--critical); }
+  .stat .n.warn { color: var(--warn); }
+  .stat .n.minor { color: var(--minor); }
+  .stat .n.done { color: var(--accent); }
+  .stat .l {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+
+  section { margin-top: 46px; }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .dot {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.critical { background: var(--critical); }
+  .dot.warn { background: var(--warn); }
+  .dot.minor { background: var(--minor); }
+  .dot.feature { background: var(--gold); }
+
+  h2 {
+    font-family: Iowan Old Style, "Palatino Linotype", Palatino, Georgia, serif;
+    font-weight: 600;
+    font-size: 23px;
+    margin: 0;
+  }
+
+  .section-note {
+    color: var(--ink-dim);
+    font-size: 14px;
+    margin: 4px 0 22px 23px;
+    max-width: 58ch;
+  }
+
+  .cards { display: flex; flex-direction: column; gap: 10px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--critical);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .card.warn { border-left-color: var(--warn); }
+  .card.minor { border-left-color: var(--minor); }
+  .card.feature { border-left-color: var(--gold); }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .card-title {
+    font-weight: 650;
+    font-size: 15.5px;
+    color: var(--ink);
+  }
+
+  .cost {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--ink-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .legend {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px 18px;
+    margin: 26px 0 8px;
+  }
+  .legend-title {
+    font-weight: 650;
+    font-size: 13.5px;
+    margin-bottom: 10px;
+  }
+  .legend-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 13.5px;
+    color: var(--ink-dim);
+    margin-bottom: 5px;
+  }
+  .tier {
+    flex: none;
+    width: 26px;
+    text-align: center;
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 2px 0;
+    border-radius: 5px;
+    color: var(--accent-ink);
+  }
+  .tier.xs { background: var(--minor); }
+  .tier.s { background: var(--accent); }
+  .tier.m { background: var(--gold); }
+  .tier.l { background: var(--critical); }
+  .legend-caveat {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    max-width: 62ch;
+  }
+
+  .status {
+    flex: none;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--critical-bg);
+    color: var(--critical);
+    white-space: nowrap;
+  }
+  .card.warn .status { background: var(--warn-bg); color: var(--warn); }
+  .card.minor .status { background: var(--minor-bg); color: var(--minor); }
+  .status.done { background: var(--accent); color: var(--accent-ink); }
+  .card.done { opacity: 0.72; }
+
+  .card-desc {
+    margin-top: 6px;
+    font-size: 14.5px;
+    color: var(--ink-dim);
+    max-width: 62ch;
+  }
+
+  .refs {
+    margin-top: 10px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .ref {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 5px;
+  }
+
+  .next-box {
+    background: var(--warn-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px 18px;
+    margin: 26px 0 8px;
+  }
+  .next-title {
+    font-weight: 650;
+    font-size: 13.5px;
+    margin-bottom: 10px;
+    color: var(--warn);
+  }
+  .next-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13.5px;
+    color: var(--ink);
+  }
+  .next-list li { margin-bottom: 4px; }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-size: 13px;
+  }
+
+  @media (max-width: 520px) {
+    .stats { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .stat .n { font-size: 24px; }
+  }
+</style>
+
+<div class="page">
+
+  <p class="eyebrow">План доработок · шахматный тренажёр</p>
+  <h1>Chess-2d <span class="version">v.1.1</span></h1>
+  <p class="dek">Продолжение v.1.0 — список изменений по итогам полного разбора кода. Все 29 пунктов закрыты (плюс 3/3 пожелания игрока).</p>
+
+  <div class="meta">
+    <div><b>Проект</b> — chessoff (Godot 4.6)</div>
+    <div><b>Дата ревью</b> — 2026-08-14</div>
+    <div><b>Сессия 2</b> — 2026-08-14, закрыла 26 из 30 карточек, остановлена на 4 из-за лимита</div>
+    <div><b>Сессия 3</b> — 2026-08-15, закрыла оставшиеся 4 (одна из них оказалась уже сделанной ранее), затем взяла техдолг с тестовыми утилитами и пожелание игрока по «Великим шахматистам»</div>
+    <div><b>Файлов проверено</b> — 45 скриптов, ~12 400 строк</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="n done">29</div>
+      <div class="l">выполнено из 29</div>
+    </div>
+    <div class="stat">
+      <div class="n critical">6</div>
+      <div class="l">критично</div>
+    </div>
+    <div class="stat">
+      <div class="n warn">16</div>
+      <div class="l">стоит поправить</div>
+    </div>
+    <div class="stat">
+      <div class="n minor">7</div>
+      <div class="l">мелочи</div>
+    </div>
+  </div>
+
+  <div class="next-box">
+    <div class="next-title">Сессия 3 — все 4 оставшихся пункта закрыты ✓</div>
+    <ol class="next-list">
+      <li>game_status() дорогой, вызывается дважды за ход — кэш в ChessEngine, инвалидируется в apply_move()</li>
+      <li>Боты в турнире переигрывают друг друга без памяти о встречах — pairing теперь избегает повторов через state.bot_pairs</li>
+      <li>Дублирование кода в пяти генераторах паззлов — вынесено в общий PuzzleGenUtils.gd (849 → 731 строк)</li>
+      <li>Превращение пешки жёстко зашито в ферзя — оказалось уже реализовано (PromoPanel в Board.gd), карточка была просто не обновлена</li>
+    </ol>
+  </div>
+
+  <div class="legend">
+    <div class="legend-title">Как читать оценку в скобках у каждого пункта</div>
+    <div class="legend-row"><span class="tier xs">XS</span> до ~15k токенов — точечная правка в одном месте, проверка почти не нужна</div>
+    <div class="legend-row"><span class="tier s">S</span> ~15–35k — правка в 1–2 файлах + быстрая проверка</div>
+    <div class="legend-row"><span class="tier m">M</span> ~35–80k — несколько связанных файлов + прогон игры в Godot</div>
+    <div class="legend-row"><span class="tier l">L</span> ~80–180k — рефактор с широким охватом или новая логика, задевающая много мест</div>
+    <p class="legend-caveat">Оценки приблизительные — это то, сколько токенов уйдёт у меня на чтение кода, правку и проверку в разговоре с тобой; они не совпадают с официальной цифрой лимита тарифа Pro за 5 часов (она нигде не задокументирована в токенах публично) и зависят от количества итераций. Ориентир для планирования: в один 5-часовой блок разумно брать одну L-задачу, либо 2–3 M, либо все XS/S сразу. Из этой сессии: пачка параллельных агентов на исторические партии съела ~60-70% лимита разом — тяжёлые параллельные задачи планируй отдельным блоком.</p>
+  </div>
+
+  <section>
+    <div class="section-head"><span class="dot critical"></span><h2>Критично</h2></div>
+    <p class="section-note">Влияет на честность прогресса или ломает механику — чинить в первую очередь. Всё готово.</p>
+    <div class="cards">
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Перевёрнутые PST-таблицы в ИИ <span class="cost">(S, ≈25k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Формула индекса позиционных бонусов перепутана для белых и чёрных: пешка на старте получает бонус вместо пешки перед превращением, король поощряется за уход из укрытия. Портит позиционную игру ИИ на всех 25 уровнях. Исправлено: белые теперь читают таблицу как (7-r)*8+f, чёрные как r*8+f — проверено вручную на e2/e7 (пешка) и e1 (король).</div>
+        <div class="refs"><span class="ref">ChessAI.gd:273</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Фарм основного рейтинга через тренировочные режимы <span class="cost">(S, ≈30k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Результат любой партии «Дороги домой» (включая переигровки) и «Школы» пишется в основной Glicko-2, как обычная игра. Можно бесконечно раскручивать рейтинг и ачивки лёгкими повторами. Исправлено: запись в Profile.record_game_result() теперь пропускается, когда road != "" или school != "" — остальная логика (прогресс дороги, ачивки внимательности, дуэли, карта) не тронута.</div>
+        <div class="refs"><span class="ref">Board.gd:527-535</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Дублирующийся id ачивки streak_3 <span class="cost">(XS, ≈15k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Два разных достижения используют один и тот же id — «3 победы подряд» и «3 дня решения задач подряд». Из-за этого «Корона Каиссы» (100% ачивок) физически недостижима. Исправлено: дневная серия переименована в daily_streak_3 (Profile.gd:100, 321), «3 победы подряд» осталась streak_3 — TrophyRoom.gd:35 по-прежнему указывает на неё верно.</div>
+        <div class="refs"><span class="ref">Profile.gd:71</span><span class="ref">Profile.gd:100</span><span class="ref">Profile.gd:321</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">«Дневник»: разбор партий с нестандартным стартом обрывается молча <span class="cost">(M, ≈65k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Партии из обучающих дриллов начинаются не со стандартной позиции, но start_fen не сохранялся в лог партии. При просмотре в «Партиях» разбор ходов тихо обрывался на первом ходу без объяснения. Исправлено: Board.gd теперь вычисляет initial_fen (assist_fen/start_fen персонажа карты либо стандарт) независимо от авто-резюме и кладёт его в лог; Diary._load_replay стартует движок от start_fen, если он есть, иначе как раньше — от стандартной позиции.</div>
+        <div class="refs"><span class="ref">Board.gd:174-180</span><span class="ref">Board.gd:410</span><span class="ref">Diary.gd:564-569</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Гонка между шахматными часами и асинхронным ходом ИИ <span class="cost">(M, ≈50k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">По истечении времени игра завершается сразу, но поток расчёта хода ИИ это не проверяло и мог применить ход уже после показа результата партии — портило сохранённое состояние. Исправлено: _apply_ai_move() теперь проверяет game_over дважды — на входе (пока ИИ считал ход в потоке) и сразу после анимации (пока тикали часы) — и в обоих случаях просто сбрасывает ai_thinking и выходит, не трогая engine/автосохранение. Все асинхронные пути хода ИИ (обычный, кооп-команда/дуо/помощь другу) идут через эту же функцию.</div>
+        <div class="refs"><span class="ref">Board.gd:726-733</span><span class="ref">Board.gd:736-742</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Автосохранение не исключает «Внимательность» и «Школу» <span class="cost">(XS, ≈18k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Позиции из этих режимов попадали в общий слот автосохранения обычной игры и подменяли собой прерванную партию или новую игру при следующем входе. Исправлено: _autosave_game() теперь пропускает запись и для attention &gt; 0, и для school != "" (не только road/tournament, как раньше). Заодно закрыта обратная сторона той же дыры: условие авто-резюме тоже не проверяло attention — вход в «Внимательность» мог случайно подхватить чужое сохранение обычной игры.</div>
+        <div class="refs"><span class="ref">Board.gd:330-333</span><span class="ref">Board.gd:187</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="dot warn"></span><h2>Стоит поправить</h2></div>
+    <p class="section-note">Не ломает игру прямо сейчас, но искажает честность/точность систем или создаёт технический долг. 12 из 16 готово.</p>
+    <div class="cards">
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">_quick_status() в поиске ИИ — заглушка, всегда «playing» <span class="cost">(M, ≈40k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Ничья по правилу 50 ходов не видна ИИ внутри дерева поиска. Исправлено: заглушка удалена, вместо неё добавлен дешёвый ChessEngine.is_draw_by_rule() (без генерации ходов — только halfmove_clock и материал), вызывается в начале _negamax и _qsearch. Мат/пат по-прежнему определяются через штатный moves.is_empty(), без дублирования legal_moves().</div>
+        <div class="refs"><span class="ref">ChessAI.gd:205-207</span><span class="ref">ChessAI.gd:236-238</span><span class="ref">ChessEngine.gd:353-358</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Нет проверки троекратного повторения ходов <span class="cost">(L, ≈150k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">game_status() учитывал мат, пат, 50 ходов и недостаточность материала, но не повторение позиции. Партия против ИИ на удержание могла тянуться до предела без досрочной ничьей. Исправлено: добавлена position_history (ключ позиции без счётчиков ходов, аналог halfmove_clock — переносится через clone(), как и остальное состояние). game_status() возвращает новый статус "repetition", is_draw_by_rule() тоже его учитывает (значит поиск ИИ теперь корректно распознаёт форсированные ничьи повторением, включая спасающий вечный шах). Board.gd показывает игроку отдельный текст. Проверено прямым тестом (шаг конями туда-обратно трижды → ничья точно на 3-м повторении) и полной регрессией: все 140 исторических партий по-прежнему парсятся без ошибок.</div>
+        <div class="refs"><span class="ref">ChessEngine.gd:340-372</span><span class="ref">Board.gd:359-361</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Quiescence-поиск не учитывает шах <span class="cost">(M, ≈55k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Если сторона под шахом и нет взятий, поиск в глубину просто возвращал статичную оценку — упускалась тактика, начинающаяся не со взятия, включая маты прямо за горизонтом поиска. Исправлено: под шахом _qsearch больше не «стоит на месте» и не фильтрует ходы до одних взятий — перебирает все ходы защиты (блок/увод короля/взятие атакующего), пока шах не снят. Проверено тестом на «Детском мате»: наивная статическая оценка позиции была бы −70 (примерное равенство материала), после фикса qsearch(qdepth=0) корректно возвращает −100000 (обнаруживает мат).</div>
+        <div class="refs"><span class="ref">ChessAI.gd:236-261</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Резкие скачки силы ИИ на стыках уровней 10→11 и 14→15 <span class="cost">(M, ≈45k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">На 10→11 разом отключались шум/шанс на зевок И включался quiescence-поиск — три вещи одновременно. На 14→15 глубина полного перебора скачком шла 3→4 без переходной ступени. Исправлено точечно, без пересчёта остальной лестницы 1-10/16-25: уровень 11 получил маленький остаточный шанс зевка (2%) и шум (2 очка) вместо резкого обнуления, уровень 14 получил quiescence глубиной 3 вместо 2 (мостик перед скачком глубины на 15). Проверка самоигрой ИИ-vs-ИИ была запущена, но остановлена как статистически бессмысленная на выборке в 4 партии — вывод сделан на основе точного разбора формул (какие параметры меняются и когда), не догадки.</div>
+        <div class="refs"><span class="ref">ChessAI.gd:108-124</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">game_status() дорогой и вызывается дважды за ход <span class="cost">(L, ≈170k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Полный make/unmake или транспозиционные таблицы — за рамки одной сессии; вместо этого сделано целевое исправление именно жалобы «дважды за ход»: game_status() теперь кэширует результат в ChessEngine (_status_cache/_status_cache_valid), инвалидируя кэш в apply_move() и setup_start_position()/setup_from_fen(). Board.gd вызывает game_status() дважды подряд после каждого хода (_update_status + _play_move_sfx) — второй вызов теперь просто читает кэш вместо повторного legal_moves(). Остальные вызовы (ИИ-поиск через clone(), генераторы паззлов) не задеты — у клонов кэш всегда стартует невалидным. Проверено: сцены компилируются (test_scenes.gd); все 5 генераторов паззлов (которые гоняют apply_move()/game_status() в цикле для проверки мата/шаха на каждом сгенерированном ходе) по-прежнему выдают 0/30 отказов на seed 12345 — поведение кэша корректно на реальных позициях.</div>
+        <div class="refs"><span class="ref">ChessEngine.gd:348-366</span><span class="ref">Board.gd:344-390</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Повторная пара в подготовке к турниру <span class="cost">(S, ≈25k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">«Большая сцена» задавала 8 туров при 7 ботах — на последнем туре игрок неизбежно переигрывал с уже встреченным соперником вместо честного swiss-тура. Исправлено: rounds уменьшено до 7 (по числу ботов), текст описания поправлен. Реальные Tournaments.gd никогда не превышают 6 туров при том же составе — 8 было опечаткой/рассинхроном.</div>
+        <div class="refs"><span class="ref">TournamentPrep.gd:28-30</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Боты в турнире переигрывают друг друга без памяти о встречах <span class="cost">(M, ≈55k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Добавлена state.bot_pairs (карта "i-j" → сколько раз уже встречались), считается отдельно для каждого турнира/подготовки. Новая _simulate_bot_round() в Profile.gd (общая для finish_prep_round и finish_tournament_round) пробует до 20 случайных перестановок пар и берёт ту, что даёт меньше всего повторных встреч — с всего 6 ботами и 3 парами за тур повторы всё равно неизбежны к 5-6 туру (15 уникальных пар на 6 ботов), но теперь пары не повторяются раньше времени, как раньше при чистой случайности. Обратная совместимость: bot_pairs достаётся через state.get("bot_pairs", {}) — старые сохранённые турниры без этого поля не ломаются. Проверено test_tournaments.gd — ALL TOURNAMENT TESTS PASSED (тест сам создаёт state без bot_pairs, что подтверждает обратную совместимость).</div>
+        <div class="refs"><span class="ref">Profile.gd:486-543</span><span class="ref">Tournaments.gd:144-149</span><span class="ref">TournamentPrep.gd:103-108</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">tournament_rd не растёт при простое <span class="cost">(XS, ≈12k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">При загрузке профиля затухание неопределённости рейтинга (decay_rd) применялось только к основному rd — турнирный рейтинг оставался искусственно «уверенным» после долгого перерыва. Исправлено: та же decay_rd(days_elapsed) теперь применяется и к tournament_rd.</div>
+        <div class="refs"><span class="ref">Profile.gd:1104-1106</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">game_log смешивает обычные, турнирные и школьные партии <span class="cost">(S, ≈25k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Турнирный забег из нескольких раундов мог целиком вытеснить из окна анализа реальные ошибки игрока, сбивая генерацию «Дороги домой». Исправлено: _log_finished_game() теперь пропускается для school != "" и tournament — в лог по-прежнему пишутся быстрая игра, карта и road (как и задумано в комментарии RoadHome.gd).</div>
+        <div class="refs"><span class="ref">Board.gd:486-491</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Дублирование кода в пяти генераторах паззлов <span class="cost">(L, ≈130k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Новый scripts/PuzzleGenUtils.gd собирает всё, что было буквально или эквивалентно продублировано: нотация клетки (sq), пустая доска-заготовка ChessEngine (new_empty_engine), геометрия линии между двумя клетками (path_between) и скольжение по направлениям до блокера (slide_candidates), поиск клеток для белого короля с отступом от центра событий (wk_candidates — обобщил также нестандартную проверку BackRank на пешки-щит, это тот же самый blocked-list паттерн), общая проверка «все ответы чёрных — только королём, и после каждого цель остаётся без защиты» (only_king_replies_leave_undefended, было у Fork и Defense дословно), сам retry-цикл generate() на 300 попыток, и общие константы KNIGHT_OFFSETS/ROOK_DIRS/BISHOP_DIRS/KING_OFFSETS. Уникальная тактическая геометрия каждого паззла (какие клетки заняты, какая фигура форсирует) осталась в своих файлах — объединять её не стал, это специфика темы, а не дублирование. Каждый генератор подключает утилиты через const PuzzleGenUtils = preload(...) (не class_name — свежий class_name не подхватился бы в headless без пересборки кэша global_script_class_cache.cfg). Суммарно 849 → 731 строк (5 файлов + новый общий модуль). Проверено: все 5 генераторов на seed 12345 дают 0/30 отказов и корректные образцы (fen/moves/theme/piece_lost), сцены компилируются (test_scenes.gd).</div>
+        <div class="refs"><span class="ref">PuzzleGenUtils.gd</span><span class="ref">ForkPuzzleGenerator.gd</span><span class="ref">PinPuzzleGenerator.gd</span><span class="ref">DefensePuzzleGenerator.gd</span><span class="ref">DeflectionPuzzleGenerator.gd</span><span class="ref">BackRankPuzzleGenerator.gd</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Menu.gd сбрасывает не все контекстные флаги <span class="cost">(XS, ≈10k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">road_mode и map_assist не сбрасывались в общей точке выхода — раньше это компенсировалось только в Board.gd. Исправлено: Menu._ready() теперь сбрасывает и их тоже, рядом с уже существующим сбросом tournament_game/attention_level/school_mode.</div>
+        <div class="refs"><span class="ref">Menu.gd:27-31</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">«Дневник» блокирует интерфейс при быстром переключении хода <span class="cost">(M, ≈35k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Клик на другой ход/партию, пока анализ предыдущего ещё считается, вызывал wait_to_finish() в главном потоке — UI подвисал. Исправлено по-разному для двух случаев, потому что они не были одинаково безопасны: вкладка «Ходы» (_moves_thread) не трогает общие массивы — просто перестала блокировать, старый поток тихо доживает и присоединяется позже (_stale_threads, осушается в _process(), финально в _exit_tree()). Вкладка «Партии» (_replay_thread) оказалась опаснее: старый поток читал live replay_states/replay_moves/replay_mover, которые тут же переписывались при открытии новой партии — гонка с потенциальным крашем по выходу за границы массива (ровно то, о чём предупреждал старый комментарий в коде). Исправлено правильно, а не «замаскировано»: поток теперь получает свои снимки (duplicate()) этих массивов при запуске, независимые от последующего переприсваивания полей — блокировка убрана полностью, без риска гонки. Проверено смок-тестом сцен — Diary.tscn по-прежнему грузится без ошибок.</div>
+        <div class="refs"><span class="ref">Diary.gd:36-51</span><span class="ref">Diary.gd:349-350</span><span class="ref">Diary.gd:567</span><span class="ref">Diary.gd:625-644</span><span class="ref">Diary.gd:755-762</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Дублирование разбора нотации в инструментах <span class="cost">(S, ≈25k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">HistoricValidator и MateFinder копировали _parse_san/_square вместо переиспользования методов из HistoricGames.gd. Исправлено: оба метода в HistoricGames.gd стали static, дубликаты в HistoricValidator.gd и MateFinder.gd удалены — оба теперь вызывают HG._parse_san(eng, san) через preload.</div>
+        <div class="refs"><span class="ref">HistoricGames.gd:368</span><span class="ref">HistoricGames.gd:422</span><span class="ref">HistoricValidator.gd:27</span><span class="ref">MateFinder.gd:15</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Партии исторических шахматистов не прогнаны валидатором <span class="cost">(S, ≈30k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">~1300 строк PGN-подобных данных введены вручную — стоило прогнать HistoricValidator.tscn перед релизом на предмет опечаток в нотации. Прогнано headless-запуском Godot: все 140 партий у всех 12 шахматистов читаются движком без единой ошибки, ни у одного меньше 10 партий. Заодно нашлась отдельная, не связанная с этим пунктом проблема с содержанием — см. «Пожелания игрока» ниже.</div>
+        <div class="refs"><span class="ref">scripts/historic/*.gd</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">Смок-тест сцен не покрывает половину экранов <span class="cost">(XS, ≈12k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">test_scenes.gd не включал Diary.tscn, HistoricGames.tscn, Login.tscn, Settings.tscn, School.tscn и ещё 8 сцен. По пути нашлась более серьёзная проблема: тест запускался через `godot -s` (режим SceneTree-скрипта), который не инициализирует автозагрузки — все 3 исходные сцены на самом деле проваливали компиляцию (Identifier not found: Profile/Global), но тест всё равно печатал «OK», потому что load()/instantiate() возвращали нескомпилированный узел. Переписан как обычная сцена (TestScenes.tscn) с нормальной загрузкой автозагрузок — теперь реально проверяет все 16 экранов. Прогнано: 16/16 без ошибок.</div>
+        <div class="refs"><span class="ref">test_scenes.gd</span><span class="ref">scenes/tools/TestScenes.tscn</span></div>
+      </div>
+
+      <div class="card warn done">
+        <div class="card-top">
+          <div class="card-title">generated_puzzles.json нигде не читается рантаймом <span class="cost">(XS, ≈10k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">gen_mate_puzzles.gd пишет файл, который никто не загружает. Оказалось не брошенной фичей, а разовым инструментом авторинга: банк матов сгенерирован один раз, вручную отобран и скопирован в PuzzleData.gd. Устаревший JSON-артефакт удалён (легко перегенерировать), в шапке скрипта явно задокументирована его роль оффлайн-инструмента.</div>
+        <div class="refs"><span class="ref">gen_mate_puzzles.gd:1-9</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="dot minor"></span><h2>Мелочи</h2></div>
+    <p class="section-note">Не срочно, можно взять заодно с соседними правками. Всё готово (7 из 7).</p>
+    <div class="cards">
+
+      <div class="card minor done">
+        <div class="card-top">
+          <div class="card-title">Тестовые утилиты не запускаются (-s режим ломает компиляцию) <span class="cost">(S, ≈20k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">test_map.gd, test_generators.gd, verify_puzzles.gd и gen_mate_puzzles.gd запускались через `godot -s`/`--script` (режим SceneTree-скрипта) — тот же режим, что test_scenes.gd уже обходил стороной: он не инициализирует автозагрузки, а ChessEngine.gd ссылается на автозагрузку Global, поэтому компиляция падала с «Identifier not found: Global» и каскадом ошибок дальше. Исправлено по образцу test_scenes.gd: все четыре переведены на extends Node/_ready()/get_tree().quit() с парной сценой в scenes/tools/ (TestMap/TestGenerators/VerifyPuzzles/GenMatePuzzles.tscn), запускаются как `godot --headless --path . res://scenes/tools/X.tscn`. test_dynamic_road.gd и test_tournaments.gd трогать не потребовалось — они не касаются ChessEngine, уже работали. Проверено: test_map — 0 проблем; все 5 генераторов паззлов — 0/30 отказов; verify_puzzles — 0 плохих из 50; gen_mate_puzzles — компилируется и стартует генерацию без ошибок (не гонялся до конца — это медленный разовый инструмент авторинга).</div>
+        <div class="refs"><span class="ref">scripts/tools/test_map.gd</span><span class="ref">scripts/tools/test_generators.gd</span><span class="ref">scripts/tools/verify_puzzles.gd</span><span class="ref">scripts/tools/gen_mate_puzzles.gd</span><span class="ref">scenes/tools/*.tscn</span></div>
+      </div>
+
+      <div class="card minor done">
+        <div class="card-top">
+          <div class="card-title">Journal.gd / Progress.gd — мёртвый код <span class="cost">(XS, ≈8k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Заменены «Дневником», ни один скрипт или сцена на них больше не ссылались — удалены вместе со сценами и .uid-файлами (только упоминания в комментариях остались, безопасно).</div>
+        <div class="refs"><span class="ref">scripts/Journal.gd</span><span class="ref">scripts/Progress.gd</span><span class="ref">scenes/Journal.tscn</span><span class="ref">scenes/Progress.tscn</span></div>
+      </div>
+
+      <div class="card minor done">
+        <div class="card-top">
+          <div class="card-title">Превращение пешки жёстко зашито в ферзя <span class="cost">(M, ≈45k ток.)</span></div>
+          <div class="status done">Готово ✓ (уже было сделано)</div>
+        </div>
+        <div class="card-desc">При проверке в этой сессии выяснилось, что это на самом деле уже не баг: в Board.gd давно есть полноценный выбор превращения — UI/PromoPanel с четырьмя кнопками (Ферзь/Ладья/Слон/Конь), pending_promotion и _on_promotion_chosen(), который перезаписывает move["promo"] выбранной игроком фигурой ПЕРЕД применением хода. ChessEngine.gd:140-144 (_mk_pawn_move) действительно всегда кладёт в pseudo-ход promo="Q" — но это только «ход по умолчанию» для подсветки клеток и для ИИ (которому недопревращение не нужно), а не ограничение на то, что реально применяется. Проверено напрямую: клетка e7-e8, из legal_moves_for_square взят ход с promo="Q", вручную заменено на "N" (как делает _on_promotion_chosen) и применено через apply_move() — на доске оказался корректный конь. Карточка в чек-листе, видимо, была написана до того, как в этой же марафонской сессии добавили PromoPanel, и статус не обновили. Кода не потребовалось — только обновление статуса.</div>
+        <div class="refs"><span class="ref">Board.gd:1242-1345</span><span class="ref">scenes/Board.tscn:197-361 (PromoPanel)</span><span class="ref">ChessEngine.gd:155-159</span></div>
+      </div>
+
+      <div class="card minor done">
+        <div class="card-top">
+          <div class="card-title">Ничья за 1-е место в турнире засчитывается как чистая победа <span class="cost">(S, ≈18k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">При равенстве очков с ботом игрок формально получал «1-е место» как чистую победу, без пометки тай-брейка. Исправлено: state.won теперь требует строго большего счёта (никаких трофеев/ачивок за общий счёт), добавлен state.tied_first для ничьей — Board.gd показывает отдельный текст «ничья за 1-е место». tournament_place() не трогали — он и раньше корректно давал место 1 при ничьей. Проверено существующим test_tournaments.gd — ALL TOURNAMENT TESTS PASSED.</div>
+        <div class="refs"><span class="ref">Profile.gd:515-524</span><span class="ref">Profile.gd:570-577</span><span class="ref">Board.gd:529-533</span></div>
+      </div>
+
+      <div class="card minor done">
+        <div class="card-top">
+          <div class="card-title">Недостаточность материала проверяется не полностью <span class="cost">(S, ≈15k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Не были покрыты слоны на полях одного цвета — частый ничейный расклад (K+B vs K+B, слоны на одноцветных полях, мат в принципе невозможен). Исправлено: добавлена проверка по чётности (file+rank) для этого конкретного случая (один слон на сторону, разного цвета фигур, одинаковый цвет поля). K+2 слона на разноцветных полях у одной стороны и другие «богатые» расклады намеренно не тронуты — там мат в принципе возможен. Проверено 4 тестовыми позициями (однопольные слоны/разнопольные/два слона у одной стороны/K+N) — все совпали с ожиданием.</div>
+        <div class="refs"><span class="ref">ChessEngine.gd:385-402</span></div>
+      </div>
+
+      <div class="card minor done">
+        <div class="card-top">
+          <div class="card-title">Генератор паззлов без повторной попытки при неудаче <span class="cost">(XS, ≈12k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">После 300 неудачных попыток показывалось «Не удалось создать задачу» без автоматического повтора — тупиковый экран для ребёнка. Исправлено: общий хелпер _generate_with_retry() пробует до 3 раз подряд (300×3 попыток внутри), подключён во все 6 мест (fork/pin/backrank/defense/deflection + оба генератора внутри «Микса»).</div>
+        <div class="refs"><span class="ref">Puzzle.gd:222-227</span></div>
+      </div>
+
+      <div class="card minor done">
+        <div class="card-top">
+          <div class="card-title">MateFinder.gd — разовый скрипт, не общий инструмент <span class="cost">(XS, ≈5k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Написан под конкретную позицию Карпов–Корчной, не переиспользуется. Помечен явным комментарием «ОДНОРАЗОВЫЙ диагностический скрипт, не общий инструмент» в шапке файла.</div>
+        <div class="refs"><span class="ref">MateFinder.gd:1-9</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="dot feature"></span><h2>Пожелания игрока</h2></div>
+    <p class="section-note">Не из код-ревью — попросили прямо по ходу работы. Все 3 готовы.</p>
+    <div class="cards">
+
+      <div class="card feature done">
+        <div class="card-top">
+          <div class="card-title">Список партий в «Великих шахматистах» нельзя свернуть <span class="cost">(S, ≈15k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">На небольшом разрешении фиксированная 280px полоса со списком партий слева не оставляла места под текст комментария справа — приходилось читать в тесноте. Добавлена кнопка-стрелка (◂/▸) в левом верхнем углу доски — появляется только во время самой партии (лежит внутри Main/BoardArea, поэтому на экранах выбора шахматиста/партии её не видно, там список нужен всегда). По нажатию сворачивает Main/ListScroll — HBoxContainer сам растягивает доску и правую панель на освободившееся место, InfoPanel заранее заякорена на всю ширину BoardArea, так что текст комментария сразу получает больше места. При возврате к списку (_show_players/_show_games) список принудительно возвращается видимым, чтобы свёрнутое состояние не подвесило игрока на пустом экране. Доска и правая панель сдвинуты на 36px вниз, чтобы кнопка не перекрывала поля. Проверено: сцена грузится без ошибок (test_scenes.gd), реальный запуск через Godot MCP — без новых script-ошибок (только старые не связанные warning'и).</div>
+        <div class="refs"><span class="ref">HistoricGames.gd:30-33</span><span class="ref">HistoricGames.gd:467-474</span><span class="ref">scenes/HistoricGames.tscn</span></div>
+      </div>
+
+      <div class="card feature done">
+        <div class="card-top">
+          <div class="card-title">Переключатель правила «ничья за 50 ходов» <span class="cost">(S, ≈20k ток.)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Раньше партия без взятий и ходов пешками всегда автоматически заканчивалась вничью через 50 ходов без возможности отключить это. Добавлен переключатель в Настройках, по умолчанию выключен — играть можно сколько угодно долго; включить обратно можно в любой момент.</div>
+        <div class="refs"><span class="ref">Settings.tscn</span><span class="ref">Settings.gd:5,38-41</span><span class="ref">Global.gd:44-46,127,140</span><span class="ref">ChessEngine.gd:347,358</span></div>
+      </div>
+
+      <div class="card feature done">
+        <div class="card-top">
+          <div class="card-title">Комментарии в «Партиях великих шахматистов» скучные почти везде <span class="cost">(?, зависит от объёма)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Причина была в том, что поле notes (ручные комментарии к ключевым ходам) заполнено почти пустым словарём {} у подавляющего большинства партий — движок в этом случае честно показывал автосгенерированный, но общий шаблонный комментарий. Дописаны содержательные заметки для всех 120 ранее пустых партий (12 игроков): опора на реальные критические моменты, посчитанные headless-анализом движка (взятия, скачки оценки, маты — scripts/tools/historic_analyze.gd), плюс настоящий исторический контекст из веб-поиска для знаменитых партий (Бессмертная и Вечнозелёная партии Андерсена, матч Ласкер–Стейниц 1895, Сан-Себастьян 1911 и Санкт-Петербург 1914 Капабланки, все 4 партии матчей Карпов–Корчной, 6-я партия Фишер–Спасский 1972, 1-я партия безлимитного матча Каспаров–Карпов 1984 и другие) — везде переписано своими словами, без копирования источников. Итог прогнан через HistoricValidator: все 140 партий у всех 12 шахматистов читаются движком без единой ошибки.</div>
+        <div class="refs"><span class="ref">scripts/historic/*.gd</span><span class="ref">HistoricGames.gd:138-139</span><span class="ref">tools/historic_analyze.gd</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    v.1.0 составлена по итогам полного код-ревью проекта — 2026-08-14. Сессия 2 (тот же день) закрыла 26 из 30 карточек, остановилась на 4 по лимиту. Сессия 3 (2026-08-15) закрыла все 4 оставшихся, а затем добавила и сразу закрыла ещё два пункта поверх исходного списка: техдолг с тестовыми утилитами (-s режим ломал компиляцию через ChessEngine→Global) и пожелание игрока — сворачиваемый список партий в «Великих шахматистах» для маленьких разрешений. Итог: 29/29 пунктов основного списка и 3/3 пожеланий игрока готовы.
+  </footer>
+
+</div>

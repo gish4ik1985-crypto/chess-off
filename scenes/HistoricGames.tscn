@@ -1,0 +1,198 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/HistoricGames.gd" id="1"]
+[ext_resource type="Theme" path="res://theme/NeonTheme.tres" id="2"]
+
+[node name="HistoricGames" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.02, 0.05, 1)
+
+[node name="TopBar" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 20.0
+offset_right = -24.0
+offset_bottom = 98.0
+grow_horizontal = 2
+
+[node name="HBox" type="HBoxContainer" parent="TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="TopBar/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.2, 1)
+theme_override_font_sizes/font_size = 18
+text = "ПАРТИИ ВЕЛИКИХ ШАХМАТИСТОВ"
+
+[node name="SubLabel" type="Label" parent="TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.6, 0.68, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = "Изучайте знаменитые партии — каждый ход объяснён"
+
+[node name="MenuButton" type="Button" parent="TopBar/HBox"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "В меню"
+
+[node name="Main" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 110.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="ListScroll" type="ScrollContainer" parent="Main"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="ListVBox" type="VBoxContainer" parent="Main/ListScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ListTitle" type="Label" parent="Main/ListScroll/ListVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.68, 0.78, 1)
+theme_override_font_sizes/font_size = 14
+text = "Выберите шахматиста:"
+autowrap_mode = 2
+
+[node name="BoardArea" type="Control" parent="Main"]
+visible = false
+custom_minimum_size = Vector2(760, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ListToggleButton" type="Button" parent="Main/BoardArea"]
+custom_minimum_size = Vector2(36, 32)
+layout_mode = 0
+offset_right = 36.0
+offset_bottom = 32.0
+tooltip_text = "Свернуть/развернуть список партий"
+text = "◂"
+
+[node name="BoardDraw" type="Node2D" parent="Main/BoardArea"]
+position = Vector2(10, 46)
+
+[node name="InfoPanel" type="PanelContainer" parent="Main/BoardArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 545.0
+offset_top = 46.0
+offset_right = -10.0
+offset_bottom = -66.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Main/BoardArea/InfoPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="Main/BoardArea/InfoPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.2, 1)
+theme_override_font_sizes/font_size = 22
+text = "Партия"
+autowrap_mode = 2
+
+[node name="MetaLabel" type="Label" parent="Main/BoardArea/InfoPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.68, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = ""
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="Main/BoardArea/InfoPanel/VBox"]
+layout_mode = 2
+
+[node name="CommentScroll" type="ScrollContainer" parent="Main/BoardArea/InfoPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="CommentLabel" type="Label" parent="Main/BoardArea/InfoPanel/VBox/CommentScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+autowrap_mode = 2
+vertical_alignment = 0
+
+[node name="Controls" type="HBoxContainer" parent="Main/BoardArea"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -56.0
+offset_right = 510.0
+offset_bottom = -10.0
+grow_vertical = 0
+theme_override_constants/separation = 8
+
+[node name="FirstButton" type="Button" parent="Main/BoardArea/Controls"]
+custom_minimum_size = Vector2(48, 40)
+layout_mode = 2
+text = "⏮"
+
+[node name="PrevButton" type="Button" parent="Main/BoardArea/Controls"]
+custom_minimum_size = Vector2(48, 40)
+layout_mode = 2
+text = "◀"
+
+[node name="NextButton" type="Button" parent="Main/BoardArea/Controls"]
+custom_minimum_size = Vector2(48, 40)
+layout_mode = 2
+text = "▶"
+
+[node name="LastButton" type="Button" parent="Main/BoardArea/Controls"]
+custom_minimum_size = Vector2(48, 40)
+layout_mode = 2
+text = "⏭"
+
+[node name="AutoCheck" type="CheckButton" parent="Main/BoardArea/Controls"]
+layout_mode = 2
+text = "Авто"
+
+[node name="CounterLabel" type="Label" parent="Main/BoardArea/Controls"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "0 / 0"
+
+[connection signal="pressed" from="TopBar/HBox/MenuButton" to="." method="_on_menu_pressed"]
+[connection signal="pressed" from="Main/BoardArea/ListToggleButton" to="." method="_on_list_toggle_pressed"]
+[connection signal="pressed" from="Main/BoardArea/Controls/FirstButton" to="." method="_on_first_pressed"]
+[connection signal="pressed" from="Main/BoardArea/Controls/PrevButton" to="." method="_on_prev_pressed"]
+[connection signal="pressed" from="Main/BoardArea/Controls/NextButton" to="." method="_on_next_pressed"]
+[connection signal="pressed" from="Main/BoardArea/Controls/LastButton" to="." method="_on_last_pressed"]

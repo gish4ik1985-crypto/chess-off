@@ -1,0 +1,181 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/BotsHub.gd" id="1"]
+[ext_resource type="Theme" path="res://theme/NeonTheme.tres" id="2"]
+
+[node name="BotsHub" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.02, 0.05, 1)
+
+[node name="TopBar" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 20.0
+offset_right = -24.0
+offset_bottom = 98.0
+grow_horizontal = 2
+
+[node name="HBox" type="HBoxContainer" parent="TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="TopBar/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 18
+text = "БАЗА ИГРОКОВ"
+
+[node name="StatusLabel" type="Label" parent="TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+
+[node name="MenuButton" type="Button" parent="TopBar/HBox"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "В меню"
+
+[node name="Main" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 110.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="LeaguePanel" type="PanelContainer" parent="Main"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+
+[node name="LeagueVBox" type="VBoxContainer" parent="Main/LeaguePanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="NewsButton" type="Button" parent="Main/LeaguePanel/LeagueVBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "📰 Что изменилось"
+
+[node name="NewsSeparator" type="HSeparator" parent="Main/LeaguePanel/LeagueVBox"]
+layout_mode = 2
+
+[node name="LeagueTitle" type="Label" parent="Main/LeaguePanel/LeagueVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.68, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = "Лига:"
+
+[node name="ListScroll" type="ScrollContainer" parent="Main"]
+custom_minimum_size = Vector2(330, 0)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="ListVBox" type="VBoxContainer" parent="Main/ListScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="CardPanel" type="PanelContainer" parent="Main"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBox" type="VBoxContainer" parent="Main/CardPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="NameLabel" type="Label" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 24
+text = "Выберите игрока"
+autowrap_mode = 2
+
+[node name="LeagueLabel" type="Label" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = ""
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+
+[node name="StyleLabel" type="Label" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+autowrap_mode = 2
+
+[node name="StatsLabel" type="Label" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.72, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+autowrap_mode = 2
+
+[node name="HSeparator2" type="HSeparator" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+
+[node name="ChallengeLabel" type="Label" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 15
+text = "Вызвать на товарищескую партию"
+autowrap_mode = 2
+
+[node name="FormatRow" type="HBoxContainer" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ColorRow" type="HBoxContainer" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="PlayButton" type="Button" parent="Main/CardPanel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Играть!"
+
+[node name="WatchButton" type="Button" parent="Main/CardPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "📂 Партии игрока"
+
+[node name="HintLabel" type="Label" parent="Main/CardPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.68, 0.78, 1)
+theme_override_font_sizes/font_size = 13
+text = "В турнире соперники берутся только из вашей лиги, а вызвать на товарищескую партию можно кого угодно — хоть легенду."
+autowrap_mode = 2
+
+[connection signal="pressed" from="Main/LeaguePanel/LeagueVBox/NewsButton" to="." method="_on_news_pressed"]
+[connection signal="pressed" from="Main/CardPanel/VBox/WatchButton" to="." method="_on_watch_pressed"]
+[connection signal="pressed" from="TopBar/HBox/MenuButton" to="." method="_on_menu_pressed"]

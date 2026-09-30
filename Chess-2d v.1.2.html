@@ -1,0 +1,556 @@
+<title>Chess-2d v.1.2</title>
+<style>
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16140f;
+      --surface: #201c15;
+      --surface-2: #29241a;
+      --ink: #f1ebdd;
+      --ink-dim: #b6ab96;
+      --line: #3a3427;
+      --accent: #74b391;
+      --accent-ink: #0d1611;
+      --gold: #d6ac57;
+      --critical: #e57b62;
+      --critical-bg: #382019;
+      --warn: #dcb04c;
+      --warn-bg: #362c15;
+      --minor: #a89d87;
+      --minor-bg: #26221a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16140f;
+    --surface: #201c15;
+    --surface-2: #29241a;
+    --ink: #f1ebdd;
+    --ink-dim: #b6ab96;
+    --line: #3a3427;
+    --accent: #74b391;
+    --accent-ink: #0d1611;
+    --gold: #d6ac57;
+    --critical: #e57b62;
+    --critical-bg: #382019;
+    --warn: #dcb04c;
+    --warn-bg: #362c15;
+    --minor: #a89d87;
+    --minor-bg: #26221a;
+  }
+  :root {
+    --bg: #f6f1e6;
+    --surface: #fffdf8;
+    --surface-2: #efe7d6;
+    --ink: #241d13;
+    --ink-dim: #6f6552;
+    --line: #ddd2b8;
+    --accent: #2f4d3a;
+    --accent-ink: #f2f6f1;
+    --gold: #a9762f;
+    --critical: #a5402a;
+    --critical-bg: #f5e2da;
+    --warn: #8f6a17;
+    --warn-bg: #f4ecd6;
+    --minor: #6f6552;
+    --minor-bg: #efe9da;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    margin: 0;
+    padding: 56px 20px 90px;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: Iowan Old Style, "Palatino Linotype", Palatino, Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(34px, 6vw, 48px);
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .version {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .dek {
+    color: var(--ink-dim);
+    font-size: 16px;
+    max-width: 60ch;
+    margin: 14px 0 0;
+  }
+
+  .meta {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    font-size: 13.5px;
+    color: var(--ink-dim);
+  }
+  .meta b { color: var(--ink); font-weight: 600; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 34px 0 8px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+  }
+  .stat .n {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .stat .n.critical { color: var(--critical); }
+  .stat .n.warn { color: var(--warn); }
+  .stat .n.minor { color: var(--minor); }
+  .stat .n.done { color: var(--accent); }
+  .stat .l {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+
+  section { margin-top: 46px; }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .dot {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.critical { background: var(--critical); }
+  .dot.warn { background: var(--warn); }
+  .dot.minor { background: var(--minor); }
+  .dot.feature { background: var(--gold); }
+
+  h2 {
+    font-family: Iowan Old Style, "Palatino Linotype", Palatino, Georgia, serif;
+    font-weight: 600;
+    font-size: 23px;
+    margin: 0;
+  }
+
+  .section-note {
+    color: var(--ink-dim);
+    font-size: 14px;
+    margin: 4px 0 22px 23px;
+    max-width: 58ch;
+  }
+
+  .cards { display: flex; flex-direction: column; gap: 10px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--critical);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .card.warn { border-left-color: var(--warn); }
+  .card.minor { border-left-color: var(--minor); }
+  .card.feature { border-left-color: var(--gold); }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .card-title {
+    font-weight: 650;
+    font-size: 15.5px;
+    color: var(--ink);
+  }
+
+  .cost {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--ink-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .legend {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px 18px;
+    margin: 26px 0 8px;
+  }
+  .legend-title {
+    font-weight: 650;
+    font-size: 13.5px;
+    margin-bottom: 10px;
+  }
+  .legend-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 13.5px;
+    color: var(--ink-dim);
+    margin-bottom: 5px;
+  }
+  .tier {
+    flex: none;
+    width: 26px;
+    text-align: center;
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 2px 0;
+    border-radius: 5px;
+    color: var(--accent-ink);
+  }
+  .tier.xs { background: var(--minor); }
+  .tier.s { background: var(--accent); }
+  .tier.m { background: var(--gold); }
+  .tier.l { background: var(--critical); }
+  .legend-caveat {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    max-width: 62ch;
+  }
+
+  .status {
+    flex: none;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--critical-bg);
+    color: var(--critical);
+    white-space: nowrap;
+  }
+  .card.warn .status { background: var(--warn-bg); color: var(--warn); }
+  .card.minor .status { background: var(--minor-bg); color: var(--minor); }
+  .status.done { background: var(--accent); color: var(--accent-ink); }
+  .card.done { opacity: 0.72; }
+
+  .card-desc {
+    margin-top: 6px;
+    font-size: 14.5px;
+    color: var(--ink-dim);
+    max-width: 62ch;
+  }
+
+  .refs {
+    margin-top: 10px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .ref {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 5px;
+  }
+
+  .next-box {
+    background: var(--warn-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px 18px;
+    margin: 26px 0 8px;
+  }
+  .next-title {
+    font-weight: 650;
+    font-size: 13.5px;
+    margin-bottom: 10px;
+    color: var(--warn);
+  }
+  .next-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13.5px;
+    color: var(--ink);
+  }
+  .next-list li { margin-bottom: 4px; }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-size: 13px;
+  }
+
+  @media (max-width: 520px) {
+    .stats { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .stat .n { font-size: 24px; }
+  }
+</style>
+<div class="page">
+
+  <p class="eyebrow">Список изменений · шахматный тренажёр</p>
+  <h1>Chess-2d <span class="version">v.1.2</span></h1>
+  <p class="dek">Продолжение v.1.1. Версия проставлена в самой сборке (project.godot и настройки экспорта), а не только в названии файла.</p>
+
+  <div class="meta">
+    <div><b>Проект</b> — chessoff (Godot 4.6)</div>
+    <div><b>Дата</b> — 2026-08-15</div>
+    <div><b>Основание</b> — полный аудит по просьбе владельца, затем крупная новая механика: база игроков и лиги</div>
+    <div><b>Проверка</b> — аудит интерфейса 0 проблем, сцены 17/17, тесты базы игроков 40/40, партии великих 140/140, турниры и «Дорога домой» пройдены</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n done">18</div><div class="l">изменений</div></div>
+    <div class="stat"><div class="n critical">7</div><div class="l">исправлено</div></div>
+    <div class="stat"><div class="n warn">7</div><div class="l">новых возможностей</div></div>
+    <div class="stat"><div class="n minor">4</div><div class="l">инструменты</div></div>
+  </div>
+
+  <div class="next-box">
+    <div class="next-title">Что осталось непроверенным</div>
+    <ol class="next-list">
+      <li>Всё подтверждено headless-прогонами и замерами координат — вживую глазами экраны не смотрели</li>
+      <li>Стоит проверить лично: разбор партии бота, товарищескую партию с часами, подменю «Турниры и соперники»</li>
+      <li>Рейтинги ботов начнут расходиться только с новых турниров — сейчас у всех стартовые значения из базы</li>
+    </ol>
+  </div>
+
+  <section>
+    <div class="section-head"><span class="dot critical"></span><h2>Исправленные ошибки</h2></div>
+    <div class="cards">
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Шапка налезала на содержимое в четырёх экранах <span class="cost">(вёрстка)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Верхняя панель описана в сцене высотой 52px (offset_top 20, offset_bottom 72), но тема требует минимум 78 — Godot не может сделать панель ниже минимума, поэтому она молча кончалась на y=98, а содержимое начиналось с y=90. Наложение 8px: под шапку попадали список партий и кнопка «свернуть». В главном меню тот же дефект давал 19px. Числа в файле сцены — это то, что у макета попросили, а не то, чем он стал. Исправлено во всех четырёх экранах: заявленная высота приведена к фактической, содержимое отодвинуто с зазором 12px.</div>
+        <div class="refs"><span class="ref">HistoricGames.tscn</span><span class="ref">Tournaments.tscn</span><span class="ref">TournamentPrep.tscn</span><span class="ref">Menu.tscn</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Список партий распирал макет «Великих шахматистов» <span class="cost">(вёрстка)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">У кнопки в Godot минимальная ширина равна ширине её текста, а у ListScroll отключена горизонтальная прокрутка. Длинные названия партий раздували список с 280 до 483px, переполняли HBox и сжимали панель комментария до ~174px. Исправлено: clip_text с многоточием, полный текст в подсказке; BoardArea получил настоящий минимум 760px, потому что доска рисуется через Node2D и система контейнеров о её размере не знает.</div>
+        <div class="refs"><span class="ref">HistoricGames.gd</span><span class="ref">HistoricGames.tscn</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Панель «Выйти из партии?» оставалась поверх итогов <span class="cost">(логика)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Панель выхода скрывалась только по кнопке «Остаться». Если нажать «В меню», пока ИИ думает, а он в этот момент ставит мат или падает флаг в турнире — панель итогов открывалась поверх незакрытого вопроса. Исправлено: панель выхода скрывается при завершении партии.</div>
+        <div class="refs"><span class="ref">Board.gd:_show_game_over</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Режим «Внимательность» не возвращал к списку уровней <span class="cost">(навигация)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">В обработчике выхода были ветки для дороги, школы, турнира и карты — для внимательности не было. После каждого из 50 последовательных уровней игрока выбрасывало в главное меню, и приходилось заново идти Обучение — Внимательность. Исправлено: возврат в хаб, как у дороги и школы.</div>
+        <div class="refs"><span class="ref">Board.gd:_do_leave</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Кнопка выхода врала в четырёх режимах из пяти <span class="cost">(навигация)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Кнопка всегда подписана «В меню», но код ведёт в тот хаб, откуда пришли: в «Дороге домой» — на Дорогу, в школе — в Школу, в турнире — в Турниры. Главное меню из этих режимов было недостижимо в один клик. Исправлено: подпись совпадает с назначением, заодно убраны дублирующие кнопки на панели итогов.</div>
+        <div class="refs"><span class="ref">Board.gd:_exit_destination_label</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">В дневнике не показывались лучшие ходы <span class="cost">(логика)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Отбор в галерею лучших идёт по символам «x», «=», «O-O» в записи хода. Но разбор качества хода строил свою, голую нотацию вида «e2e4», где этих символов нет никогда. Условие не срабатывало ни разу за всё время — список лучших ходов был всегда пуст, и вкладка «Ходы» показывала только худшие. Исправлено: запись вынесена в общую функцию, которая уже строила правильную нотацию для журнала ходов.</div>
+        <div class="refs"><span class="ref">Board.gd:move_notation</span><span class="ref">Profile.gd:record_move_quality</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Система преимущества смешивала две шкалы <span class="cost">(понятность)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">В одном абзаце уживались «потеряно 150 очков» и «Оценка позиции: +1.3» — про одну и ту же величину, но в разных единицах и без подписи. Шкала оценки в «Партиях великих» вообще была без единой цифры. Исправлено: всё, что видит игрок, приведено к пешкам с явной единицей и пояснением знака, на шкалу добавлено число.</div>
+        <div class="refs"><span class="ref">Diary.gd</span><span class="ref">HistoricGames.gd</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="dot warn"></span><h2>Новые возможности</h2></div>
+    <div class="cards">
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">База игроков — 120 постоянных соперников <span class="cost">(новое)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Раньше соперники в турнире были одноразовыми: 7 случайных имён из списка в 18 штук, без личности, рейтинга и истории. Теперь постоянный состав из 120 игроков, у каждого свой рейтинг Glicko-2, манера игры и карточка со статистикой, лучшим рейтингом, кубками и счётом личных встреч с вами.</div>
+        <div class="refs"><span class="ref">BotData.gd</span><span class="ref">BotsHub.tscn</span><span class="ref">BotsHub.gd</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Восемь лиг и защита от отставания игрока <span class="cost">(новое)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Дворовая, Школьная, Клубная, Городская, Кандидатов, Мастеров, Гроссмейстеров, Легенд — по 15 игроков. Соперники в турнир берутся только из лиги игрока: выросший бот уходит наверх и не попадается, пока игрок не подтянется. Ровно 10% состава — слабые боты, но слабые ВНУТРИ своей лиги и привязанные к её нижней половине навсегда. Глобально слабые осели бы внизу, и наверху игрок встречал бы только сильнейших — та самая ситуация, которой избегали. Так в каждой лиге всегда есть кого обыграть.</div>
+        <div class="refs"><span class="ref">BotData.gd</span><span class="ref">Profile.gd:apply_bot_result</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Живой мир: рейтинги ботов меняются, но только вместе с игроком <span class="cost">(новое)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Когда игрок доигрывает турнир, свой тур играют все восемь лиг — иначе живой была бы только лига игрока, а остальные семь стояли бы замороженными. Фонового роста нет: ушли на месяц — вернулись в тот же мир. Партии ботов между собой идут с половинным весом, чтобы личные встречи с игроком значили больше. Обычный бот не уходит дальше двух лиг от родной, иначе состав расползается по краям и средние лиги пустеют.</div>
+        <div class="refs"><span class="ref">Profile.gd:simulate_world_round</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Экран изменений в базе <span class="cost">(новое)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Кнопка «Что изменилось» показывает по дням, кто сменил лигу и у кого самые заметные скачки рейтинга. Без неё жизнь мира была бы невидимой: боты росли бы молча.</div>
+        <div class="refs"><span class="ref">Profile.gd</span><span class="ref">BotsHub.gd</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Товарищеские партии с любым игроком базы <span class="cost">(новое)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Вызвать можно кого угодно из любой лиги, хоть легенду — ограничение по лигам действует только в турнирах. Пять форматов: классика без часов, рапид 15+10 и 10+5, блиц 5+3 и 3+2. Результат двигает обычный рейтинг игрока и постоянный рейтинг соперника, но не турнирный зачёт.</div>
+        <div class="refs"><span class="ref">Global.gd</span><span class="ref">Board.gd</span><span class="ref">BotData.gd</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Архив партий и разбор соперника <span class="cost">(новое)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Замер показал: настоящая партия бота стоит около 5 секунд при уровне ИИ 3, 8 секунд при уровне 6 и почти минуту при уровне 10, а один тик мира это 56 партий — просчитать их заранее невозможно, и симуляция тура ходов не даёт вообще. Поэтому в архив попадают только по-настоящему сыгранные партии: ваши личные встречи с ботом, где ходы уже есть и просто перестали выбрасываться, и партии ботов по вашему запросу. Разбор: доска, перемотка, авторежим, список ходов и оценка позиции с указанием, как её изменил каждый ход. Ходы хранятся координатами — воспроизведение точное, без разбора текста.</div>
+        <div class="refs"><span class="ref">Profile.gd:record_bot_game</span><span class="ref">BotMatch.tscn</span><span class="ref">BotMatch.gd</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Перестройка меню <span class="cost">(удобство)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Главный экран сокращён с 8 пунктов до 6. Новое подменю «Турниры и соперники» собрало турниры, подготовку к ним и базу игроков; «Игра с ИИ» переименована в «Играть» и получила товарищескую партию. Перенос «Быстрой игры» и «Папы и сына» в другие меню рассматривался и отклонён — ни один из них не относится ни к обучению, ни к карте, проблема была в четырёх турнирных пунктах на верхнем уровне.</div>
+        <div class="refs"><span class="ref">Menu.tscn</span><span class="ref">Menu.gd</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="dot minor"></span><h2>Инструменты и тесты</h2></div>
+    <div class="cards">
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Аудитор интерфейса <span class="cost">(инструмент)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Новый инструмент добавляет каждую сцену в дерево, из-за чего срабатывают _ready и все пути к узлам, и проверяет: переполнение контейнеров, кнопки без обработчика, наложения по всему дереву и выход за пределы экрана. Порог наложения по доле площади оказался ошибкой — шапка, налезающая полоской в 8px, это 1% площади, но именно она и портит картинку; теперь считается любое перекрытие толще 2px. Сцены со списками и меню прогоняются в раскрытом состоянии: проверять экран в состоянии по умолчанию — значит не проверять его.</div>
+        <div class="refs"><span class="ref">tools/audit_ui.gd</span><span class="ref">scenes/tools/AuditUI.tscn</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Тесты базы игроков <span class="cost">(инструмент)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">40 проверок: состав и уникальность имён, доля слабых, заполненность лиг, отсутствие чужаков в турнирном составе, рост и падение рейтинга, привязка слабых к лиге после 200 форсированных побед, наличие обыгрываемых соперников в каждой лиге, тик мира по всем лигам, стабильность состава после 60 туров, архив партий с точным воспроизведением до совпадения финальной позиции.</div>
+        <div class="refs"><span class="ref">tools/test_bots.gd</span><span class="ref">scenes/tools/TestBots.tscn</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Смоук-тест не ловил сломанный скрипт <span class="cost">(инструмент)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">Загрузка возвращает сцену успешно даже когда её скрипт не скомпилировался — он просто молча отваливается. Из-за этого новый экран прошёл тест зелёным с ошибкой компиляции. Добавлена явная проверка, что у корня сцены есть скрипт.</div>
+        <div class="refs"><span class="ref">tools/test_scenes.gd</span></div>
+      </div>
+
+      <div class="card done">
+        <div class="card-top">
+          <div class="card-title">Проверка партий великих висела после прогона <span class="cost">(инструмент)</span></div>
+          <div class="status done">Готово ✓</div>
+        </div>
+        <div class="card-desc">В скрипте не было выхода из движка — он печатал итог по 140 партиям и оставался работать вечно, из-за чего прогон в консоли всегда упирался в таймаут.</div>
+        <div class="refs"><span class="ref">tools/HistoricValidator.gd</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    v.1.2 — 2026-08-15. Аудит начался с жалобы владельца на налезающие друг на друга элементы; два его скриншота поймали то, что headless-прогон пропускал, — оба раза виноват был не замер, а слишком мягкий порог и проверка экрана в состоянии по умолчанию. Затем добавлена база игроков со 120 соперниками, лигами и живым миром, товарищеские партии и архив партий для подготовки к сопернику.
+  </footer>
+
+</div>

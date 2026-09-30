@@ -1,0 +1,150 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/BotMatch.gd" id="1"]
+[ext_resource type="Theme" path="res://theme/NeonTheme.tres" id="2"]
+
+[node name="BotMatch" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.02, 0.05, 1)
+
+[node name="TopBar" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 20.0
+offset_right = -24.0
+offset_bottom = 98.0
+grow_horizontal = 2
+
+[node name="HBox" type="HBoxContainer" parent="TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="TopBar/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 18
+text = "ПАРТИЯ БОТОВ"
+
+[node name="StatusLabel" type="Label" parent="TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+
+[node name="BackButton" type="Button" parent="TopBar/HBox"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "К базе игроков"
+
+[node name="Main" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 110.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="BoardArea" type="Control" parent="Main"]
+custom_minimum_size = Vector2(540, 0)
+layout_mode = 2
+
+[node name="BoardDraw" type="Node2D" parent="Main/BoardArea"]
+position = Vector2(10, 10)
+
+[node name="EvalLabel" type="Label" parent="Main/BoardArea"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -92.0
+offset_right = 520.0
+offset_bottom = -60.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.82, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 14
+text = ""
+
+[node name="Controls" type="HBoxContainer" parent="Main/BoardArea"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -56.0
+offset_right = 520.0
+offset_bottom = -10.0
+grow_vertical = 0
+theme_override_constants/separation = 8
+
+[node name="InfoPanel" type="PanelContainer" parent="Main"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBox" type="VBoxContainer" parent="Main/InfoPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PlayersLabel" type="Label" parent="Main/InfoPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 18
+text = ""
+autowrap_mode = 2
+
+[node name="StateLabel" type="Label" parent="Main/InfoPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="Main/InfoPanel/VBox"]
+layout_mode = 2
+
+[node name="MovesScroll" type="ScrollContainer" parent="Main/InfoPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="MovesLabel" type="Label" parent="Main/InfoPanel/VBox/MovesScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.82, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 14
+text = ""
+autowrap_mode = 2
+vertical_alignment = 0
+
+[node name="ResultLabel" type="Label" parent="Main/InfoPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.95, 0.5, 1)
+theme_override_font_sizes/font_size = 16
+text = ""
+autowrap_mode = 2
+
+[connection signal="pressed" from="TopBar/HBox/BackButton" to="." method="_on_back_pressed"]

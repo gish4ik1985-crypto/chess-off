@@ -1,0 +1,365 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/Board.gd" id="1"]
+[ext_resource type="Theme" path="res://theme/NeonTheme.tres" id="2"]
+[ext_resource type="Script" path="res://scripts/MusicPlayer.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/SoundFX.gd" id="4"]
+
+[sub_resource type="StyleBoxFlat" id="BoardFrameStyle"]
+bg_color = Color(0.02, 0.015, 0.03, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.11, 0.85, 0.95, 0.5)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+shadow_color = Color(0.05, 0.85, 1, 0.2)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="Panel1"]
+bg_color = Color(0.04, 0.04, 0.08, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.2, 0.85, 0.6)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_left = 12
+corner_radius_bottom_right = 12
+shadow_color = Color(1, 0.15, 0.85, 0.3)
+shadow_size = 14
+content_margin_left = 20.0
+content_margin_top = 18.0
+content_margin_right = 20.0
+content_margin_bottom = 18.0
+
+[node name="Board" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Music" type="AudioStreamPlayer" parent="."]
+script = ExtResource("3")
+
+[node name="SoundFX" type="AudioStreamPlayer" parent="."]
+script = ExtResource("4")
+
+[node name="Background" type="ColorRect" parent="."]
+mouse_filter = 2
+offset_left = -40.0
+offset_top = -40.0
+offset_right = 1320.0
+offset_bottom = 840.0
+color = Color(0.02, 0.02, 0.05, 1)
+
+[node name="BoardFrame" type="Panel" parent="."]
+mouse_filter = 2
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 760.0
+offset_bottom = 760.0
+theme_override_styles/panel = SubResource("BoardFrameStyle")
+
+[node name="BoardDraw" type="Node2D" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="SidePanel" type="ScrollContainer" parent="UI"]
+theme = ExtResource("2")
+offset_left = 784.0
+offset_top = 40.0
+offset_right = 1256.0
+offset_bottom = 760.0
+horizontal_scroll_mode = 0
+
+[node name="Content" type="VBoxContainer" parent="UI/SidePanel"]
+custom_minimum_size = Vector2(452, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_constants/separation = 14
+
+[node name="TitleLabel" type="Label" parent="UI/SidePanel/Content"]
+layout_mode = 2
+text = "ШАХМАТЫ"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+
+[node name="TurnLabel" type="Label" parent="UI/SidePanel/Content"]
+layout_mode = 2
+text = "Сложность: 5"
+autowrap_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+
+[node name="ClockLabel" type="Label" parent="UI/SidePanel/Content"]
+visible = false
+layout_mode = 2
+text = ""
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
+
+[node name="StatusLabel" type="Label" parent="UI/SidePanel/Content"]
+layout_mode = 2
+text = "Ход: Белые"
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 0.65, 0.95, 1)
+
+[node name="HSeparator" type="HSeparator" parent="UI/SidePanel/Content"]
+layout_mode = 2
+
+[node name="HistoryLabel" type="RichTextLabel" parent="UI/SidePanel/Content"]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+theme_override_colors/default_color = Color(0.6, 0.68, 0.78, 1)
+scroll_active = true
+bbcode_enabled = false
+
+[node name="HintLabel" type="Label" parent="UI/SidePanel/Content"]
+layout_mode = 2
+text = ""
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.35, 0.75, 0.95, 1)
+
+[node name="HintButton" type="Button" parent="UI/SidePanel/Content"]
+layout_mode = 2
+text = "Подсказка"
+
+[node name="UndoButton" type="Button" parent="UI/SidePanel/Content"]
+layout_mode = 2
+disabled = true
+text = "Отменить ход"
+
+[node name="HSeparator2" type="HSeparator" parent="UI/SidePanel/Content"]
+layout_mode = 2
+
+[node name="RestartButton" type="Button" parent="UI/SidePanel/Content"]
+layout_mode = 2
+text = "Новая партия"
+
+[node name="ResignButton" type="Button" parent="UI/SidePanel/Content"]
+layout_mode = 2
+text = "Сдаться"
+
+[node name="MenuButton" type="Button" parent="UI/SidePanel/Content"]
+layout_mode = 2
+text = "В меню"
+
+[node name="NudgePanel" type="PanelContainer" parent="UI"]
+theme = ExtResource("2")
+visible = false
+offset_left = 280.0
+offset_top = 24.0
+offset_right = 720.0
+offset_bottom = 76.0
+
+[node name="HBox" type="HBoxContainer" parent="UI/NudgePanel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Label" type="Label" parent="UI/NudgePanel/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Похоже, позиция непростая — показать подсказку?"
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(1, 0.65, 0.95, 1)
+
+[node name="HintNowButton" type="Button" parent="UI/NudgePanel/HBox"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "Подсказка"
+
+[node name="DismissButton" type="Button" parent="UI/NudgePanel/HBox"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+text = "✕"
+
+[node name="SpeechPanel" type="PanelContainer" parent="UI"]
+theme = ExtResource("2")
+visible = false
+offset_left = 100.0
+offset_top = 84.0
+offset_right = 684.0
+offset_bottom = 140.0
+
+[node name="SpeechLabel" type="Label" parent="UI/SpeechPanel"]
+layout_mode = 2
+text = ""
+autowrap_mode = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.95, 0.85, 0.55, 1)
+
+[node name="PromoPanel" type="Panel" parent="UI"]
+theme = ExtResource("2")
+visible = false
+offset_left = 280.0
+offset_top = 310.0
+offset_right = 720.0
+offset_bottom = 490.0
+theme_override_styles/panel = SubResource("Panel1")
+
+[node name="VBox" type="VBoxContainer" parent="UI/PromoPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="UI/PromoPanel/VBox"]
+layout_mode = 2
+text = "Выберите фигуру для превращения"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+
+[node name="HBox" type="HBoxContainer" parent="UI/PromoPanel/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="QueenButton" type="Button" parent="UI/PromoPanel/VBox/HBox"]
+custom_minimum_size = Vector2(70, 40)
+layout_mode = 2
+text = "Ферзь"
+
+[node name="RookButton" type="Button" parent="UI/PromoPanel/VBox/HBox"]
+custom_minimum_size = Vector2(70, 40)
+layout_mode = 2
+text = "Ладья"
+
+[node name="BishopButton" type="Button" parent="UI/PromoPanel/VBox/HBox"]
+custom_minimum_size = Vector2(70, 40)
+layout_mode = 2
+text = "Слон"
+
+[node name="KnightButton" type="Button" parent="UI/PromoPanel/VBox/HBox"]
+custom_minimum_size = Vector2(70, 40)
+layout_mode = 2
+text = "Конь"
+
+[node name="LeavePanel" type="Panel" parent="UI"]
+theme = ExtResource("2")
+visible = false
+offset_left = 280.0
+offset_top = 320.0
+offset_right = 720.0
+offset_bottom = 470.0
+theme_override_styles/panel = SubResource("Panel1")
+
+[node name="VBox" type="VBoxContainer" parent="UI/LeavePanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="UI/LeavePanel/VBox"]
+layout_mode = 2
+text = "Выйти из партии?"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+
+[node name="QuestionLabel" type="Label" parent="UI/LeavePanel/VBox"]
+layout_mode = 2
+text = "Партия ещё не закончена. Выйти без сохранения результата?"
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.82, 0.88, 0.95, 1)
+
+[node name="HBox" type="HBoxContainer" parent="UI/LeavePanel/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="LeaveButton" type="Button" parent="UI/LeavePanel/VBox/HBox"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+text = "Выйти"
+
+[node name="StayButton" type="Button" parent="UI/LeavePanel/VBox/HBox"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+text = "Остаться"
+
+[node name="GameOverPanel" type="Panel" parent="UI"]
+theme = ExtResource("2")
+visible = false
+offset_left = 240.0
+offset_top = 150.0
+offset_right = 760.0
+offset_bottom = 650.0
+theme_override_styles/panel = SubResource("Panel1")
+
+[node name="VBox" type="VBoxContainer" parent="UI/GameOverPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 16
+
+[node name="ResultLabel" type="Label" parent="UI/GameOverPanel/VBox"]
+layout_mode = 2
+text = "Игра окончена"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1, 0.65, 0.95, 1)
+autowrap_mode = 2
+
+[node name="ReviewLabel" type="Label" parent="UI/GameOverPanel/VBox"]
+visible = false
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.35, 0.75, 0.95, 1)
+
+[node name="ReplayButton" type="Button" parent="UI/GameOverPanel/VBox"]
+visible = false
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Переиграть с этого места"
+
+[node name="HBox" type="HBoxContainer" parent="UI/GameOverPanel/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="RestartButton2" type="Button" parent="UI/GameOverPanel/VBox/HBox"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+text = "Новая партия"
+
+[node name="MenuButton2" type="Button" parent="UI/GameOverPanel/VBox/HBox"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+text = "В меню"
+
+[node name="MapButton" type="Button" parent="UI/GameOverPanel/VBox/HBox"]
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+text = "На карту"
+
+[connection signal="pressed" from="UI/SidePanel/Content/RestartButton" to="." method="_on_restart_pressed"]
+[connection signal="pressed" from="UI/SidePanel/Content/ResignButton" to="." method="_on_resign_pressed"]
+[connection signal="pressed" from="UI/SidePanel/Content/MenuButton" to="." method="_on_menu_pressed"]
+[connection signal="pressed" from="UI/SidePanel/Content/HintButton" to="." method="_on_hint_pressed"]
+[connection signal="pressed" from="UI/SidePanel/Content/UndoButton" to="." method="_on_undo_pressed"]
+[connection signal="pressed" from="UI/LeavePanel/VBox/HBox/LeaveButton" to="." method="_on_leave_confirmed"]
+[connection signal="pressed" from="UI/LeavePanel/VBox/HBox/StayButton" to="." method="_on_leave_cancel"]
+[connection signal="pressed" from="UI/NudgePanel/HBox/HintNowButton" to="." method="_on_nudge_hint_pressed"]
+[connection signal="pressed" from="UI/NudgePanel/HBox/DismissButton" to="." method="_on_nudge_dismiss_pressed"]
+[connection signal="pressed" from="UI/PromoPanel/VBox/HBox/QueenButton" to="." method="_on_promo_queen_pressed"]
+[connection signal="pressed" from="UI/PromoPanel/VBox/HBox/RookButton" to="." method="_on_promo_rook_pressed"]
+[connection signal="pressed" from="UI/PromoPanel/VBox/HBox/BishopButton" to="." method="_on_promo_bishop_pressed"]
+[connection signal="pressed" from="UI/PromoPanel/VBox/HBox/KnightButton" to="." method="_on_promo_knight_pressed"]
+[connection signal="pressed" from="UI/GameOverPanel/VBox/HBox/RestartButton2" to="." method="_on_restart_pressed"]
+[connection signal="pressed" from="UI/GameOverPanel/VBox/HBox/MenuButton2" to="." method="_on_menu_pressed"]
+[connection signal="pressed" from="UI/GameOverPanel/VBox/HBox/MapButton" to="." method="_on_map_pressed"]
+[connection signal="pressed" from="UI/GameOverPanel/VBox/ReplayButton" to="." method="_on_replay_worst_pressed"]

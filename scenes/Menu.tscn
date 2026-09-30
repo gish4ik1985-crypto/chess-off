@@ -1,0 +1,375 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/Menu.gd" id="1"]
+[ext_resource type="Theme" path="res://theme/NeonTheme.tres" id="2"]
+
+[node name="Menu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.02, 0.05, 1)
+
+[node name="DecorBoard" type="Node2D" parent="."]
+position = Vector2(0, 40)
+
+[node name="ProfileBar" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 16.0
+offset_right = -24.0
+offset_bottom = 103.0
+grow_horizontal = 2
+
+[node name="HBox" type="HBoxContainer" parent="ProfileBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="UserLabel" type="Label" parent="ProfileBar/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "Игрок"
+
+[node name="RatingLabel" type="Label" parent="ProfileBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+autowrap_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "Рейтинг: 1500 (Клубный игрок)"
+
+[node name="AchievementsSummary" type="Label" parent="ProfileBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+autowrap_mode = 2
+theme_override_colors/font_color = Color(1, 0.65, 0.95, 1)
+text = "Достижения: 0/15"
+
+[node name="ProfileButton" type="Button" parent="ProfileBar/HBox"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "Профиль ▸"
+
+[node name="TrophyButton" type="Button" parent="ProfileBar/HBox"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+text = "🏆 Награды"
+
+[node name="JournalButton" type="Button" parent="ProfileBar/HBox"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "Дневник"
+
+[node name="SwitchUserButton" type="Button" parent="ProfileBar/HBox"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Сменить игрока"
+
+[node name="ContentCenter" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 115.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainPanel" type="PanelContainer" parent="ContentCenter"]
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="ContentCenter/MainPanel"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="ContentCenter/MainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+theme_override_colors/font_shadow_color = Color(1, 0.2, 0.85, 0.6)
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 0
+theme_override_constants/shadow_outline_size = 8
+theme_override_font_sizes/font_size = 40
+text = "ШАХМАТЫ"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="ContentCenter/MainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+theme_override_font_sizes/font_size = 13
+text = "2D шахматы против ИИ · 25 уровней сложности"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="ContentCenter/MainPanel/VBox"]
+layout_mode = 2
+
+[node name="MapButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "Карта шахматной страны"
+
+[node name="TourneyMenuButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Турниры и соперники  ▸"
+
+[node name="PlayMenuButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Играть  ▸"
+
+[node name="TrainMenuButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Обучение и задачи  ▸"
+
+[node name="SettingsButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Настройки"
+
+[node name="QuitButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Выход"
+
+[node name="PlayPanel" type="PanelContainer" parent="ContentCenter"]
+visible = false
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="ContentCenter/PlayPanel"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="ContentCenter/PlayPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 26
+text = "ИГРА"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="ContentCenter/PlayPanel/VBox"]
+layout_mode = 2
+
+[node name="ColorLabel" type="Label" parent="ContentCenter/PlayPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.88, 0.95, 1)
+text = "Играть за:"
+
+[node name="ColorRow" type="HBoxContainer" parent="ContentCenter/PlayPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="WhiteButton" type="Button" parent="ContentCenter/PlayPanel/VBox/ColorRow"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+button_pressed = true
+text = "Белые"
+
+[node name="BlackButton" type="Button" parent="ContentCenter/PlayPanel/VBox/ColorRow"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Чёрные"
+
+[node name="DifficultyLabel" type="Label" parent="ContentCenter/PlayPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.88, 0.95, 1)
+text = "Сложность:"
+
+[node name="DifficultyRow" type="HBoxContainer" parent="ContentCenter/PlayPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DifficultySlider" type="HSlider" parent="ContentCenter/PlayPanel/VBox/DifficultyRow"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 25.0
+value = 5.0
+
+[node name="DifficultyValueLabel" type="Label" parent="ContentCenter/PlayPanel/VBox/DifficultyRow"]
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+text = "5"
+
+[node name="DifficultyNameLabel" type="Label" parent="ContentCenter/PlayPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+text = "5 — Клубный игрок"
+horizontal_alignment = 1
+
+[node name="HSeparator2" type="HSeparator" parent="ContentCenter/PlayPanel/VBox"]
+layout_mode = 2
+
+[node name="PlayButton" type="Button" parent="ContentCenter/PlayPanel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "Быстрая игра"
+
+[node name="TeamButton" type="Button" parent="ContentCenter/PlayPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Папа и сын (команда против двух ИИ)"
+
+[node name="FriendlyButton" type="Button" parent="ContentCenter/PlayPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Товарищеская партия — выбрать соперника"
+
+[node name="BackButton" type="Button" parent="ContentCenter/PlayPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "◂ Назад"
+
+[node name="TourneyPanel" type="PanelContainer" parent="ContentCenter"]
+visible = false
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="ContentCenter/TourneyPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="ContentCenter/TourneyPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 26
+text = "ТУРНИРЫ И СОПЕРНИКИ"
+
+[node name="HSeparator" type="HSeparator" parent="ContentCenter/TourneyPanel/VBox"]
+layout_mode = 2
+
+[node name="TournamentsButton" type="Button" parent="ContentCenter/TourneyPanel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Турниры (рейтинг, турнир дня)"
+
+[node name="TournamentPrepButton" type="Button" parent="ContentCenter/TourneyPanel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Подготовка к турниру (3 уровня)"
+
+[node name="BotsButton" type="Button" parent="ContentCenter/TourneyPanel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "База игроков — карточки соперников и лиги"
+
+[node name="BackButton" type="Button" parent="ContentCenter/TourneyPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "◂ Назад"
+
+[node name="TrainPanel" type="PanelContainer" parent="ContentCenter"]
+visible = false
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="ContentCenter/TrainPanel"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="ContentCenter/TrainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
+theme_override_font_sizes/font_size = 26
+text = "ОБУЧЕНИЕ И ЗАДАЧИ"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="ContentCenter/TrainPanel/VBox"]
+layout_mode = 2
+
+[node name="RoadButton" type="Button" parent="ContentCenter/TrainPanel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "Дорога домой (твой личный путь)"
+
+[node name="RoadHint" type="Label" parent="ContentCenter/TrainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "Дорога растёт из твоих партий: новые остановки для твоих слабых мест"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="PuzzlesButton" type="Button" parent="ContentCenter/TrainPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Задачи и тактика (все режимы)"
+
+[node name="ProgressButton" type="Button" parent="ContentCenter/TrainPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "📖 Дневник игрока — статистика, ходы, разбор партий"
+
+[node name="AttentionButton" type="Button" parent="ContentCenter/TrainPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "👁 Внимательность — 50 уровней с подсказками угроз"
+
+[node name="HistoricGamesButton" type="Button" parent="ContentCenter/TrainPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "♟ Партии великих шахматистов — разбор хода за ходом"
+
+[node name="SchoolButton" type="Button" parent="ContentCenter/TrainPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "🎓 Школа юного шахматиста — учимся не спешить"
+
+[node name="BackButton" type="Button" parent="ContentCenter/TrainPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "◂ Назад"
+
+[connection signal="pressed" from="ProfileBar/HBox/ProfileButton" to="." method="_on_profile_pressed"]
+[connection signal="pressed" from="ProfileBar/HBox/TrophyButton" to="." method="_on_trophy_pressed"]
+[connection signal="pressed" from="ProfileBar/HBox/JournalButton" to="." method="_on_journal_pressed"]
+[connection signal="pressed" from="ProfileBar/HBox/SwitchUserButton" to="." method="_on_switch_user_pressed"]
+[connection signal="pressed" from="ContentCenter/MainPanel/VBox/MapButton" to="." method="_on_map_pressed"]
+[connection signal="pressed" from="ContentCenter/MainPanel/VBox/TourneyMenuButton" to="." method="_on_tourney_menu_pressed"]
+[connection signal="pressed" from="ContentCenter/TourneyPanel/VBox/TournamentsButton" to="." method="_on_tournaments_pressed"]
+[connection signal="pressed" from="ContentCenter/TourneyPanel/VBox/TournamentPrepButton" to="." method="_on_tournament_prep_pressed"]
+[connection signal="pressed" from="ContentCenter/TourneyPanel/VBox/BotsButton" to="." method="_on_bots_pressed"]
+[connection signal="pressed" from="ContentCenter/TourneyPanel/VBox/BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="ContentCenter/PlayPanel/VBox/FriendlyButton" to="." method="_on_bots_pressed"]
+[connection signal="pressed" from="ContentCenter/MainPanel/VBox/PlayMenuButton" to="." method="_on_play_menu_pressed"]
+[connection signal="pressed" from="ContentCenter/MainPanel/VBox/TrainMenuButton" to="." method="_on_train_menu_pressed"]
+[connection signal="pressed" from="ContentCenter/MainPanel/VBox/SettingsButton" to="." method="_on_settings_pressed"]
+[connection signal="pressed" from="ContentCenter/MainPanel/VBox/QuitButton" to="." method="_on_quit_pressed"]
+[connection signal="pressed" from="ContentCenter/PlayPanel/VBox/PlayButton" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="ContentCenter/PlayPanel/VBox/TeamButton" to="." method="_on_team_pressed"]
+[connection signal="pressed" from="ContentCenter/PlayPanel/VBox/BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="ContentCenter/TrainPanel/VBox/RoadButton" to="." method="_on_road_pressed"]
+[connection signal="pressed" from="ContentCenter/TrainPanel/VBox/PuzzlesButton" to="." method="_on_puzzles_pressed"]
+[connection signal="pressed" from="ContentCenter/TrainPanel/VBox/ProgressButton" to="." method="_on_progress_pressed"]
+[connection signal="pressed" from="ContentCenter/TrainPanel/VBox/AttentionButton" to="." method="_on_attention_pressed"]
+[connection signal="pressed" from="ContentCenter/TrainPanel/VBox/HistoricGamesButton" to="." method="_on_historic_games_pressed"]
+[connection signal="pressed" from="ContentCenter/TrainPanel/VBox/SchoolButton" to="." method="_on_school_pressed"]
+[connection signal="pressed" from="ContentCenter/TrainPanel/VBox/BackButton" to="." method="_on_back_pressed"]

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/tools/verify_puzzles.gd" id="1"]
+
+[node name="VerifyPuzzles" type="Node"]
+script = ExtResource("1")

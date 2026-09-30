@@ -1,0 +1,252 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/Settings.gd" id="1"]
+[ext_resource type="Theme" path="res://theme/NeonTheme.tres" id="2"]
+
+[node name="Settings" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.02, 0.05, 1)
+
+[node name="ContentCenter" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+horizontal_scroll_mode = 0
+
+[node name="InnerCenter" type="CenterContainer" parent="ContentCenter"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="CenterPanel" type="PanelContainer" parent="ContentCenter/InnerCenter"]
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="ContentCenter/InnerCenter/CenterPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(420, 0)
+theme_override_constants/separation = 14
+
+[node name="TitleLabel" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+theme_override_colors/font_shadow_color = Color(1, 0.2, 0.85, 0.6)
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 0
+theme_override_constants/shadow_outline_size = 8
+theme_override_font_sizes/font_size = 32
+text = "НАСТРОЙКИ"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+
+[node name="HandicapRow" type="HBoxContainer" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HandicapCheck" type="CheckButton" parent="ContentCenter/InnerCenter/CenterPanel/VBox/HandicapRow"]
+layout_mode = 2
+text = "Игра «с форой»"
+
+[node name="HandicapHint" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+text = "Когда включено, на карте шахматной страны у каждого персонажа появляется кнопка «С форой» — начать партию сразу с материальным перевесом."
+
+[node name="AdaptiveRow" type="HBoxContainer" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="AdaptiveCheck" type="CheckButton" parent="ContentCenter/InnerCenter/CenterPanel/VBox/AdaptiveRow"]
+layout_mode = 2
+text = "Живая сложность"
+
+[node name="AdaptiveHint" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+text = "Когда включено, сила каждого соперника подтягивается к вашему рейтингу: слабые растут вместе с вами, слишком сильные — становятся ближе по силе. Выключено — уровни ровно такие, как выбраны или заданы на карте."
+
+[node name="FiftyMoveRow" type="HBoxContainer" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="FiftyMoveCheck" type="CheckButton" parent="ContentCenter/InnerCenter/CenterPanel/VBox/FiftyMoveRow"]
+layout_mode = 2
+text = "Ничья по правилу 50 ходов"
+
+[node name="FiftyMoveHint" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+text = "Когда включено, партия без взятий и ходов пешками 50 ходов подряд автоматически заканчивается вничью — как в настоящих шахматах. По умолчанию выключено, чтобы можно было играть сколько угодно долго."
+
+[node name="HSeparator2" type="HSeparator" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+
+[node name="DisplayLabel" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+text = "Экран"
+
+[node name="FullscreenRow" type="HBoxContainer" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="FullscreenCheck" type="CheckButton" parent="ContentCenter/InnerCenter/CenterPanel/VBox/FullscreenRow"]
+layout_mode = 2
+text = "Полноэкранный режим"
+
+[node name="ResolutionRow" type="HBoxContainer" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ResolutionLabel" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox/ResolutionRow"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+text = "Разрешение окна"
+
+[node name="ResolutionOption" type="OptionButton" parent="ContentCenter/InnerCenter/CenterPanel/VBox/ResolutionRow"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DisplayHint" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+text = "Разрешение применяется только в оконном режиме (когда полноэкранный режим выключен)."
+
+[node name="HSeparatorDisplay" type="HSeparator" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+
+[node name="AudioLabel" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+text = "Звук"
+
+[node name="MusicRow" type="HBoxContainer" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MusicLabel" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox/MusicRow"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+text = "Музыка"
+
+[node name="MusicSlider" type="HSlider" parent="ContentCenter/InnerCenter/CenterPanel/VBox/MusicRow"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+
+[node name="SfxRow" type="HBoxContainer" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SfxLabel" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox/SfxRow"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+text = "Звуки фигур"
+
+[node name="SfxSlider" type="HSlider" parent="ContentCenter/InnerCenter/CenterPanel/VBox/SfxRow"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+
+[node name="MoveSoundRow" type="HBoxContainer" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MoveSoundLabel" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox/MoveSoundRow"]
+custom_minimum_size = Vector2(130, 0)
+layout_mode = 2
+text = "Звук хода"
+
+[node name="MoveSoundOption" type="OptionButton" parent="ContentCenter/InnerCenter/CenterPanel/VBox/MoveSoundRow"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MoveSoundHint" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+text = "При выборе варианта звук проигрывается для примера."
+
+[node name="HSeparatorAudio" type="HSeparator" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+
+[node name="BackupLabel" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+text = "Профиль"
+
+[node name="ExportButton" type="Button" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+text = "Сохранить профиль в файл"
+
+[node name="ImportButton" type="Button" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+text = "Загрузить профиль из файла"
+
+[node name="ReportButton" type="Button" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+text = "Отчёт по партиям (HTML)"
+
+[node name="BackupHint" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+text = "Прогресс хранится только на этом компьютере. Сохраните файл профиля, чтобы не потерять рейтинг и достижения при переустановке."
+
+[node name="BackupStatus" type="Label" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.4, 0.85, 0.35, 1)
+text = ""
+
+[node name="HSeparator3" type="HSeparator" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="ContentCenter/InnerCenter/CenterPanel/VBox"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+text = "Назад в меню"
+
+[connection signal="pressed" from="ContentCenter/InnerCenter/CenterPanel/VBox/BackButton" to="." method="_on_back_pressed"]
