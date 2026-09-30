@@ -9,13 +9,15 @@ extends Node
 const USERS_DIR := "user://users/"
 const SESSION_PATH := "user://session.cfg"
 
-# Approximate opponent strength for each AI difficulty level (1-10), used as
+# ИЗМЕРЕННАЯ сила уровней ИИ (самоигра, scripts/tools/calibrate_levels.gd), пересчитана в шкалу,
+# где сильнейший уровень ≈ 1500–1560 (допущение: разницы в самоигре завышены, коэффициент 0,6).
+# Раньше здесь стояли угаданные 400–4000. Approximate opponent strength for each AI level, used as
 # the "opponent rating" fed into the Glicko-2 formula. Loosely mirrors real
 # rating bands from beginner to super-GM (Magnus-level) play.
 const LEVEL_RATING := [
-	400, 700, 950, 1150, 1350, 1550, 1750, 1980, 2250, 2600,
-	2700, 2780, 2850, 2920, 3000, 3080, 3160, 3250, 3350, 3500,
-	3600, 3700, 3800, 3900, 4000,
+	300, 390, 450, 520, 610, 650, 780, 870, 930, 1000,
+	1040, 1150, 1170, 1300, 1380, 1400, 1420, 1440, 1480, 1510,
+	1520, 1530, 1540, 1550, 1560,
 ]
 const MAX_GAME_SWING := 100.0
 const FARM_MARGIN := 200.0
@@ -104,9 +106,9 @@ const ACHIEVEMENTS := [
 	{"id": "streak_3", "name": "Серия побед", "desc": "3 победы подряд"},
 	{"id": "streak_5", "name": "Не остановить", "desc": "5 побед подряд"},
 	{"id": "beat_level_10", "name": "Повержен Магнус", "desc": "Обыграйте ИИ 10-го уровня сложности"},
-	{"id": "rating_1600", "name": "Турнирный рейтинг 1600", "desc": "Достигните турнирного рейтинга 1600"},
-	{"id": "rating_2000", "name": "Турнирный рейтинг 2000", "desc": "Достигните турнирного рейтинга 2000"},
-	{"id": "rating_2400", "name": "Турнирный рейтинг 2400", "desc": "Достигните турнирного рейтинга 2400"},
+	{"id": "rating_1600", "name": "Турнирный рейтинг 1200", "desc": "Достигните турнирного рейтинга 1200"},
+	{"id": "rating_2000", "name": "Турнирный рейтинг 1500", "desc": "Достигните турнирного рейтинга 1500"},
+	{"id": "rating_2400", "name": "Турнирный рейтинг 1700", "desc": "Достигните турнирного рейтинга 1700"},
 	{"id": "puzzle_first", "name": "Первая задача", "desc": "Решите первую задачу на мат"},
 	{"id": "puzzle_10", "name": "Тактик", "desc": "Решите 10 задач на мат"},
 	{"id": "puzzle_25", "name": "Комбинатор", "desc": "Решите 25 задач на мат"},
@@ -140,7 +142,7 @@ const ACHIEVEMENTS := [
 	{"id": "tourney_win", "name": "Кубок на полке", "desc": "Выиграйте турнир (займите 1-е место)"},
 	{"id": "tourney_win_5", "name": "Коллекционер кубков", "desc": "Выиграйте 5 турниров"},
 	{"id": "tourney_daily", "name": "Герой дня", "desc": "Выиграйте «Турнир дня»"},
-	{"id": "tourney_rating_1800", "name": "Турнирный боец", "desc": "Достигните турнирного рейтинга 1800"},
+	{"id": "tourney_rating_1800", "name": "Турнирный боец", "desc": "Достигните турнирного рейтинга 1400"},
 ]
 
 func _ready() -> void:
@@ -186,10 +188,12 @@ func step_wins_left() -> int:
 	return maxi(STEP_WINS_REQUIRED - int(clean_wins.get(str(nxt), 0)), 0)
 
 static func title_for_rating(r: float) -> String:
-	if r < 800: return "Новичок"
-	if r < 1200: return "Любитель"
-	if r < 1500: return "Клубный игрок"
-	if r < 1800: return "Кандидат в мастера"
+	if r < 500: return "Новичок"
+	if r < 800: return "Любитель"
+	if r < 1100: return "Клубный игрок"
+	if r < 1400: return "Сильный любитель"
+	if r < 1800: return "Турнирный боец"
+	if r < 1800: return "Турнирный боец"
 	if r < 2100: return "Мастер"
 	if r < 2400: return "Международный мастер"
 	if r < 2600: return "Гроссмейстер"
@@ -969,7 +973,7 @@ func record_tournament_game(ai_level: int, score: float) -> void:
 	tournament_rating = result.rating
 	tournament_rd = result.rd
 	tournament_volatility = result.volatility
-	if tournament_rating >= 1800:
+	if tournament_rating >= 1400:
 		_unlock("tourney_rating_1800")
 	save_profile()
 
@@ -1249,9 +1253,9 @@ func _check_achievements() -> void:
 	if best_win_streak >= 3: _unlock("streak_3")
 	if best_win_streak >= 5: _unlock("streak_5")
 	if best_win_level >= 10: _unlock("beat_level_10")
-	if tournament_rating >= 1600: _unlock("rating_1600")
-	if tournament_rating >= 2000: _unlock("rating_2000")
-	if tournament_rating >= 2400: _unlock("rating_2400")
+	if tournament_rating >= 1200: _unlock("rating_1600")
+	if tournament_rating >= 1500: _unlock("rating_2000")
+	if tournament_rating >= 1700: _unlock("rating_2400")
 	var solved_count = solved_puzzles.size()
 	if solved_count >= 1: _unlock("puzzle_first")
 	if solved_count >= 10: _unlock("puzzle_10")

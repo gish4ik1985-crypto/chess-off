@@ -25,8 +25,8 @@ func _ready() -> void:
 	check("победа над слабым даёт меньше, чем над равным", weak_win.rating >= 1200.0 and weak_win.rating - 1200.0 < eq_win.rating - 1200.0)
 	var weak_loss: Dictionary = Glicko2.update(1200.0, 100.0, 0.06, 800.0, 100.0, 0.0)
 	check("поражение от слабого бьёт по рейтингу сильнее", 1200.0 - weak_loss.rating > 1200.0 - eq_loss.rating)
-	var new_player: Dictionary = Glicko2.update(Glicko2.DEFAULT_RATING, Glicko2.DEFAULT_RD, Glicko2.DEFAULT_VOLATILITY, 1000.0, 100.0, 1.0)
-	check("у новичка (RD 350) рейтинг двигается сильнее, чем у опытного", new_player.rating - 1000.0 > eq_win.rating - 1200.0, "%.0f" % (new_player.rating - 1000.0))
+	var new_player: Dictionary = Glicko2.update(Glicko2.DEFAULT_RATING, Glicko2.DEFAULT_RD, Glicko2.DEFAULT_VOLATILITY, Glicko2.DEFAULT_RATING, 100.0, 1.0)
+	check("у новичка (RD 350) рейтинг двигается сильнее, чем у опытного", new_player.rating - Glicko2.DEFAULT_RATING > eq_win.rating - 1200.0, "%.0f" % (new_player.rating - Glicko2.DEFAULT_RATING))
 	var r := 1000.0
 	var rd := 350.0
 	var vol := 0.06

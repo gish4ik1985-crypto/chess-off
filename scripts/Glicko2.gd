@@ -3,7 +3,7 @@ class_name Glicko2
 
 # Standard Glicko-2 rating algorithm (Mark Glickman), the same system
 # lichess.org uses for its ratings (lichess itself starts new players at
-# 1500; this game starts new players at 1000 instead, since our AI ladder
+# 1500; this game starts new players at 600 instead, since our AI ladder
 # and rating_title() bands are calibrated around a lower "brand new player"
 # floor). RD/volatility defaults still match lichess.
 # Reference: https://www.glicko.net/glicko/glicko2.pdf
@@ -12,7 +12,7 @@ const SCALE := 173.7178
 const TAU := 0.5
 const EPSILON := 0.000001
 
-const DEFAULT_RATING := 1000.0
+const DEFAULT_RATING := 600.0
 const DEFAULT_RD := 350.0
 const DEFAULT_VOLATILITY := 0.06
 
