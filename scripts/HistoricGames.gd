@@ -8,24 +8,12 @@ extends Control
 # развитие фигуры и т.д.) — так объяснён буквально каждый ход.
 
 const GamesData := preload("res://scripts/HistoricGamesData.gd")
+const Comments := preload("res://scripts/HistoricComments.gd")
 
 const SQ := 62.0
 const LIGHT_COL := Color(0.32, 0.38, 0.5)
 const DARK_COL := Color(0.14, 0.17, 0.26)
 const AUTO_STEP := 2.2
-const PIECE_RU := {"P": "пешка", "N": "конь", "B": "слон", "R": "ладья", "Q": "ферзь", "K": "король"}
-const PIECE_RU_ACC := {"P": "пешку", "N": "коня", "B": "слона", "R": "ладью", "Q": "ферзя", "K": "короля"}
-const PIECE_RU_INST := {"P": "пешкой", "N": "конём", "B": "слоном", "R": "ладьёй", "Q": "ферзём", "K": "королём"}
-const PIECE_VALUE := {"P": 1, "N": 3, "B": 3, "R": 5, "Q": 9, "K": 0}
-# начальные клетки фигур (для «это первый выход фигуры в игру»)
-const START_SQUARES := {
-	"w": {"N": [Vector2i(1, 0), Vector2i(6, 0)], "B": [Vector2i(2, 0), Vector2i(5, 0)], "R": [Vector2i(0, 0), Vector2i(7, 0)], "Q": [Vector2i(3, 0)], "K": [Vector2i(4, 0)]},
-	"b": {"N": [Vector2i(1, 7), Vector2i(6, 7)], "B": [Vector2i(2, 7), Vector2i(5, 7)], "R": [Vector2i(0, 7), Vector2i(7, 7)], "Q": [Vector2i(3, 7)], "K": [Vector2i(4, 7)]},
-}
-const CENTER4 := [Vector2i(3, 3), Vector2i(4, 3), Vector2i(3, 4), Vector2i(4, 4)] # d4 e4 d5 e5
-# конь/слон/ферзь/король — мужского рода, ладья/пешка — женского: без этого
-# согласования получалось "слон стояла" — коряво и неграмотно
-const PIECE_GENDER := {"P": "f", "N": "m", "B": "m", "R": "f", "Q": "m", "K": "m"}
 
 @onready var list_scroll: ScrollContainer = $Main/ListScroll
 @onready var list_vbox: VBoxContainer = $Main/ListScroll/ListVBox
@@ -175,12 +163,28 @@ func _auto_comment(before: ChessEngine, after: ChessEngine, mv: Dictionary, san:
 	var mover = "Белые" if (ply % 2 == 1) else "Чёрные"
 	var prefix = "%d. %s (%s): " % [num, mover, san]
 	var body := ""
-	if mv.get("is_castle", "") == "K":
-		body = "короткая рокировка: король прячется за пешками в угол, а ладья сразу выходит на центральную линию — двойная польза одним ходом."
-	elif mv.get("is_castle", "") == "Q":
-		body = "длинная рокировка: король уходит на ферзевый фланг, ладья d1/d8 занимает центральную линию — но король тут обычно менее защищён, чем при короткой."
+	var mover_color: String = "w" if ply % 2 == 1 else "b"
+	var opp_color: String = "b" if mover_color == "w" else "w"
+	var v: int = (ply + mv.to.x + mv.to.y) % 3
+	if mv.get("is_castle", "") != "":
+		var short: bool = mv.get("is_castle", "") == "K"
+		var late: bool = num > 12
+		if short:
+			body = [
+				"короткая рокировка: король прячется за пешками в угол, а ладья сразу выходит на центральную линию — двойная польза одним ходом.",
+				"рокировка в короткую сторону — король в безопасности, ладья включена в игру; хороший момент сделать её, пока центр ещё не вскрыт.",
+				"король уходит в короткую рокировку: за его спиной пешки f, g, h, а ладья становится ближе к центру.",
+			][v]
+		else:
+			body = [
+				"длинная рокировка: король уходит на ферзевый фланг, ладья занимает центральную линию d — но король тут обычно менее защищён, чем при короткой.",
+				"рокировка в длинную сторону: обе ладьи скоро смогут работать в центре, а король уходит подальше от открытой игры — хотя и оказывается ближе к ферзевому флангу.",
+				"длинная рокировка — ладья сразу встаёт на линию d, а король становится в стороне; такой выбор часто означает планы штурма на противоположном фланге.",
+			][v]
+		if late:
+			body += " Рокировка на %d-м ходу — король долго оставался в центре." % num
 	else:
-		body = _explain_regular_move(before, after, mv, ply)
+		body = Comments.explain(before, after, mv, ply)
 	var status = after.game_status()
 	if status == "checkmate":
 		body += " Мат — партия окончена!"
@@ -189,167 +193,21 @@ func _auto_comment(before: ChessEngine, after: ChessEngine, mv: Dictionary, san:
 	elif after.is_in_check(after.side_to_move):
 		body += " Шах королю!"
 	if ply == 1:
-		body += "\nДебют: главное — развить фигуры и увести короля из центра, не тратя ходы впустую."
+		body += "
+Дебют: главное — развить фигуры и увести короля из центра, не тратя ходы впустую."
+	elif ply == 2 and str(current_game.get("opening", "")) != "":
+		body += "
+Дебют партии: %s." % str(current_game.get("opening", ""))
 	elif ply == 21:
-		body += "\nМиттельшпиль: фигуры развиты, начинается борьба планов и комбинаций."
-	elif ply == 51:
-		body += "\nЭндшпиль: на доске мало фигур, король становится активным бойцом."
+		body += "
+Миттельшпиль: фигуры развиты, начинается борьба планов и комбинаций."
+	elif Comments.is_endgame(after) and not Comments.is_endgame(before):
+		body += "
+Эндшпиль: на доске осталось мало фигур, король становится активным бойцом. " + Comments.material_line(after)
+	elif ply % 12 == 0 and status == "playing":
+		body += "
+" + Comments.material_line(after)
 	return prefix + body
-
-func _g_verb(ptype: String, m_form: String, f_form: String) -> String:
-	return m_form if PIECE_GENDER.get(ptype, "m") == "m" else f_form
-
-func _g_pron_nom(ptype: String) -> String:
-	return _g_verb(ptype, "он", "она")
-
-func _g_pron_acc(ptype: String) -> String:
-	return _g_verb(ptype, "его", "её")
-
-# Собирает список настоящих причин хода (под боем/угроза/развитие/центр/…) и
-# компонует из них 1-2 связных предложения. Варианты фраз чередуются по ходу
-# партии, чтобы одинаковые по смыслу ходы не звучали слово-в-слово одинаково.
-func _explain_regular_move(before: ChessEngine, after: ChessEngine, mv: Dictionary, ply: int) -> String:
-	var p = before.board[mv.from.y][mv.from.x]
-	var ptype = p.type if p != null else "P"
-	var color = p.color if p != null else "w"
-	var opp = "b" if color == "w" else "w"
-	var piece = PIECE_RU.get(ptype, "фигура")
-	var piece_inst = PIECE_RU_INST.get(ptype, "фигурой")
-	var to_name = ChessEngine.square_name(mv.to.x, mv.to.y)
-	var v = ply % 3 # для чередования формулировок одного и того же смысла
-
-	# --- превращение пешки: самое важное, говорим сразу и выходим ---
-	if str(mv.get("promo", "")) != "":
-		return "пешка прошла всю доску и превращается в %s — с доски пропадает слабая пешка, появляется новая грозная фигура." % PIECE_RU_ACC.get(str(mv.promo), "ферзя")
-
-	var victim = before.board[mv.to.y][mv.to.x]
-	var is_capture = victim != null or mv.get("is_ep", false)
-	var was_attacked = before.is_square_attacked(mv.from.x, mv.from.y, opp)
-	var recapture = before.last_move != null and before.last_move.to == mv.to and before.last_move.get("captured", null) != null
-
-	# --- взятие ---
-	if is_capture:
-		var vt = victim.type if victim != null else "P"
-		var vname = PIECE_RU_ACC.get(vt, "фигуру")
-		if recapture:
-			return "%s отыгрывает %s, взятую соперником на прошлом ходу, — материальное равновесие восстановлено." % [piece.capitalize(), vname]
-		if PIECE_VALUE.get(vt, 1) > PIECE_VALUE.get(ptype, 1):
-			return "%s забирает %s — выгодный размен: отдаём фигуру подешевле, берём подороже." % [piece.capitalize(), vname]
-		if was_attacked:
-			return "%s берёт %s: заодно уходит из-под собственного удара, под которым %s %s до этого." % [piece.capitalize(), vname, piece, _g_verb(ptype, "стоял", "стояла")]
-		return "%s забирает %s соперника." % [piece.capitalize(), vname]
-
-	# --- фигура уходила из-под боя ---
-	if was_attacked and ptype != "P":
-		if [0, 1].has(v):
-			return "%s %s под ударом — этим ходом %s уходит в безопасное место." % [piece.capitalize(), _g_verb(ptype, "стоял", "стояла"), _g_pron_nom(ptype)]
-		return "спасаем %s: соперник грозил %s забрать, а теперь %s вне опасности." % [PIECE_RU_ACC.get(ptype, "фигуру"), _g_pron_acc(ptype), _g_pron_nom(ptype)]
-
-	# --- новая угроза сопернику ---
-	var threat = _best_new_threat(before, after, color)
-	if not threat.is_empty():
-		var t_nom = PIECE_RU.get(threat.type, "фигура")
-		var t_acc = PIECE_RU_ACC.get(threat.type, "фигуру")
-		if threat.defended:
-			return "теперь %s держит под ударом %s соперника на %s — но %s %s, так что нужно ещё посчитать, кто выигрывает при размене." % [piece_inst, t_acc, threat.sq_name, _g_pron_nom(threat.type), _g_verb(threat.type, "защищён", "защищена")]
-		if [0, 2].has(v):
-			return "%s создаёт угрозу: %s соперника на %s остаётся без защиты под ударом!" % [piece.capitalize(), t_nom, threat.sq_name]
-		return "теперь %s соперника на %s стоит без защиты под ударом — приходится срочно спасать." % [t_nom, threat.sq_name]
-
-	# --- первый выход фигуры в игру ---
-	var start_sqs: Array = START_SQUARES.get(color, {}).get(ptype, [])
-	if start_sqs.has(mv.from):
-		match ptype:
-			"N":
-				return "конь впервые входит в игру, беря под контроль клетки в центре доски."
-			"B":
-				if [1, 2].has(v):
-					return "слон впервые выходит из-за пешек — теперь у него открыта дорога на %s." % to_name
-				return "слон развивается по диагонали, целясь на позицию соперника."
-			"Q":
-				return "ферзь выходит в игру — но обычно с этим не спешат: слишком рано выведенного ферзя легко атаковать с темпом."
-			"R":
-				return "ладья впервые вступает в игру."
-			_:
-				return "%s развивается, вступая в игру." % piece
-
-	# --- пешки: центр, фланговый штурм, просто продвижение ---
-	if ptype == "P":
-		if CENTER4.has(mv.to):
-			return "пешка занимает центральное поле %s — тот, кто владеет центром, легче переводит фигуры на любой фланг." % to_name
-		if mv.to.x <= 1 or mv.to.x >= 6:
-			return "фланговая пешка идёт вперёд, готовя атаку или вскрытие линии на краю доски."
-		return "пешка продвигается, отвоёвывая пространство и открывая дорогу другим фигурам."
-
-	# --- ладья на открытую/полуоткрытую линию ---
-	if ptype == "R":
-		var kind = _file_openness(after, mv.to.x, color)
-		if kind == "open":
-			return "ладья становится на полностью открытую линию %s — ни одна пешка её здесь не задерживает." % String.chr(97 + mv.to.x)
-		elif kind == "semi":
-			return "ладья занимает полуоткрытую линию %s: своих пешек тут больше нет, значит, дорога свободнее." % String.chr(97 + mv.to.x)
-
-	# --- слон на длинную диагональ / фианкетто ---
-	if ptype == "B" and (mv.to == Vector2i(6, 1) or mv.to == Vector2i(1, 1) or mv.to == Vector2i(6, 6) or mv.to == Vector2i(1, 6)):
-		return "слон фианкеттируется — встаёт рядом с королём и держит под прицелом длинную диагональ через всю доску."
-
-	# --- король гуляет вне рокировки — тревожный сигнал ---
-	if ptype == "K":
-		return "король делает шаг сам — обычно рискованно раньше времени убирать его без рокировки."
-
-	# --- запасной вариант, но не пустой шаблон, а с конкретикой по фигуре ---
-	match ptype:
-		"N":
-			return "конь перестраивается на %s, нацеливаясь на новые поля для прыжка." % to_name
-		"B":
-			return "слон меняет диагональ, перенацеливаясь на %s." % to_name
-		"Q":
-			return "ферзь перемещается на %s, усиливая давление в этой части доски." % to_name
-		"R":
-			return "ладья переходит на %s, готовясь подключиться к игре по этой линии." % to_name
-		_:
-			return "%s переходит на %s." % [piece, to_name]
-
-# Ищет самую ценную вражескую фигуру, которая оказалась под боем именно
-# после этого хода (а не была под боем и раньше — иначе это не "новая"
-# угроза). Возвращает {} если такой фигуры нет.
-func _best_new_threat(before: ChessEngine, after: ChessEngine, mover_color: String) -> Dictionary:
-	var opp = "b" if mover_color == "w" else "w"
-	var best := {}
-	var best_value := -1
-	for r in range(8):
-		for f in range(8):
-			var pc = after.board[r][f]
-			if pc == null or pc.color != opp or pc.type == "K":
-				continue
-			if not after.is_square_attacked(f, r, mover_color):
-				continue
-			# было ли это поле уже под боем ДО хода (тогда угроза не новая)
-			if before.is_square_attacked(f, r, mover_color):
-				continue
-			var val = PIECE_VALUE.get(pc.type, 1)
-			if val > best_value:
-				best_value = val
-				best = {
-					"sq": Vector2i(f, r), "sq_name": ChessEngine.square_name(f, r),
-					"type": pc.type, "defended": after.is_square_attacked(f, r, opp),
-				}
-	return best
-
-# "open" — на линии вообще нет пешек, "semi" — нет своих пешек (но есть
-# чужие), "closed" — есть свои пешки.
-func _file_openness(eng: ChessEngine, file: int, color: String) -> String:
-	var own_pawn := false
-	var any_pawn := false
-	for r in range(8):
-		var pc = eng.board[r][file]
-		if pc != null and pc.type == "P":
-			any_pawn = true
-			if pc.color == color:
-				own_pawn = true
-	if own_pawn:
-		return "closed"
-	return "semi" if any_pawn else "open"
 
 # Список ходов партии в SAN: из строки "pgn" (движущийся текст с номерами
 # ходов) либо из массива "moves" (строки или словари {san,c}).

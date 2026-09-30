@@ -76,6 +76,7 @@ func clone() -> ChessEngine:
 	c.halfmove_clock = halfmove_clock
 	c.fullmove_number = fullmove_number
 	c.position_history = position_history.duplicate()
+	c.last_move = last_move # нужен, например, чтобы отличить ответное взятие
 	return c
 
 func in_bounds(f: int, r: int) -> bool:
