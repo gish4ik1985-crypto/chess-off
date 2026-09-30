@@ -490,6 +490,26 @@ func dynamic_road_stages() -> Array:
 			stages.append(_make_focus_stage("focus_middlegame", err_mid, n))
 		if err_end >= 4:
 			stages.append(_make_focus_stage("focus_endgame", err_end, n))
+	# слабая тема задач: решено не меньше 5, но меньше половины — без подсказок и ошибок
+	var SP = preload("res://scripts/SkillProfile.gd")
+	var weak_theme := ""
+	var weak_ratio := 0.5
+	for t in SP.THEME_NAMES:
+		var solved: int = theme_progress(t)
+		if solved >= 5:
+			var ratio: float = float(theme_clean_count(t)) / float(solved)
+			if ratio < weak_ratio:
+				weak_ratio = ratio
+				weak_theme = t
+	if weak_theme != "":
+		stages.append({
+			"kind": "focus_tactics",
+			"theme": weak_theme,
+			"name": "Тренажёр: %s" % SP.THEME_NAMES[weak_theme],
+			"blurb": "Тема «%s» пока даётся хуже всего: чисто, без подсказок и ошибок, решено %d из %d. Реши несколько задач этой темы — остановка исчезнет, когда доля чистых решений превысит половину." % [SP.THEME_NAMES[weak_theme], theme_clean_count(weak_theme), theme_progress(weak_theme)],
+			"accent": Color(0.75, 0.55, 0.95),
+			"icon": "T",
+		})
 	# drop stale "done" marks for stages that are no longer on the road
 	var active := {}
 	for st in stages:

@@ -91,6 +91,7 @@ func _ready() -> void:
 			"blurb": d.blurb,
 			"pos": DYNAMIC_POSITIONS[i],
 			"accent": d.accent,
+			"theme": d.get("theme", ""),
 		})
 	map_draw.position.x = (get_viewport_rect().size.x - 1020.0) / 2.0
 	map_draw.draw.connect(_on_draw)
@@ -156,6 +157,10 @@ func _on_play_pressed() -> void:
 	var st = stages[selected]
 	if st.kind == "blunders":
 		Global.puzzle_theme = "blunders"
+		get_tree().change_scene_to_file("res://scenes/Puzzle.tscn")
+		return
+	if st.kind == "focus_tactics":
+		Global.puzzle_theme = str(st.theme)
 		get_tree().change_scene_to_file("res://scenes/Puzzle.tscn")
 		return
 	Global.road_mode = st.kind

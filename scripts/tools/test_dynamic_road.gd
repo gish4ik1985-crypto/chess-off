@@ -40,5 +40,16 @@ func _init() -> void:
 	assert("focus_endgame" in kinds, "legacy worst_move_no must map to endgame")
 	print("legacy OK: ", kinds)
 
+	# слабая тема задач даёт остановку-тренажёр, чистая тема — нет
+	profile.game_log.clear()
+	profile.fork_puzzles_solved = 8
+	profile.theme_clean["fork"] = 1
+	st = profile.dynamic_road_stages()
+	kinds = st.map(func(s): return s.kind)
+	assert("focus_tactics" in kinds and st[0].theme == "fork", "weak theme must add a tactics stage")
+	profile.theme_clean["fork"] = 6
+	assert(profile.dynamic_road_stages().is_empty(), "clean theme must not add a stage")
+	print("tactics OK")
+
 	print("ALL DYNAMIC ROAD TESTS PASSED")
 	quit(0)
