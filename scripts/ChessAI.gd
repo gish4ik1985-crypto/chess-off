@@ -72,6 +72,28 @@ const QUEEN_PST := [
 	-10,0,5,0,0,0,0,-10,
 	-20,-10,-10,-5,-5,-10,-10,-20
 ]
+# Эндшпиль: король — боевая фигура, ему место в центре (а не в углу, как в миттельшпиле)
+const KING_EG_PST := [
+	-50,-40,-30,-20,-20,-30,-40,-50,
+	-30,-20,-10,0,0,-10,-20,-30,
+	-30,-10,20,30,30,20,-10,-30,
+	-30,-10,30,40,40,30,-10,-30,
+	-30,-10,30,40,40,30,-10,-30,
+	-30,-10,20,30,30,20,-10,-30,
+	-30,-30,0,0,0,0,-30,-30,
+	-50,-30,-30,-30,-30,-30,-30,-50
+]
+# Эндшпиль: чем дальше продвинута пешка, тем она ценнее (проходные решают партии)
+const PAWN_EG_PST := [
+	0,0,0,0,0,0,0,0,
+	90,90,90,90,90,90,90,90,
+	60,60,60,60,60,60,60,60,
+	40,40,40,40,40,40,40,40,
+	25,25,25,25,25,25,25,25,
+	10,10,10,10,10,10,10,10,
+	0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0
+]
 const KING_PST := [
 	-30,-40,-40,-50,-50,-40,-40,-30,
 	-30,-40,-40,-50,-50,-40,-40,-30,
@@ -133,15 +155,33 @@ func _eval_noise() -> float:
 		return 2.0
 	return maxf(float(11 - level) * 8.0, 0.0)
 
+# Оценка позиции в сантипешках (плюс — у белых): та же, что использует поиск.
+# Один экземпляр ядра на ИИ — чтобы не пересоздавать таблицы при оценке каждого хода партии.
+var _eval_fs = null
 func evaluate_position(engine: ChessEngine) -> float:
-	return _evaluate(engine)
+	if _eval_fs == null:
+		_eval_fs = FastSearch.new(tables(), 0)
+	_eval_fs.load_engine(engine, false)
+	return float(_eval_fs.eval_white())
 
 # Быстрое ядро поиска (см. FastSearch.gd) для позиции engine. Делает ход
 # корневых вариантов из engine.legal_moves() — ChessEngine остаётся эталоном правил.
-func _fast(engine: ChessEngine):
-	var fs = FastSearch.new([PAWN_PST, KNIGHT_PST, BISHOP_PST, ROOK_PST, QUEEN_PST, KING_PST], _quiescence_depth())
-	fs.load_engine(engine)
+static func tables() -> Array:
+	return [PAWN_PST, KNIGHT_PST, BISHOP_PST, ROOK_PST, QUEEN_PST, KING_PST, KING_EG_PST, PAWN_EG_PST]
+
+# Быстрое ядро поиска (см. FastSearch.gd) для позиции engine. Корневые ходы берутся
+# из ChessEngine (он остаётся эталоном правил).
+func _fast(engine: ChessEngine, with_history: bool = true):
+	var fs = FastSearch.new(tables(), _quiescence_depth())
+	fs.load_engine(engine, with_history)
 	return fs
+
+# Все легальные ходы, включая превращение в ладью/слона/коня — ИИ они нужны
+# (иногда конь с превращением даёт шах-вилку); игроку и задачам лишние ходы не отдаём.
+func _legal_all(engine: ChessEngine) -> Array:
+	var e := engine.clone()
+	e.underpromotions = true
+	return e.legal_moves(e.side_to_move)
 
 func _encode_root(moves: Array, engine: ChessEngine) -> PackedInt32Array:
 	var root := PackedInt32Array()
@@ -152,7 +192,7 @@ func _encode_root(moves: Array, engine: ChessEngine) -> PackedInt32Array:
 # Best move with no randomness/blunders — used for hints and coaching, not
 # as an opponent (so hints are always genuinely good, not level-limited).
 func best_move_clean(engine: ChessEngine, depth: int = 3):
-	var moves = engine.legal_moves(engine.side_to_move)
+	var moves = _legal_all(engine)
 	if moves.is_empty():
 		return null
 	if moves.size() == 1:
@@ -166,7 +206,7 @@ func best_move_clean(engine: ChessEngine, depth: int = 3):
 # the remaining moves run with alpha seeded at that score, so anything worse
 # than the played move is pruned immediately.
 func move_loss(engine: ChessEngine, move: Dictionary, depth: int = 3) -> float:
-	var moves = engine.legal_moves(engine.side_to_move)
+	var moves = _legal_all(engine)
 	var root := _encode_root(moves, engine)
 	var played := -1
 	for i in range(moves.size()):
@@ -189,29 +229,6 @@ func choose_move(engine: ChessEngine):
 	if moves.size() == 1:
 		return moves[0]
 
+	moves = _legal_all(engine) # для поиска — с превращением в любую фигуру
 	var fs = _fast(engine)
 	return moves[fs.choose(_encode_root(moves, engine), _search_depth(), _eval_noise(), rng, move_time_ms)]
-
-func _evaluate(engine: ChessEngine) -> float:
-	var score := 0.0
-	for r in range(8):
-		for f in range(8):
-			var p = engine.board[r][f]
-			if p == null:
-				continue
-			var val = PIECE_VALUE.get(p.type, 0)
-			var pst_index = ((7 - r) * 8 + f) if p.color == ChessEngine.WHITE else (r * 8 + f)
-			var pst_val = 0
-			match p.type:
-				"P": pst_val = PAWN_PST[pst_index]
-				"N": pst_val = KNIGHT_PST[pst_index]
-				"B": pst_val = BISHOP_PST[pst_index]
-				"R": pst_val = ROOK_PST[pst_index]
-				"Q": pst_val = QUEEN_PST[pst_index]
-				"K": pst_val = KING_PST[pst_index]
-			var total = val + pst_val
-			if p.color == ChessEngine.WHITE:
-				score += total
-			else:
-				score -= total
-	return score

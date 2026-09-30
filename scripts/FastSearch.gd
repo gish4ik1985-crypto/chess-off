@@ -20,6 +20,11 @@ const INF := 1000000
 const MATE := 100000
 const VAL := [0, 100, 320, 330, 500, 900, 0]
 const TYPE_CODE := {"P": 1, "N": 2, "B": 3, "R": 4, "Q": 5, "K": 6}
+# вес фигуры для «фазы партии»: 24 = все фигуры на доске (дебют), 0 = только короли и пешки
+const PHASE_W := [0, 0, 1, 1, 2, 4, 0]
+# расстояние клетки до центра доски (0 — центр, 6 — угол): для загона короля в эндшпиле
+# превращение: ферзь первым, затем ладья, слон, конь
+const PROMOS := [5, 4, 3, 2]
 const TYPE_LETTER := {"p": 1, "n": 2, "b": 3, "r": 4, "q": 5, "k": 6}
 
 # --- общие статические таблицы (строятся один раз при загрузке скрипта) ---
@@ -94,8 +99,14 @@ static func _build_static() -> Dictionary:
 	cmask[56] = 7
 	cmask[60] = 3
 	cmask[63] = 11
+	var cdist := PackedInt32Array()
+	cdist.resize(64)
+	for sq in range(64):
+		var cf: int = sq & 7
+		var cr: int = sq >> 3
+		cdist[sq] = maxi(3 - cf, cf - 4) + maxi(3 - cr, cr - 4)
 	return {
-		"rays": rays, "knight": knight, "king": king, "pawn_src": pawn_src,
+		"cdist": cdist, "rays": rays, "knight": knight, "king": king, "pawn_src": pawn_src,
 		"zp": zp, "zc": zc, "ze": ze, "zs": (rng.randi() << 32) | rng.randi(),
 		"cmask": cmask,
 	}
@@ -107,7 +118,9 @@ var castle: int = 0
 var ep: int = -1
 var half: int = 0
 var hash: int = 0
-var score: int = 0        # оценка с точки зрения белых
+var score: int = 0        # оценка с точки зрения белых (миттельшпиль)
+var score_eg: int = 0     # то же по таблицам эндшпиля
+var phase: int = 0        # 24 — все фигуры, 0 — только короли и пешки
 var nk: int = 0           # число фигур кроме королей
 var ksq := PackedInt32Array([0, 0])
 
@@ -119,12 +132,16 @@ var u_ep := PackedInt32Array()
 var u_half := PackedInt32Array()
 var u_hash := PackedInt64Array()
 var u_score := PackedInt32Array()
+var u_score_eg := PackedInt32Array()
+var u_phase := PackedInt32Array()
 var u_nk := PackedInt32Array()
 var hist := PackedInt64Array()
 var hist_n: int = 0
 
 # --- параметры поиска ---
 var pst := PackedInt32Array()
+var pst_eg := PackedInt32Array()
+var _cdist: PackedInt32Array
 var qdepth: int = 0
 var fifty_rule: bool = false
 var tt := {}
@@ -156,6 +173,7 @@ func _init(tables: Array, quiescence_depth: int = 0) -> void:
 	_ze = T.ze
 	_zs = T.zs
 	_cmask = T.cmask
+	_cdist = T.cdist
 	qdepth = quiescence_depth
 	b.resize(64)
 	var n := 320
@@ -165,21 +183,32 @@ func _init(tables: Array, quiescence_depth: int = 0) -> void:
 	u_half.resize(n)
 	u_hash.resize(n)
 	u_score.resize(n)
+	u_score_eg.resize(n)
+	u_phase.resize(n)
 	u_nk.resize(n)
 	killers.resize(n * 2)
 	history.resize(4096)
 	pst.resize(16 * 64)
+	pst_eg.resize(16 * 64)
+	# tables: P N B R Q K (миттельшпиль), затем король и пешка для эндшпиля
 	for t in range(1, 7):
 		var tab: Array = tables[t - 1]
+		var tab_eg: Array = tab
+		if t == 6:
+			tab_eg = tables[6]
+		elif t == 1:
+			tab_eg = tables[7]
 		for sq in range(64):
 			var r: int = sq >> 3
 			var f: int = sq & 7
 			pst[t * 64 + sq] = VAL[t] + int(tab[(7 - r) * 8 + f])
 			pst[(t + 8) * 64 + sq] = -(VAL[t] + int(tab[r * 8 + f]))
+			pst_eg[t * 64 + sq] = VAL[t] + int(tab_eg[(7 - r) * 8 + f])
+			pst_eg[(t + 8) * 64 + sq] = -(VAL[t] + int(tab_eg[r * 8 + f]))
 	fifty_rule = Global.fifty_move_rule_enabled
 
 # --- загрузка позиции из ChessEngine ---
-func load_engine(e: ChessEngine) -> void:
+func load_engine(e: ChessEngine, with_history: bool = true) -> void:
 	b.fill(0)
 	for r in range(8):
 		for f in range(8):
@@ -197,6 +226,13 @@ func load_engine(e: ChessEngine) -> void:
 		ep = e.en_passant_target.y * 8 + e.en_passant_target.x
 	half = e.halfmove_clock
 	_recompute()
+	sp = 0
+	hist.resize(4)
+	hist_n = 0
+	if not with_history:
+		hist[0] = hash
+		hist_n = 1
+		return
 	# история позиций для повторов: только то, что после последнего необратимого хода
 	var keys: Array = e.position_history
 	var take: int = mini(half + 1, keys.size())
@@ -212,6 +248,8 @@ func load_engine(e: ChessEngine) -> void:
 func _recompute() -> void:
 	hash = 0
 	score = 0
+	score_eg = 0
+	phase = 0
 	nk = 0
 	for sq in range(64):
 		var p: int = b[sq]
@@ -219,6 +257,8 @@ func _recompute() -> void:
 			continue
 		hash ^= _zp[p * 64 + sq]
 		score += pst[p * 64 + sq]
+		score_eg += pst_eg[p * 64 + sq]
+		phase += int(PHASE_W[p & 7])
 		if (p & 7) == 6:
 			ksq[p >> 3] = sq
 		else:
@@ -334,11 +374,19 @@ func gen(caps_only: bool) -> PackedInt32Array:
 				var to: int = to1 + df
 				var tg: int = b[to]
 				if tg != 0 and (tg >> 3) != s:
-					out.append(sq | (to << 6) | ((5 if (to >> 3) == promo_rank else 0) << 12))
+					if (to >> 3) == promo_rank:
+						for pr in PROMOS:
+							out.append(sq | (to << 6) | (pr << 12))
+					else:
+						out.append(sq | (to << 6))
 				elif to == ep:
 					out.append(sq | (to << 6) | (1 << 16))
 			if not caps_only and b[to1] == 0:
-				out.append(sq | (to1 << 6) | ((5 if (to1 >> 3) == promo_rank else 0) << 12))
+				if (to1 >> 3) == promo_rank:
+					for pr in PROMOS:
+						out.append(sq | (to1 << 6) | (pr << 12))
+				else:
+					out.append(sq | (to1 << 6))
 				var start: int = 1 if s == 0 else 6
 				if r == start and b[to1 + d8] == 0:
 					out.append(sq | ((to1 + d8) << 6) | (8 << 16))
@@ -397,24 +445,33 @@ func make(m: int) -> void:
 	u_half[d] = half
 	u_hash[d] = hash
 	u_score[d] = score
+	u_score_eg[d] = score_eg
+	u_phase[d] = phase
 	u_nk[d] = nk
 	var h: int = hash ^ _zs ^ _zc[castle]
 	if ep >= 0:
 		h ^= _ze[ep]
 	var sc: int = score
+	var sce: int = score_eg
+	var ph: int = phase
 	b[from] = 0
 	h ^= _zp[p * 64 + from]
 	sc -= pst[p * 64 + from]
+	sce -= pst_eg[p * 64 + from]
 	if (fl & 1) != 0:
 		var csq: int = to - 8 if col == 0 else to + 8
 		cap = b[csq]
 		b[csq] = 0
 		h ^= _zp[cap * 64 + csq]
 		sc -= pst[cap * 64 + csq]
+		sce -= pst_eg[cap * 64 + csq]
+		ph -= int(PHASE_W[cap & 7])
 		nk -= 1
 	elif cap != 0:
 		h ^= _zp[cap * 64 + to]
 		sc -= pst[cap * 64 + to]
+		sce -= pst_eg[cap * 64 + to]
+		ph -= int(PHASE_W[cap & 7])
 		nk -= 1
 	u_cap[d] = cap
 	var np: int = p
@@ -423,6 +480,9 @@ func make(m: int) -> void:
 	b[to] = np
 	h ^= _zp[np * 64 + to]
 	sc += pst[np * 64 + to]
+	sce += pst_eg[np * 64 + to]
+	if promo != 0:
+		ph += int(PHASE_W[promo])
 	if (fl & 6) != 0:
 		var rf: int
 		var rt: int
@@ -437,6 +497,7 @@ func make(m: int) -> void:
 		b[rt] = rook
 		h ^= _zp[rook * 64 + rf] ^ _zp[rook * 64 + rt]
 		sc += pst[rook * 64 + rt] - pst[rook * 64 + rf]
+		sce += pst_eg[rook * 64 + rt] - pst_eg[rook * 64 + rf]
 	if (p & 7) == 6:
 		ksq[col] = to
 	castle = castle & _cmask[from] & _cmask[to]
@@ -453,6 +514,8 @@ func make(m: int) -> void:
 		half += 1
 	hash = h
 	score = sc
+	score_eg = sce
+	phase = ph
 	side = 1 - side
 	sp += 1
 	hist[hist_n] = hash
@@ -496,6 +559,8 @@ func unmake(m: int) -> void:
 	half = u_half[d]
 	hash = u_hash[d]
 	score = u_score[d]
+	score_eg = u_score_eg[d]
+	phase = u_phase[d]
 	nk = u_nk[d]
 
 func in_check() -> bool:
@@ -548,8 +613,26 @@ func _insufficient() -> bool:
 		return ((s1 >> 3) + (s1 & 7)) % 2 == ((s2 >> 3) + (s2 & 7)) % 2
 	return false
 
+# Оценка с точки зрения белых: между таблицами миттельшпиля и эндшпиля — по фазе
+# (число оставшихся фигур), плюс в чистом эндшпиле бонус за загон короля слабой
+# стороны к краю и приближение своего короля — без него ИИ не умеет ставить мат
+# ладьёй или ферзём против голого короля.
+@warning_ignore("integer_division")
+func eval_white() -> int:
+	var ph: int = mini(phase, 24)
+	var e: int = (score * ph + score_eg * (24 - ph)) / 24
+	if ph <= 6 and absi(e) >= 250:
+		var win: int = 0 if e > 0 else 1
+		var lose_k: int = ksq[1 - win]
+		var win_k: int = ksq[win]
+		var kd: int = absi((lose_k & 7) - (win_k & 7)) + absi((lose_k >> 3) - (win_k >> 3))
+		var bonus: int = _cdist[lose_k] * 10 + (14 - kd) * 4
+		e += bonus if win == 0 else -bonus
+	return e
+
 func _eval_side() -> int:
-	return score if side == 0 else -score
+	var e: int = eval_white()
+	return e if side == 0 else -e
 
 # --- порядок ходов ---
 func _order_scores(moves: PackedInt32Array, tt_move: int, ply: int) -> PackedInt32Array:
@@ -571,7 +654,7 @@ func _order_scores(moves: PackedInt32Array, tt_move: int, ply: int) -> PackedInt
 		elif (m >> 16) & 1:
 			s = 100000 + 16 - 1
 		elif ((m >> 12) & 15) != 0:
-			s = 90000
+			s = 90000 if ((m >> 12) & 15) == 5 else 1
 		elif mv == k1:
 			s = 80000
 		elif mv == k2:

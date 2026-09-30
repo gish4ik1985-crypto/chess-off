@@ -19,6 +19,10 @@ var board: Array = []
 var side_to_move: String = WHITE
 var castling := {"wk": true, "wq": true, "bk": true, "bq": true}
 var en_passant_target = null # Vector2i(file, rank) square that can be captured en passant, or null
+# Генерировать ли превращение не только в ферзя (ладья/слон/конь тоже). Для игрока
+# и задач выключено: интерфейс показывает один ход на клетку, а выбор фигуры делает
+# отдельная панель. Включается только для ИИ (ChessAI) и проверок перебора ходов.
+var underpromotions := false
 var halfmove_clock := 0
 var fullmove_number := 1
 
@@ -71,6 +75,7 @@ func clone() -> ChessEngine:
 				row.append({"type": p.type, "color": p.color})
 		c.board.append(row)
 	c.side_to_move = side_to_move
+	c.underpromotions = underpromotions
 	c.castling = castling.duplicate()
 	c.en_passant_target = en_passant_target
 	c.halfmove_clock = halfmove_clock
@@ -102,7 +107,7 @@ func pseudo_moves_for(f: int, r: int) -> Array:
 		"P":
 			var one_r = r + dir
 			if in_bounds(f, one_r) and board[one_r][f] == null:
-				moves.append(_mk_pawn_move(f, r, f, one_r))
+				_add_pawn_move(moves, f, r, f, one_r)
 				var start_rank = 1 if color == WHITE else 6
 				var two_r = r + dir * 2
 				if r == start_rank and board[two_r][f] == null:
@@ -113,7 +118,7 @@ func pseudo_moves_for(f: int, r: int) -> Array:
 				if in_bounds(nf, nr):
 					var target = board[nr][nf]
 					if target != null and target.color != color:
-						moves.append(_mk_pawn_move(f, r, nf, nr))
+						_add_pawn_move(moves, f, r, nf, nr)
 					elif en_passant_target != null and en_passant_target == Vector2i(nf, nr):
 						moves.append({"from": Vector2i(f, r), "to": Vector2i(nf, nr), "is_ep": true})
 		"N":
@@ -160,11 +165,16 @@ func pseudo_moves_for(f: int, r: int) -> Array:
 							moves.append({"from": Vector2i(f, r), "to": Vector2i(2, rank), "is_castle": "Q"})
 	return moves
 
-func _mk_pawn_move(f: int, r: int, nf: int, nr: int) -> Dictionary:
+func _add_pawn_move(moves: Array, f: int, r: int, nf: int, nr: int) -> void:
 	var promo_rank = 7 if board[r][f].color == WHITE else 0
-	if nr == promo_rank:
-		return {"from": Vector2i(f, r), "to": Vector2i(nf, nr), "promo": "Q"}
-	return {"from": Vector2i(f, r), "to": Vector2i(nf, nr)}
+	if nr != promo_rank:
+		moves.append({"from": Vector2i(f, r), "to": Vector2i(nf, nr)})
+		return
+	# ферзь всегда первым: код, берущий «первый подходящий ход», получает ферзя
+	moves.append({"from": Vector2i(f, r), "to": Vector2i(nf, nr), "promo": "Q"})
+	if underpromotions:
+		for t in ["R", "B", "N"]:
+			moves.append({"from": Vector2i(f, r), "to": Vector2i(nf, nr), "promo": t})
 
 func _slide_moves(f: int, r: int, color: String, dirs: Array) -> Array:
 	var moves := []

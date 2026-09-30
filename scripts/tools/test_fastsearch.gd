@@ -8,7 +8,7 @@ const FS = preload("res://scripts/FastSearch.gd")
 var fails := 0
 
 func tables() -> Array:
-	return [ChessAI.PAWN_PST, ChessAI.KNIGHT_PST, ChessAI.BISHOP_PST, ChessAI.ROOK_PST, ChessAI.QUEEN_PST, ChessAI.KING_PST]
+	return ChessAI.tables()
 
 func check(name: String, ok: bool, info: String = "") -> void:
 	print(("OK   " if ok else "FAIL ") + name + " " + info)
@@ -68,16 +68,32 @@ func _ready() -> void:
 		for d in range(want.size()):
 			have.append(engine_perft(eg, d + 1))
 		check("ChessEngine perft " + c[0], have == want, str(have))
-	# pos4: превращения только в ферзя — сверяем с движком ChessEngine, а не с эталоном
-	var e4 := ChessEngine.new()
-	e4.setup_from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1")
-	var fs4 = FS.new(tables(), 0)
-	fs4.load_engine(e4)
-	var eng2 := 0
-	for m in e4.legal_moves():
-		var c2 = e4.clone(); c2.apply_move(m); eng2 += c2.legal_moves().size()
-	check("pos4 совпадает с ChessEngine (только ферзь)", perft(fs4, 2) == eng2, str(perft(fs4, 2)) + " vs " + str(eng2))
-
+	# превращения во все фигуры: сверяем с эталонными числами (позиции 4 и 5 из набора perft)
+	var promo_cases := [
+		["pos4", "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", [6, 264, 9467]],
+		["pos5", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", [44, 1486, 62379]],
+	]
+	for c in promo_cases:
+		var fsp = fast_from_fen(c[1])
+		var gotp := []
+		for d in range(3):
+			gotp.append(perft(fsp, d + 1))
+		check("perft " + c[0] + " (FastSearch, все превращения)", gotp == c[2], str(gotp))
+		var egp := ChessEngine.new()
+		egp.setup_from_fen(c[1])
+		egp.underpromotions = true
+		var haveq := []
+		for d in range(3):
+			haveq.append(engine_perft(egp, d + 1))
+		check("perft " + c[0] + " (ChessEngine, underpromotions)", haveq == c[2], str(haveq))
+	# по умолчанию ChessEngine отдаёт игроку только ферзя
+	var plain := ChessEngine.new()
+	plain.setup_from_fen("8/P7/8/8/8/8/8/k6K w - - 0 1")
+	var promo_n := 0
+	for m in plain.legal_moves():
+		if str(m.get("promo", "")) != "":
+			promo_n += 1
+	check("  игроку одно превращение на клетку", promo_n == 1, str(promo_n))
 	# случайные партии: инкрементальный хэш/оценка == пересчёт, и == ChessAI._evaluate
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
@@ -99,8 +115,12 @@ func _ready() -> void:
 			plies += 1
 			var inc_h: int = fs.hash
 			var inc_s: int = fs.score
+			var inc_se: int = fs.score_eg
+			var inc_ph: int = fs.phase
 			fs._recompute()
-			if inc_h != fs.hash or inc_s != fs.score or fs.score != int(ai.evaluate_position(e)):
+			if inc_h != fs.hash or inc_s != fs.score or inc_se != fs.score_eg or inc_ph != fs.phase:
+				bad += 1
+			if float(fs.eval_white()) != ai.evaluate_position(e):
 				bad += 1
 			# ключ движка -> хэш должен совпасть с хэшем позиции
 			if fs._hash_of_key(e.position_history[e.position_history.size() - 1]) != fs.hash:
@@ -137,5 +157,37 @@ func _ready() -> void:
 		var mv3 = ai3.choose_move(mid)
 		var ms3 := Time.get_ticks_msec() - t1
 		check("уровень %d ходит и укладывается в лимит" % lvl, mv3 != null and ms3 < ai3.move_time_ms + 3000, "%d мс" % ms3)
+	# эндшпиль: ИИ обязан довести ладью/ферзя против голого короля до мата и провести проходную пешку
+	_endgame_mate("K+R против K", "8/8/8/4k3/8/8/8/R3K3 w - - 0 1", 40)
+	_endgame_mate("K+Q против K", "8/8/8/4k3/8/8/8/Q3K3 w - - 0 1", 20)
+	_endgame_mate("K+2R против K", "8/8/8/3k4/8/8/8/R3K2R w - - 0 1", 20)
 	print("=== ИТОГО ошибок: %d ===" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
+
+# Играет сильная сторона (ИИ уровня 12) против случайных ходов слабой и проверяет мат за max_moves ходов.
+func _endgame_mate(name: String, fen: String, max_moves: int) -> void:
+	var e := ChessEngine.new()
+	e.setup_from_fen(fen)
+	var ai := ChessAI.new(12)
+	ai.custom_blunder = 0.0
+	ai.move_time_ms = 3000
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var t0 := Time.get_ticks_msec()
+	var n := 0
+	var status := "playing"
+	while n < max_moves:
+		var m = ai.choose_move(e)
+		if m == null:
+			break
+		e.apply_move(m)
+		n += 1
+		status = e.game_status()
+		if status != "playing":
+			break
+		var lm = e.legal_moves()
+		e.apply_move(lm[rng.randi_range(0, lm.size() - 1)])
+		status = e.game_status()
+		if status != "playing":
+			break
+	check("эндшпиль %s: мат за ≤ %d ходов" % [name, max_moves], status == "checkmate", "статус %s, ходов %d, %d мс" % [status, n, Time.get_ticks_msec() - t0])
