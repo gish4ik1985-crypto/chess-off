@@ -141,6 +141,16 @@ func _check_tournament() -> void:
 	for i in range(100):
 		Profile.record_tournament_game(1, 1.0)
 	check("турнир: 100 побед над уровнем 1 не разгоняют рейтинг (%d)" % int(Profile.tournament_rating), Profile.tournament_rating <= Glicko2.DEFAULT_RATING + 100.0)
+	var saved_real: int = Profile.real_rating
+	var saved_int: float = Profile.rating
+	Profile.set_real_rating(1234)
+	check("настоящий рейтинг становится точкой отсчёта", int(Profile.tournament_rating) == 1234 and int(Profile.rating) == 1234 and Profile.tournament_rd < Glicko2.DEFAULT_RD)
+	Profile.set_real_rating(99999)
+	check("настоящий рейтинг ограничен сверху", Profile.real_rating == Profile.REAL_RATING_MAX)
+	Profile.set_real_rating(0)
+	check("ноль убирает настоящий рейтинг, рейтинг остаётся", Profile.real_rating == 0 and int(Profile.tournament_rating) == Profile.REAL_RATING_MAX)
+	Profile.real_rating = saved_real
+	Profile.rating = saved_int
 	Profile.current_user = saved_user
 	Profile.tournament_rating = saved_r
 	Profile.tournament_rd = saved_rd

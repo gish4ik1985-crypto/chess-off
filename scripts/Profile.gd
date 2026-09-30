@@ -291,6 +291,7 @@ func _reset_defaults() -> void:
 	road_stage = 0
 	road_blunders_fixed = 0
 	road_focus_done = {}
+	real_rating = 0
 	tournament_rating = Glicko2.DEFAULT_RATING
 	tournament_rd = Glicko2.DEFAULT_RD
 	tournament_volatility = Glicko2.DEFAULT_VOLATILITY
@@ -558,6 +559,25 @@ func record_focus_stage_done(kind: String) -> void:
 # the middle of an event and come back later. A tournament is 8 participants
 # (the player + 7 named bots); only the player's games are actually played —
 # the other three boards each round are simulated from rating expectation.
+
+# Настоящий рейтинг игрока (федерация, клуб, турнир), 0 — нет. Служит точкой отсчёта:
+# турнирный и внутренний рейтинг стартуют с него, а дальше идут по результатам игры.
+const REAL_RATING_MIN := 100
+const REAL_RATING_MAX := 2800
+const REAL_RATING_RD := 150.0 # уверенность ниже, чем в собственных партиях — рейтинг быстро подстроится
+var real_rating := 0
+
+func set_real_rating(r: int) -> void:
+	if r <= 0:
+		real_rating = 0
+		save_profile()
+		return
+	real_rating = clampi(r, REAL_RATING_MIN, REAL_RATING_MAX)
+	tournament_rating = float(real_rating)
+	tournament_rd = REAL_RATING_RD
+	rating = float(real_rating)
+	rd = REAL_RATING_RD
+	save_profile()
 
 var tournament_rating: float = Glicko2.DEFAULT_RATING
 var tournament_rd: float = Glicko2.DEFAULT_RD
@@ -1445,6 +1465,7 @@ func save_profile() -> void:
 	cfg.set_value("road", "blunders_fixed", road_blunders_fixed)
 	cfg.set_value("road", "focus_done", road_focus_done)
 	cfg.set_value("tourney", "rating", tournament_rating)
+	cfg.set_value("tourney", "real_rating", real_rating)
 	cfg.set_value("tourney", "rd", tournament_rd)
 	cfg.set_value("tourney", "volatility", tournament_volatility)
 	cfg.set_value("tourney", "played", tournaments_played)
@@ -1499,6 +1520,7 @@ func load_profile() -> void:
 	road_blunders_fixed = cfg.get_value("road", "blunders_fixed", 0)
 	road_focus_done = cfg.get_value("road", "focus_done", {})
 	tournament_rating = cfg.get_value("tourney", "rating", Glicko2.DEFAULT_RATING)
+	real_rating = int(cfg.get_value("tourney", "real_rating", 0))
 	tournament_rd = cfg.get_value("tourney", "rd", Glicko2.DEFAULT_RD)
 	tournament_volatility = cfg.get_value("tourney", "volatility", Glicko2.DEFAULT_VOLATILITY)
 	tournaments_played = cfg.get_value("tourney", "played", 0)
