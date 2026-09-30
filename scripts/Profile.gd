@@ -10,14 +10,14 @@ const USERS_DIR := "user://users/"
 const SESSION_PATH := "user://session.cfg"
 
 # ИЗМЕРЕННАЯ сила уровней ИИ (самоигра, scripts/tools/calibrate_levels.gd), пересчитана в шкалу,
-# где сильнейший уровень ≈ 1500–1560 (допущение: разницы в самоигре завышены, коэффициент 0,6).
+# где уровень 20 ≈ 1510, а сильнейший ≈ 1720 (допущение: разницы в самоигре завышены, коэффициент 0,6).
 # Раньше здесь стояли угаданные 400–4000. Approximate opponent strength for each AI level, used as
 # the "opponent rating" fed into the Glicko-2 formula. Loosely mirrors real
 # rating bands from beginner to super-GM (Magnus-level) play.
 const LEVEL_RATING := [
 	300, 390, 450, 520, 610, 650, 780, 870, 930, 1000,
 	1040, 1150, 1170, 1300, 1380, 1400, 1420, 1440, 1480, 1510,
-	1520, 1530, 1540, 1550, 1560,
+	1515, 1590, 1660, 1690, 1720,
 ]
 const MAX_GAME_SWING := 100.0
 const FARM_MARGIN := 200.0
