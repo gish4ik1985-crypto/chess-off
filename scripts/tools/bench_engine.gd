@@ -1,7 +1,15 @@
 extends Node
 
-# Замер скорости ChessEngine (legal_moves / game_status / apply_move).
-# Запуск: scenes/tools/BenchEngine.tscn
+# Замер скорости ChessEngine и того, что на нём построено: расчёт ходов, конец партии,
+# apply_move, генерация задач всех пяти тем. Запуск: scenes/tools/BenchEngine.tscn
+
+const Generators := {
+	"вилка": preload("res://scripts/ForkPuzzleGenerator.gd"),
+	"связка": preload("res://scripts/PinPuzzleGenerator.gd"),
+	"мат на последней": preload("res://scripts/BackRankPuzzleGenerator.gd"),
+	"уничтожение защиты": preload("res://scripts/DefensePuzzleGenerator.gd"),
+	"отвлечение": preload("res://scripts/DeflectionPuzzleGenerator.gd"),
+}
 
 func _ready() -> void:
 	var fens := [
@@ -28,5 +36,20 @@ func _ready() -> void:
 			var c = e.clone()
 			c.apply_move(lm[i % lm.size()])
 		var t_apply := Time.get_ticks_msec() - t
-		print("%s...  legal x300: %d мс (%d ходов)  status x300: %d мс  clone+apply x300: %d мс" % [fen.left(14), t_legal, n / 300, t_status, t_apply])
+		t = Time.get_ticks_msec()
+		for i in range(300):
+			e.legal_moves_for_square(4, 0)
+		var t_sq := Time.get_ticks_msec() - t
+		print("%s...  legal x300: %d мс (%d ходов) · status x300: %d мс · clone+apply x300: %d мс · ходы одной фигуры x300: %d мс" % [fen.left(14), t_legal, n / 300, t_status, t_apply, t_sq])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	for name in Generators:
+		var gen = Generators[name]
+		var t0 := Time.get_ticks_msec()
+		var made := 0
+		for i in range(10):
+			var p: Dictionary = gen.generate(rng)
+			if not p.is_empty():
+				made += 1
+		print("задача «%s»: %d из 10 за %d мс (%d мс на задачу)" % [name, made, Time.get_ticks_msec() - t0, (Time.get_ticks_msec() - t0) / 10])
 	get_tree().quit()

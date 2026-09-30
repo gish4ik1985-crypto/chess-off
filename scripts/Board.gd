@@ -598,7 +598,9 @@ func _show_game_over(text: String, score: float = -1.0) -> void:
 		# road (incl. replayed stops) and school are training modes with
 		# controlled/repeatable opponents — they must not feed the main
 		# rating, same as tournaments already don't.
-		if road == "" and school == "":
+		# партия с форой (материальный перевес игроку) показывает не силу игрока, а силу форы —
+		# в рейтинг она не идёт, иначе победы над «ослабленным» соперником завышали бы его
+		if road == "" and school == "" and not Global.map_assist:
 			Profile.record_game_result(Global.difficulty, score)
 			var delta = Profile.last_rating_change
 			var sign_str = "+" if delta >= 0 else ""

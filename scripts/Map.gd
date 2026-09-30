@@ -120,16 +120,12 @@ func _on_node_clicked(c: Dictionary) -> void:
 	detail_level.text = "Сложность: " + Global.difficulty_label(Global.adaptive_level(c.ai_level)) + status
 	detail_play_button.text = "Играть снова" if Profile.is_character_defeated(c.id) else "Играть"
 	detail_play_button.visible = true
-	# Mastering the character's theme (enough clean solves) earns the
-	# handicap option for this fight even when the global setting is off.
-	var mastered = Profile.theme_mastered(c.get("theme", ""))
-	var assist_ok = c.has("assist_fen") and (Global.handicap_enabled or mastered)
+	# «С форой» предлагается только если игрок сам включил её в настройках
+	# (раньше её ещё открывала награда за чистые решения темы — убрано).
+	var assist_ok = c.has("assist_fen") and Global.handicap_enabled
 	detail_assist_button.visible = assist_ok
 	detail_assist_hint.visible = assist_ok
-	if mastered:
-		detail_assist_hint.text = "Тема «%s» пройдена отлично — в награду доступна игра с форой!" % c.get("theme_label", "")
-	else:
-		detail_assist_hint.text = "«С форой» — начать с материальным перевесом, чтобы не вязнуть в трудной партии"
+	detail_assist_hint.text = "«С форой» — начать с материальным перевесом, чтобы не вязнуть в трудной партии. Такая партия не меняет рейтинг."
 	detail_panel.visible = true
 	music.start_theme(c.music)
 	map_draw.queue_redraw()
@@ -183,7 +179,7 @@ func _on_play_assist_pressed() -> void:
 	if selected_id == "":
 		return
 	var c = MapData.by_id(selected_id)
-	if not Global.handicap_enabled and not Profile.theme_mastered(c.get("theme", "")):
+	if not Global.handicap_enabled:
 		return
 	Global.difficulty = c.ai_level
 	Global.map_character_id = c.id
