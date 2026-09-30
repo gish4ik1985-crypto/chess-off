@@ -17,12 +17,12 @@ func _ready() -> void:
 	_populate_achievements()
 
 func _populate_header() -> void:
-	rating_big_label.text = str(int(round(Profile.rating)))
-	rating_title_label.text = Profile.rating_title()
+	rating_big_label.text = str(int(round(Profile.tournament_rating)))
+	rating_title_label.text = "%s · ступень %d" % [Profile.rating_title(), Profile.clean_step()]
 	rd_label.text = "± %d (чем меньше, тем стабильнее рейтинг)" % int(round(Profile.rd * 1.96))
 	rating_bar.min_value = RATING_MIN
 	rating_bar.max_value = RATING_MAX
-	rating_bar.value = clampf(Profile.rating, RATING_MIN, RATING_MAX)
+	rating_bar.value = clampf(Profile.tournament_rating, RATING_MIN, RATING_MAX)
 
 func _add_stat(label_text: String, value_text: String) -> void:
 	var l1 = Label.new()

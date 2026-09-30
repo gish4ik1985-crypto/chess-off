@@ -15,9 +15,9 @@ const LevelMatch = preload("res://scripts/tools/LevelMatch.gd")
 const ANCHOR_TOP := 1500.0
 
 # цепочка сравниваемых уровней: пары, число партий
+# [младший, старший, партий, макс. полуходов (необязательно)]
 const CHAIN := [
-	[1, 2, 40], [2, 3, 40], [3, 4, 40], [4, 5, 40], [5, 6, 40], [6, 7, 40], [7, 8, 40], [8, 9, 40], [9, 10, 40],
-	[10, 11, 30], [11, 12, 30], [12, 13, 30], [13, 14, 30], [14, 15, 30],
+	[15, 17, 8, 70], [17, 19, 8, 70], [19, 21, 8, 70], [21, 23, 8, 70], [23, 25, 8, 70],
 ]
 
 func _ready() -> void:
@@ -25,7 +25,7 @@ func _ready() -> void:
 	var steps: Array = [] # [уровень, прирост относительно предыдущего звена]
 	var var_sum := 0.0
 	for c in CHAIN:
-		var r: Dictionary = LevelMatch.match_levels(c[1], c[0], c[2])
+		var r: Dictionary = LevelMatch.match_levels(c[1], c[0], c[2], c[3] if c.size() > 3 else 120)
 		# elo — сила старшего уровня c[1] относительно младшего c[0]
 		print("уровень %2d против %2d: %d партий, очков старшего %.2f (+%d =%d -%d) → %+.0f ± %.0f   [%d с]" % [
 			c[1], c[0], c[2], r.score, r.wins, r.draws, r.losses, r.elo, r.err, (Time.get_ticks_msec() - t0) / 1000])

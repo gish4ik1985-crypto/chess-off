@@ -49,6 +49,11 @@ custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 text = "Обзор"
 
+[node name="TabSkills" type="Button" parent="TopBar/HBox"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Навыки"
+
 [node name="TabMoves" type="Button" parent="TopBar/HBox"]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2

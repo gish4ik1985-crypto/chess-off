@@ -65,7 +65,7 @@ func _on_back_pressed() -> void:
 
 func _update_profile_bar() -> void:
 	user_label.text = Profile.display_name
-	rating_label.text = "Рейтинг: %d (%s)" % [round(Profile.rating), Profile.rating_title()]
+	rating_label.text = "Турнирный рейтинг: %d (%s) · Ступень %d" % [round(Profile.tournament_rating), Profile.rating_title(), Profile.clean_step()]
 	achievements_label.text = "Достижения: %d/%d" % [Profile.achievement_count(), Profile.total_achievement_count()]
 	var streak = Profile.current_streak()
 	if streak > 0 and Profile.streak_last_day == Time.get_date_string_from_system():

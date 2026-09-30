@@ -49,7 +49,7 @@ func _build_user_row(u: Dictionary) -> Control:
 	info_vbox.add_child(name_label)
 
 	var sub_label = Label.new()
-	sub_label.text = "Рейтинг %d · партий: %d" % [int(round(float(u.rating))), int(u.games)]
+	sub_label.text = "Турнирный рейтинг %d · партий: %d" % [int(round(float(u.rating))), int(u.games)]
 	sub_label.add_theme_font_size_override("font_size", 12)
 	sub_label.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
 	info_vbox.add_child(sub_label)

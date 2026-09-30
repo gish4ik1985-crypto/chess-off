@@ -624,17 +624,17 @@ func _show_game_over(text: String, score: float = -1.0) -> void:
 		if road == "" and school == "":
 			var no_count := _rating_skip_reason()
 			if no_count != "":
-				text += "\nРейтинг не меняется: " + no_count + "."
+				text += "\nНе идёт в ступень и статистику: " + no_count + "."
 			else:
 				var lvl: int = clampi(Global.difficulty, 1, Profile.LEVEL_RATING.size())
-				var opp_r := float(Profile.LEVEL_RATING[lvl - 1])
-				var expected := 1.0 / (1.0 + pow(10.0, (opp_r - Profile.rating) / 400.0))
-				Profile.record_game_result(Global.difficulty, score)
-				var delta = Profile.last_rating_change
-				var sign_str = "+" if delta >= 0 else ""
-				text += "\nРейтинг: %d (%s%d)" % [round(Profile.rating), sign_str, round(delta)]
-				text += "\nСоперник: %s. Ожидалось очков: %d%%, получено: %d%%." % [Global.difficulty_label(lvl), round(expected * 100.0), round(score * 100.0)]
-				text += "\nЗа партию: ошибок %d, зевков %d." % [int(game_quality.get("mistake", 0)), int(game_quality.get("blunder", 0))]
+				Profile.record_game_result(Global.difficulty, score) # внутренняя оценка для подбора сложности
+				text += "\nСоперник: %s. За партию: ошибок %d, зевков %d." % [Global.difficulty_label(lvl), int(game_quality.get("mistake", 0)), int(game_quality.get("blunder", 0))]
+				if Profile.last_step_gain > 0:
+					text += "\n🎖 Новая ступень: %d — %s!" % [Profile.last_step_gain, Global.difficulty_label(Profile.last_step_gain)]
+				elif score >= 1.0:
+					text += "\nЧистая победа над уровнем %d засчитана. Ступень: %d, до следующей — %d чист. побед над уровнем %d." % [lvl, Profile.clean_step(), Profile.step_wins_left(), Profile.clean_step() + 1]
+				else:
+					text += "\nСтупень: %d (растёт от чистых побед без подсказок и откатов)." % Profile.clean_step()
 		if not friendly.is_empty():
 			# Товарищеская партия — тоже партия с живым игроком базы, поэтому
 			# двигает и его постоянный рейтинг (турнирный рейтинг не трогаем).

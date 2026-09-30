@@ -11,13 +11,18 @@ extends Control
 # Заменяет старые экраны Journal.tscn и Progress.tscn.
 
 @onready var tab_overview: Button = $TopBar/HBox/TabOverview
+@onready var tab_skills: Button = $TopBar/HBox/TabSkills
 @onready var tab_moves: Button = $TopBar/HBox/TabMoves
 @onready var tab_games: Button = $TopBar/HBox/TabGames
 
 var page_overview: Control
+var page_skills: Control
+var skills_draw: Node2D
 var page_moves: Control
 var page_games: Control
 var overview_draw: Node2D
+
+const SkillProfileScript = preload("res://scripts/SkillProfile.gd")
 
 # движки-аналитики (level 9 — сильный «тренерский» поиск, без зевков)
 var coach_moves := ChessAI.new(ChessAI.ANALYSIS_LEVEL)
@@ -83,9 +88,11 @@ const SCALE_HINT := "Перевес считается в пешках: 1.0 — 
 
 func _ready() -> void:
 	tab_overview.pressed.connect(func(): _show_tab(0))
+	tab_skills.pressed.connect(func(): _show_tab(3))
 	tab_moves.pressed.connect(func(): _show_tab(1))
 	tab_games.pressed.connect(func(): _show_tab(2))
 	_build_overview_page()
+	_build_skills_page()
 	_build_moves_page()
 	_build_games_page()
 	_show_tab(0)
@@ -109,6 +116,8 @@ func _show_tab(i: int) -> void:
 	page_overview.visible = i == 0
 	page_moves.visible = i == 1
 	page_games.visible = i == 2
+	page_skills.visible = i == 3
+	tab_skills.disabled = i == 3
 	tab_overview.disabled = i == 0
 	tab_moves.disabled = i == 1
 	tab_games.disabled = i == 2
@@ -119,6 +128,71 @@ func _make_page() -> Control:
 	p.offset_top = 96.0
 	add_child(p)
 	return p
+
+# ============================ НАВЫКИ ============================
+
+func _build_skills_page() -> void:
+	page_skills = _make_page()
+	skills_draw = Node2D.new()
+	page_skills.add_child(skills_draw)
+	skills_draw.draw.connect(_on_skills_draw)
+	page_skills.visibility_changed.connect(func():
+		if page_skills.visible:
+			skills_draw.queue_redraw())
+
+func _on_skills_draw() -> void:
+	var font = ThemeDB.fallback_font
+	var w = get_viewport_rect().size.x
+	var left = maxf((w - 1200.0) / 2.0, 24.0)
+	var prof: Dictionary = SkillProfileScript.compute(Profile.skill_input())
+	var dim := Color(0.55, 0.6, 0.7)
+
+	# --- индекс мастерства ---
+	var pa := Rect2(left, 8, 640, 150)
+	_panel_on(skills_draw, pa, "ИНДЕКС МАСТЕРСТВА", font)
+	if prof.has_data:
+		skills_draw.draw_string(font, pa.position + Vector2(24, 92), "%d" % int(round(prof.index)), HORIZONTAL_ALIGNMENT_LEFT, 160, 56, Color(0.1, 0.95, 1))
+		skills_draw.draw_string(font, pa.position + Vector2(190, 62), str(prof.band), HORIZONTAL_ALIGNMENT_LEFT, 420, 22, Color(0.95, 0.8, 0.35))
+		skills_draw.draw_string(font, pa.position + Vector2(190, 90), "диапазон %d–%d · надёжность оценки %d%%" % [int(round(prof.lo)), int(round(prof.hi)), int(round(prof.confidence * 100.0))], HORIZONTAL_ALIGNMENT_LEFT, 430, 13, dim)
+		skills_draw.draw_multiline_string(font, pa.position + Vector2(190, 114), "Это показатель навыков, а не шахматный рейтинг. Чем больше партий и задач, тем точнее.", HORIZONTAL_ALIGNMENT_LEFT, 430, 12, 2, dim)
+	else:
+		skills_draw.draw_multiline_string(font, pa.position + Vector2(24, 70), "Пока мало данных: сыграйте несколько партий и решите пару задач — тогда появится оценка навыков.", HORIZONTAL_ALIGNMENT_LEFT, 590, 15, 3, dim)
+
+	# --- навыки ---
+	var pb := Rect2(left, 170, 640, 520)
+	_panel_on(skills_draw, pb, "НАВЫКИ (0–100)", font)
+	var y := pb.position.y + 50.0
+	for s in prof.skills:
+		var known: bool = float(s.conf) >= 0.3
+		skills_draw.draw_string(font, Vector2(pb.position.x + 20, y + 12), str(s.name), HORIZONTAL_ALIGNMENT_LEFT, 200, 14, Color(0.82, 0.88, 0.95))
+		var bx: float = pb.position.x + 230.0
+		var bw: float = 300.0
+		skills_draw.draw_rect(Rect2(bx, y, bw, 16), Color(1, 1, 1, 0.08), true)
+		if known:
+			var col := Color(0.4, 0.95, 0.5) if s.score >= 66.0 else (Color(0.95, 0.8, 0.35) if s.score >= 33.0 else Color(1.0, 0.45, 0.45))
+			skills_draw.draw_rect(Rect2(bx, y, bw * float(s.score) / 100.0, 16), col, true)
+			skills_draw.draw_string(font, Vector2(bx + bw + 10, y + 13), "%d" % int(round(s.score)), HORIZONTAL_ALIGNMENT_LEFT, 60, 14, col)
+		else:
+			skills_draw.draw_string(font, Vector2(bx + bw + 10, y + 13), "мало данных", HORIZONTAL_ALIGNMENT_LEFT, 90, 11, dim)
+		skills_draw.draw_string(font, Vector2(pb.position.x + 20, y + 34), str(s.note), HORIZONTAL_ALIGNMENT_LEFT, 600, 11, dim)
+		y += 56.0
+
+	# --- стиль ---
+	var pc := Rect2(left + 660, 8, 540, 300)
+	_panel_on(skills_draw, pc, "СТИЛЬ ИГРЫ", font)
+	if prof.style.is_empty():
+		skills_draw.draw_multiline_string(font, pc.position + Vector2(20, 60), "Портрет стиля появится после 5 партий: игра смотрит, любите ли вы размены, как рано рокируетесь и выводите ли ферзя.", HORIZONTAL_ALIGNMENT_LEFT, 500, 13, 4, dim)
+	else:
+		var sy := pc.position.y + 56.0
+		for lab in prof.style:
+			skills_draw.draw_multiline_string(font, Vector2(pc.position.x + 20, sy), "• " + str(lab), HORIZONTAL_ALIGNMENT_LEFT, 500, 14, 2, Color(0.82, 0.88, 0.95))
+			sy += 44.0
+
+	# --- что тренировать ---
+	var pd := Rect2(left + 660, 320, 540, 370)
+	_panel_on(skills_draw, pd, "ЧТО ТРЕНИРОВАТЬ", font)
+	skills_draw.draw_multiline_string(font, pd.position + Vector2(20, 62), "💡 " + str(prof.advice), HORIZONTAL_ALIGNMENT_LEFT, 500, 15, 6, Color(0.95, 0.8, 0.3))
+	skills_draw.draw_multiline_string(font, pd.position + Vector2(20, 220), "Как растёт индекс: точные ходы без зевков, чистые решения задач, ровная игра во всех фазах и партии без подсказок и откатов. Победы над компьютером с подсказкой в зачёт не идут — важно понимать, откуда берётся результат.", HORIZONTAL_ALIGNMENT_LEFT, 500, 12, 8, dim)
 
 # ============================ ОБЗОР ============================
 
@@ -155,6 +229,11 @@ func _panel(rect: Rect2, title: String, font: Font) -> void:
 	overview_draw.draw_rect(rect, Color(0.11, 0.85, 0.95, 0.4), false, 2.0)
 	overview_draw.draw_string(font, rect.position + Vector2(18, 28), title, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 36, 14, Color(1, 0.65, 0.95, 0.9))
 
+func _panel_on(node: Node2D, rect: Rect2, title: String, font: Font) -> void:
+	node.draw_rect(rect, Color(0.05, 0.05, 0.09, 0.92), true)
+	node.draw_rect(rect, Color(0.11, 0.85, 0.95, 0.4), false, 2.0)
+	node.draw_string(font, rect.position + Vector2(18, 28), title, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 36, 14, Color(1, 0.65, 0.95, 0.9))
+
 func _stat_card(rect: Rect2, title: String, value: String, sub: String, val_col: Color, font: Font) -> void:
 	overview_draw.draw_rect(rect, Color(0.05, 0.05, 0.09, 0.92), true)
 	overview_draw.draw_rect(rect, Color(0.11, 0.85, 0.95, 0.4), false, 2.0)
@@ -169,9 +248,10 @@ func _on_overview_draw() -> void:
 
 	# --- карточки статов ---
 	var card_w = (1200.0 - 3 * 16.0) / 4.0
-	var delta = Profile.last_rating_change
-	var delta_txt = "%+d за последнюю партию" % int(delta) if delta != 0.0 else ("изменение покажет следующая партия" if Profile.games_played > 0 else "сыграйте партию!")
-	_stat_card(Rect2(left, 8, card_w, 92), "РЕЙТИНГ", str(int(Profile.rating)),
+	# главный рейтинг — ТУРНИРНЫЙ: в турнирах нет подсказок и откатов, и он сопоставим с реальным миром
+	var delta = Profile.last_tournament_rating_change
+	var delta_txt = "%+d за последний турнир" % int(delta) if delta != 0.0 else ("сыграйте турнир — появится изменение" if Profile.tournaments_played == 0 else "без изменений")
+	_stat_card(Rect2(left, 8, card_w, 92), "ТУРНИРНЫЙ РЕЙТИНГ", str(int(Profile.tournament_rating)),
 		delta_txt, Color(0.1, 0.95, 1), font)
 	_stat_card(Rect2(left + card_w + 16, 8, card_w, 92), "ПАРТИИ",
 		str(Profile.games_played), "побед %d · ничьих %d · поражений %d" % [Profile.wins, Profile.draws, Profile.losses],
@@ -180,8 +260,8 @@ func _on_overview_draw() -> void:
 	var acc_col = GOOD_COL if acc >= 70.0 else (Color(0.95, 0.8, 0.35) if acc >= 50.0 else BAD_COL)
 	_stat_card(Rect2(left + 2 * (card_w + 16), 8, card_w, 92), "ТОЧНОСТЬ ХОДОВ",
 		"%.0f%%" % acc, "доля сильных ходов", acc_col, font)
-	_stat_card(Rect2(left + 3 * (card_w + 16), 8, card_w, 92), "СЕРИЯ ПОБЕД",
-		str(Profile.win_streak), "рекорд: %d" % Profile.best_win_streak, Color(0.95, 0.8, 0.35), font)
+	_stat_card(Rect2(left + 3 * (card_w + 16), 8, card_w, 92), "СТУПЕНЬ",
+		str(Profile.clean_step()), "сильнейший уровень без помощи", Color(0.95, 0.8, 0.35), font)
 
 	# --- сильные и слабые стороны ---
 	var pr = Rect2(left, 116, 590, 240)
@@ -234,11 +314,11 @@ func _on_overview_draw() -> void:
 		overview_draw.draw_rect(Rect2(bx, qy, bw * frac, 18), row[2], true)
 		overview_draw.draw_string(font, Vector2(bx + bw + 10, qy + 14), "%d (%.0f%%)" % [row[1], 100.0 * frac], HORIZONTAL_ALIGNMENT_LEFT, 100, 12, row[2])
 		qy += 40
-	overview_draw.draw_string(font, Vector2(qr.position.x + 18, qy + 16), "Зевков меньше — рейтинг выше. Худшие ходы ждут на вкладке «Ходы».", HORIZONTAL_ALIGNMENT_LEFT, qr.size.x - 36, 11, Color(0.55, 0.6, 0.7))
+	overview_draw.draw_string(font, Vector2(qr.position.x + 18, qy + 16), "Зевков меньше — выше индекс мастерства. Худшие ходы ждут на вкладке «Ходы».", HORIZONTAL_ALIGNMENT_LEFT, qr.size.x - 36, 11, Color(0.55, 0.6, 0.7))
 
 	# --- график рейтинга ---
 	var gr = Rect2(left, 372, 1200, 230)
-	_panel(gr, "РЕЙТИНГ ПО ДНЯМ", font)
+	_panel(gr, "ТУРНИРНЫЙ РЕЙТИНГ ПО ДНЯМ", font)
 	_draw_rating_chart(gr, font)
 
 	# --- совет ---
@@ -251,12 +331,15 @@ func _draw_rating_chart(gr: Rect2, font: Font) -> void:
 	days.sort()
 	if days.size() > 30:
 		days = days.slice(days.size() - 30)
+	if Profile.tournaments_played == 0:
+		overview_draw.draw_string(font, gr.position + Vector2(18, 70), "Турнирный рейтинг появится после первого турнира — меню «Турниры и соперники».", HORIZONTAL_ALIGNMENT_LEFT, gr.size.x - 36, 13, Color(0.55, 0.6, 0.7))
+		return
 	if days.size() < 2:
 		overview_draw.draw_string(font, gr.position + Vector2(18, 70), "Играйте несколько дней подряд — тут вырастет график вашего рейтинга.", HORIZONTAL_ALIGNMENT_LEFT, gr.size.x - 36, 13, Color(0.55, 0.6, 0.7))
 		return
 	var vals := []
 	for d in days:
-		vals.append(float(Profile.daily_history[d].get("rating", Profile.rating)))
+		vals.append(float(Profile.daily_history[d].get("trating", Profile.tournament_rating)))
 	var vmin = vals.min() - 30.0
 	var vmax = vals.max() + 30.0
 	var plot = Rect2(gr.position + Vector2(70, 44), gr.size - Vector2(100, 80))

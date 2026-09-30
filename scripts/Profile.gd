@@ -59,6 +59,11 @@ var draws := 0
 var win_streak := 0
 var best_win_streak := 0
 var best_win_level := 0 # highest AI difficulty ever beaten
+# Победы над уровнями ИИ БЕЗ помощи (без подсказок, откатов, форы): уровень (String) -> число побед.
+# Из них складывается «Ступень» — самый сильный уровень, который игрок стабильно побеждает сам.
+var clean_wins: Dictionary = {}
+const STEP_WINS_REQUIRED := 2 # чистых побед над уровнем, чтобы он считался пройденным
+var last_step_gain := 0 # > 0: последняя партия подняла ступень до этого значения
 var last_rating_change := 0.0
 
 var solved_puzzles: Dictionary = {} # puzzle index (String key) -> true
@@ -97,9 +102,9 @@ const ACHIEVEMENTS := [
 	{"id": "streak_3", "name": "Серия побед", "desc": "3 победы подряд"},
 	{"id": "streak_5", "name": "Не остановить", "desc": "5 побед подряд"},
 	{"id": "beat_level_10", "name": "Повержен Магнус", "desc": "Обыграйте ИИ 10-го уровня сложности"},
-	{"id": "rating_1600", "name": "Рейтинг 1600", "desc": "Достигните рейтинга 1600"},
-	{"id": "rating_2000", "name": "Рейтинг 2000", "desc": "Достигните рейтинга 2000"},
-	{"id": "rating_2400", "name": "Рейтинг 2400", "desc": "Достигните рейтинга 2400"},
+	{"id": "rating_1600", "name": "Турнирный рейтинг 1600", "desc": "Достигните турнирного рейтинга 1600"},
+	{"id": "rating_2000", "name": "Турнирный рейтинг 2000", "desc": "Достигните турнирного рейтинга 2000"},
+	{"id": "rating_2400", "name": "Турнирный рейтинг 2400", "desc": "Достигните турнирного рейтинга 2400"},
 	{"id": "puzzle_first", "name": "Первая задача", "desc": "Решите первую задачу на мат"},
 	{"id": "puzzle_10", "name": "Тактик", "desc": "Решите 10 задач на мат"},
 	{"id": "puzzle_25", "name": "Комбинатор", "desc": "Решите 25 задач на мат"},
@@ -142,8 +147,41 @@ func _ready() -> void:
 	if last != "" and user_exists(last):
 		switch_user(last, false)
 
+# Звание — по ТУРНИРНОМУ рейтингу: он сопоставим с реальным миром (турниры, потом онлайн).
+# Внутренняя «рабочая оценка» rating из партий с ИИ игроку больше не показывается —
+# она нужна только для подбора сложности («Живая сложность», «Тень»).
 func rating_title() -> String:
-	return title_for_rating(rating)
+	return title_for_rating(tournament_rating)
+
+# Ступень: самый сильный уровень ИИ, побеждённый без помощи не менее STEP_WINS_REQUIRED раз.
+func clean_step() -> int:
+	var best := 0
+	for k in clean_wins:
+		if int(clean_wins[k]) >= STEP_WINS_REQUIRED:
+			best = maxi(best, int(k))
+	return best
+
+# Данные для профиля навыков (SkillProfile.compute): всё, что игра уже собирает.
+func skill_input() -> Dictionary:
+	var themes := {}
+	for t in ["mate", "fork", "pin", "backrank", "defense", "deflection"]:
+		themes[t] = {"solved": theme_progress(t), "clean": theme_clean_count(t)}
+	var cw := 0
+	for k in clean_wins:
+		cw += int(clean_wins[k])
+	return {
+		"games": game_log,
+		"moves": {"good": move_good, "inaccuracy": move_inaccuracy, "mistake": move_mistake, "blunder": move_blunder},
+		"themes": themes,
+		"attention_done": attention_done,
+		"step": clean_step(),
+		"clean_wins_total": cw,
+	}
+
+# Сколько чистых побед над следующим уровнем осталось до новой ступени.
+func step_wins_left() -> int:
+	var nxt := clean_step() + 1
+	return maxi(STEP_WINS_REQUIRED - int(clean_wins.get(str(nxt), 0)), 0)
 
 static func title_for_rating(r: float) -> String:
 	if r < 800: return "Новичок"
@@ -184,7 +222,7 @@ func list_users() -> Array:
 			var cfg = ConfigFile.new()
 			if cfg.load(USERS_DIR + f) == OK:
 				var nm = cfg.get_value("meta", "display_name", f.trim_suffix(".cfg"))
-				var rt = cfg.get_value("rating", "value", Glicko2.DEFAULT_RATING)
+				var rt = cfg.get_value("tourney", "rating", Glicko2.DEFAULT_RATING) # турнирный рейтинг
 				var games = cfg.get_value("stats", "games_played", 0)
 				result.append({"key": f.trim_suffix(".cfg"), "name": nm, "rating": rt, "games": games})
 		f = dir.get_next()
@@ -228,6 +266,8 @@ func _reset_defaults() -> void:
 	win_streak = 0
 	best_win_streak = 0
 	best_win_level = 0
+	clean_wins = {}
+	last_step_gain = 0
 	last_rating_change = 0.0
 	solved_puzzles = {}
 	unlocked_achievements = {}
@@ -294,6 +334,7 @@ func record_game_result(ai_level: int, score: float) -> void:
 	rd = result.rd
 	volatility = result.volatility
 	last_rating_change = rating - old_rating
+	last_step_gain = 0
 
 	games_played += 1
 	if score > 0.75:
@@ -301,6 +342,10 @@ func record_game_result(ai_level: int, score: float) -> void:
 		win_streak += 1
 		best_win_streak = max(best_win_streak, win_streak)
 		best_win_level = max(best_win_level, ai_level)
+		var step_before := clean_step()
+		clean_wins[str(ai_level)] = int(clean_wins.get(str(ai_level), 0)) + 1
+		if clean_step() > step_before:
+			last_step_gain = clean_step()
 	elif score < 0.25:
 		losses += 1
 		win_streak = 0
@@ -1152,9 +1197,9 @@ func _check_achievements() -> void:
 	if best_win_streak >= 3: _unlock("streak_3")
 	if best_win_streak >= 5: _unlock("streak_5")
 	if best_win_level >= 10: _unlock("beat_level_10")
-	if rating >= 1600: _unlock("rating_1600")
-	if rating >= 2000: _unlock("rating_2000")
-	if rating >= 2400: _unlock("rating_2400")
+	if tournament_rating >= 1600: _unlock("rating_1600")
+	if tournament_rating >= 2000: _unlock("rating_2000")
+	if tournament_rating >= 2400: _unlock("rating_2400")
 	var solved_count = solved_puzzles.size()
 	if solved_count >= 1: _unlock("puzzle_first")
 	if solved_count >= 10: _unlock("puzzle_10")
@@ -1345,6 +1390,7 @@ func save_profile() -> void:
 	cfg.set_value("stats", "win_streak", win_streak)
 	cfg.set_value("stats", "best_win_streak", best_win_streak)
 	cfg.set_value("stats", "best_win_level", best_win_level)
+	cfg.set_value("stats", "clean_wins", clean_wins)
 	cfg.set_value("puzzles", "solved", solved_puzzles)
 	cfg.set_value("achievements", "unlocked", unlocked_achievements)
 	cfg.set_value("map", "defeated", defeated_characters)
@@ -1407,6 +1453,7 @@ func load_profile() -> void:
 	win_streak = cfg.get_value("stats", "win_streak", 0)
 	best_win_streak = cfg.get_value("stats", "best_win_streak", 0)
 	best_win_level = cfg.get_value("stats", "best_win_level", 0)
+	clean_wins = cfg.get_value("stats", "clean_wins", {})
 	solved_puzzles = cfg.get_value("puzzles", "solved", {})
 	fork_puzzles_solved = cfg.get_value("puzzles", "fork_solved", 0)
 	pin_puzzles_solved = cfg.get_value("puzzles", "pin_solved", 0)
