@@ -119,5 +119,29 @@ func _ready() -> void:
 	tail /= SEEDS
 	check("растущий игрок: отставание рейтинга от настоящей силы %d (допуск ≤ 150)" % int(tail), absf(tail) <= 150.0)
 
+	_check_tournament()
+
 	print("=== ИТОГО ошибок: %d ===" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
+
+# Турнирный рейтинг считается той же функцией: проверяем через настоящий Profile
+# (current_user пуст — на диск ничего не пишется, состояние возвращается).
+func _check_tournament() -> void:
+	var saved_user: String = Profile.current_user
+	var saved_r: float = Profile.tournament_rating
+	var saved_rd: float = Profile.tournament_rd
+	var saved_v: float = Profile.tournament_volatility
+	Profile.current_user = ""
+	Profile.tournament_rating = Glicko2.DEFAULT_RATING
+	Profile.tournament_rd = Glicko2.DEFAULT_RD
+	Profile.tournament_volatility = Glicko2.DEFAULT_VOLATILITY
+	Profile.record_tournament_game(15, 1.0)
+	check("турнир: первая победа сдвигает рейтинг не больше чем на 100 (%+d)" % int(Profile.last_tournament_rating_change), absf(Profile.last_tournament_rating_change) <= 100.0)
+	Profile.tournament_rating = Glicko2.DEFAULT_RATING
+	for i in range(100):
+		Profile.record_tournament_game(1, 1.0)
+	check("турнир: 100 побед над уровнем 1 не разгоняют рейтинг (%d)" % int(Profile.tournament_rating), Profile.tournament_rating <= Glicko2.DEFAULT_RATING + 100.0)
+	Profile.current_user = saved_user
+	Profile.tournament_rating = saved_r
+	Profile.tournament_rd = saved_rd
+	Profile.tournament_volatility = saved_v

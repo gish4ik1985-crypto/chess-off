@@ -944,8 +944,7 @@ func finish_prep_round(tid: String, opp_idx: int, score: float) -> Dictionary:
 	return state
 
 func record_tournament_game(ai_level: int, score: float) -> void:
-	var opp_rating = float(LEVEL_RATING[clampi(ai_level, 1, LEVEL_RATING.size()) - 1])
-	var result = Glicko2.update(tournament_rating, tournament_rd, tournament_volatility, opp_rating, LEVEL_RD, score)
+	var result = rating_after(tournament_rating, tournament_rd, tournament_volatility, ai_level, score)
 	last_tournament_rating_change = result.rating - tournament_rating
 	tournament_rating = result.rating
 	tournament_rd = result.rd
