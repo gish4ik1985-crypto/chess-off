@@ -40,14 +40,15 @@ func _ready() -> void:
 		var gain: float = maxf(float(s[2]), 0.0) # разницу не считаем отрицательной: уровень выше не слабее
 		for l in range(lo + 1, hi + 1):
 			ladder[l] = base + gain * float(l - lo) / float(hi - lo)
-	var top_level: int = 1
+	var first_level: int = int(CHAIN[0][0])
+	var top_level: int = first_level
 	for k in ladder.keys():
 		top_level = maxi(top_level, int(k))
 	var top: float = ladder[top_level]
 	var table: Array = []
-	for l in range(1, top_level + 1):
+	for l in range(first_level, top_level + 1):
 		table.append(int(round(ladder[l] / 10.0) * 10.0))
-	print("суммарная разница уровней 1 → %d: %.0f очков (погрешность ± %.0f)" % [top_level, top, sqrt(var_sum)])
-	print("LADDER (относительно уровня 1): %s" % str(table))
+	print("суммарная разница уровней %d → %d: %.0f очков (погрешность ± %.0f)" % [first_level, top_level, top, sqrt(var_sum)])
+	print("LADDER (уровни %d…%d, относительно уровня %d): %s" % [first_level, top_level, first_level, str(table)])
 	print("всего %d с" % ((Time.get_ticks_msec() - t0) / 1000))
 	get_tree().quit()

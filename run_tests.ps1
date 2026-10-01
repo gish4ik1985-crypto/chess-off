@@ -37,6 +37,7 @@ $tests = @(
 	@{ Name = "Индекс мастерства и навыки (TestSkillProfile)"; Scene = "TestSkillProfile"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Лестница уровней ИИ (TestLevelLadder)"; Scene = "TestLevelLadder"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Правдоподобие рейтинга (TestRatingRealism)"; Scene = "TestRatingRealism"; Pass = "ИТОГО ошибок: 0" },
+	@{ Name = "Согласованность шкал (TestScales)"; Scene = "TestScales"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Помощь и рейтинг (TestHelpRating)";        Scene = "TestHelpRating";   Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Быстрый ИИ и эндшпиль (TestFastSearch)";  Scene = "TestFastSearch";   Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Честность линейки точности (TestQualityRuler)"; Scene = "TestQualityRuler"; Pass = "ИТОГО ошибок: 0" },
