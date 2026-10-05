@@ -120,5 +120,26 @@ func _ready() -> void:
 	check("clone() независим от оригинала", start.to_fen() == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	check("clone() помнит последний ход", cl.last_move != null and cl.clone().last_move != null)
 
+	# некорректный внешний FEN не должен давать незаконные ходы
+	var fe1 := ChessEngine.new()
+	fe1.setup_from_fen("4k3/8/8/8/3p4/8/4P3/4K3 b - e3 0 1")
+	var has_bad_ep := false
+	for m in fe1.legal_moves():
+		if ChessEngine.square_name(m.from.x, m.from.y) == "d4" and ChessEngine.square_name(m.to.x, m.to.y) == "e3":
+			has_bad_ep = true
+	check("FEN: взятие на проходе без пешки отбрасывается", not has_bad_ep and fe1.en_passant_target == null)
+	var fe2 := ChessEngine.new()
+	fe2.setup_from_fen("4k3/8/8/8/8/8/8/4K3 w KQ - 0 1")
+	var has_bad_castle := false
+	for m in fe2.legal_moves():
+		if ChessEngine.square_name(m.from.x, m.from.y) == "e1" and absi(m.to.x - m.from.x) == 2:
+			has_bad_castle = true
+	check("FEN: рокировка без ладьи отбрасывается", not has_bad_castle)
+	var fe3 := ChessEngine.new()
+	fe3.setup_from_fen("4k3/8/8/8/3pP3/8/8/4K3 b - e3 0 1")
+	check("FEN: настоящее взятие на проходе остаётся", fe3.en_passant_target != null)
+	var fe4 := ChessEngine.new()
+	fe4.setup_from_fen("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
+	check("FEN: настоящие права рокировки остаются", fe4.castling["wk"] and fe4.castling["wq"] and fe4.castling["bk"] and fe4.castling["bq"])
 	print("=== ИТОГО ошибок: %d ===" % fails)
 	get_tree().quit(1 if fails > 0 else 0)

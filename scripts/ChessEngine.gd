@@ -501,6 +501,35 @@ func _position_key() -> String:
 func to_fen() -> String:
 	return "%s %d %d" % [_position_key(), halfmove_clock, fullmove_number]
 
+# Внешний FEN может обещать права рокировки без ладьи/короля на месте и взятие на проходе
+# без пешки — движок на это слепо полагался (король «прыгал» через пустое место). Лишнее убираем.
+func _sanitize_fen_fields() -> void:
+	for spec in [["wk", WHITE, 0, 7], ["wq", WHITE, 0, 0], ["bk", BLACK, 7, 7], ["bq", BLACK, 7, 0]]:
+		if not castling[spec[0]]:
+			continue
+		var king = board[spec[2]][4]
+		var rook = board[spec[2]][spec[3]]
+		if king == null or king.type != "K" or king.color != spec[1] or rook == null or rook.type != "R" or rook.color != spec[1]:
+			castling[spec[0]] = false
+	if en_passant_target != null:
+		var ok := false
+		var t: Vector2i = en_passant_target
+		var mover_is_black: bool = side_to_move == BLACK
+		var target_rank := 2 if mover_is_black else 5
+		var pawn_rank := 3 if mover_is_black else 4
+		if t.x >= 0 and t.x < 8 and t.y == target_rank:
+			var pawn = board[pawn_rank][t.x]
+			var enemy := WHITE if mover_is_black else BLACK
+			if pawn != null and pawn.type == "P" and pawn.color == enemy and board[t.y][t.x] == null:
+				for df in [-1, 1]:
+					var fx: int = t.x + df
+					if fx >= 0 and fx < 8:
+						var mine = board[pawn_rank][fx]
+						if mine != null and mine.type == "P" and mine.color == side_to_move:
+							ok = true
+		if not ok:
+			en_passant_target = null
+
 func setup_from_fen(fen: String) -> void:
 	board = []
 	for r in range(8):
@@ -539,6 +568,7 @@ func setup_from_fen(fen: String) -> void:
 		var ff = files.find(sq[0])
 		var rr = sq.substr(1).to_int() - 1
 		en_passant_target = Vector2i(ff, rr)
+	_sanitize_fen_fields()
 	halfmove_clock = int(parts[4]) if parts.size() > 4 else 0
 	fullmove_number = int(parts[5]) if parts.size() > 5 else 1
 	last_move = null

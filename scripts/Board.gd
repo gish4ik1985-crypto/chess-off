@@ -491,6 +491,7 @@ func _log_finished_game(score: float) -> void:
 		"help_undos": help_undos,
 		"assist": Global.map_assist,
 		"coop": coop,
+		"tournament": not tournament.is_empty(),
 	})
 
 # Dynamic road stages ("focus_*"): winning is not enough — the stage also
@@ -563,11 +564,11 @@ func _show_game_over(text: String, score: float = -1.0) -> void:
 	# поверх итогов партии
 	leave_panel.visible = false
 	pending_leave_target = ""
-	# tournament rounds (bursts of up to 7 games against band-limited bots)
-	# and school drills (deliberately random-ish opponents) would otherwise
-	# flood the ROAD_FOCUS_WINDOW used by dynamic_road_stages() and drown out
-	# the player's real mistakes from quick play / map / road.
-	if score >= 0.0 and school == "" and tournament.is_empty():
+	# school drills (deliberately random-ish opponents) would flood the
+	# ROAD_FOCUS_WINDOW used by dynamic_road_stages() and drown out the player's
+	# real mistakes. Tournament games are the fairest mode (no hints, no undo), so
+	# they DO feed the learning stats; the road window is normalised by opponent level.
+	if score >= 0.0 and school == "":
 		_log_finished_game(score)
 	if speech_panel != null:
 		speech_panel.visible = false
@@ -1146,7 +1147,8 @@ func _on_hint_pressed() -> void:
 	ai_thinking = true
 	hint_button.disabled = true
 	var result := {"move": null}
-	await Global.run_bg(func(): result.move = hint_ai.best_move_clean(engine, 3))
+	var hint_snapshot = engine.clone() # поток не должен трогать живую позицию
+	await Global.run_bg(func(): result.move = hint_ai.best_move_clean(hint_snapshot, 3))
 	ai_thinking = false
 	hint_button.disabled = false
 	var m = result.move
