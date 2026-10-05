@@ -40,6 +40,7 @@ $tests = @(
 	@{ Name = "Правдоподобие рейтинга (TestRatingRealism)"; Scene = "TestRatingRealism"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Согласованность шкал (TestScales)"; Scene = "TestScales"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Помощь и рейтинг (TestHelpRating)";        Scene = "TestHelpRating";   Pass = "ИТОГО ошибок: 0" },
+	@{ Name = "Живая сложность (TestAdaptive)"; Scene = "TestAdaptive"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Быстрый ИИ и эндшпиль (TestFastSearch)";  Scene = "TestFastSearch";   Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Честность линейки точности (TestQualityRuler)"; Scene = "TestQualityRuler"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Партии великих читаются (HistoricValidator)"; Scene = "HistoricValidator"; Pass = "ошибок 0" },

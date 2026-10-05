@@ -404,6 +404,14 @@ const ACT1 := [
 	},
 ]
 
+# Уровень ИИ узла по порядку прохождения акта (20 узлов в каждом): не убывает и растёт
+# не больше чем на 1 за шаг. Сюжетные поля (coop_opp и т.п.) остаются у узлов.
+const LEVEL_CURVE := {
+	1: [1, 1, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, 10, 10],
+	2: [4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 12],
+	3: [10, 10, 11, 11, 12, 12, 12, 13, 13, 14, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18],
+}
+
 static var CHARACTERS: Array = _build_all()
 
 static func _build_all() -> Array:
@@ -414,6 +422,13 @@ static func _build_all() -> Array:
 		all.append(d)
 	all.append_array(_patched_act(2, _act2_overrides()))
 	all.append_array(_patched_act(3, _act3_overrides()))
+	# уровень узла берётся из единой кривой по порядку прохождения (а не из полей узлов),
+	# чтобы побочные и учебные узлы не были страшнее боссов; проверяется в TestMap
+	var idx := {1: 0, 2: 0, 3: 0}
+	for d in all:
+		var a: int = d["act"]
+		d["ai_level"] = LEVEL_CURVE[a][idx[a]]
+		idx[a] += 1
 	return all
 
 # Clones every act-1 node with a per-act id suffix and applies overrides.

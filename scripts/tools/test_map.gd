@@ -6,6 +6,8 @@
 # godot --headless --path . res://scenes/tools/TestMap.tscn
 extends Node
 
+const LEVEL_STEP_MAX := 1
+
 func _ready() -> void:
 	var chars = MapData.CHARACTERS
 	print("total nodes: ", chars.size())
@@ -32,5 +34,20 @@ func _ready() -> void:
 			if c.act == act:
 				n += 1
 		print("act %d: %d nodes" % [act, n])
+	# кривая сложности: соседние узлы акта отличаются не больше чем на LEVEL_STEP_MAX,
+	# а уровень не падает (иначе «учебный» узел страшнее босса)
+	for act in [1, 2, 3]:
+		var seq := []
+		var prev := -1
+		for c in chars:
+			if c.act != act:
+				continue
+			var lvl := int(c.ai_level)
+			seq.append(lvl)
+			if prev >= 0 and (lvl - prev > LEVEL_STEP_MAX or prev - lvl > 0):
+				print("РВАНАЯ КРИВАЯ в акте %d на %s: %d -> %d" % [act, c.id, prev, lvl])
+				bad += 1
+			prev = lvl
+		print("act %d levels: %s" % [act, seq])
 	print("problems: ", bad)
 	get_tree().quit(1 if bad > 0 else 0)

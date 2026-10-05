@@ -447,6 +447,12 @@ func _rating_skip_reason() -> String:
 		reasons.append("были подсказки (%d)" % help_hints)
 	if help_undos > 0:
 		reasons.append("был откат хода")
+	# маркеры угроз «Внимательности» — подсказка сильнее кнопки: работает всю партию
+	if attention > 0 and Global.attention_hint_mode(attention) != "none":
+		reasons.append("подсказки угроз на доске")
+	# уроки с готовой позицией (мат двумя ладьями и т.п.) учат приёму, а не меряют силу
+	if str(map_character.get("id", "")).begins_with("drill_"):
+		reasons.append("учебная позиция")
 	return ", ".join(reasons)
 
 func _log_finished_game(score: float) -> void:

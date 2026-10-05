@@ -132,13 +132,19 @@ func attention_hint_mode(n: int) -> String:
 	if n <= 40: return "flash"
 	return "none"
 
-# Adaptive difficulty: pull the authored/chosen level halfway toward the
-# player's rating level, so weak opponents grow with the player and overly
-# hard ones ease off. With the setting off, the base level passes through.
+# Adaptive difficulty: nudge the authored level toward the player's rating level,
+# by at most ADAPTIVE_MAX_SHIFT either way. Until the player has ADAPTIVE_MIN_GAMES
+# rated games the rating is only a guess, so the authored level passes through
+# (the old "average with rating_level()" made the very first battle level 4).
+# With the setting off, the base level passes through as well.
+const ADAPTIVE_MIN_GAMES := 5
+const ADAPTIVE_MAX_SHIFT := 2
+
 func adaptive_level(base: int) -> int:
-	if not adaptive_difficulty:
+	if not adaptive_difficulty or Profile.games_played < ADAPTIVE_MIN_GAMES:
 		return clampi(base, 1, MAX_DIFFICULTY)
-	return clampi(roundi((base + rating_level()) / 2.0), 1, MAX_DIFFICULTY)
+	var shift := clampi(rating_level() - base, -ADAPTIVE_MAX_SHIFT, ADAPTIVE_MAX_SHIFT)
+	return clampi(base + shift, 1, MAX_DIFFICULTY)
 
 func save_settings() -> void:
 	var cfg = ConfigFile.new()

@@ -117,7 +117,11 @@ func _on_node_clicked(c: Dictionary) -> void:
 		map_draw.queue_redraw()
 		return
 	var status = " (побеждён)" if Profile.is_character_defeated(c.id) else ""
-	detail_level.text = "Сложность: " + Global.difficulty_label(Global.adaptive_level(c.ai_level)) + status
+	var live_level: int = Global.adaptive_level(c.ai_level)
+	var live_note := ""
+	if live_level != int(c.ai_level):
+		live_note = " — живая сложность: %d → %d" % [int(c.ai_level), live_level]
+	detail_level.text = "Сложность: " + Global.difficulty_label(live_level) + live_note + status
 	detail_play_button.text = "Играть снова" if Profile.is_character_defeated(c.id) else "Играть"
 	detail_play_button.visible = true
 	# «С форой» предлагается только если игрок сам включил её в настройках

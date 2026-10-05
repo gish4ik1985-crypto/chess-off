@@ -34,6 +34,18 @@ func _ready() -> void:
 	var r: String = b._rating_skip_reason()
 	check("несколько причин перечисляются вместе", r.contains("подсказ") and r.contains("откат") and r.contains("фор"), r)
 	Global.map_assist = old_assist
+	b.help_hints = 0
+	b.help_undos = 0
+	b.attention = 20
+	check("«Внимательность» с маркерами — не идёт", b._rating_skip_reason().contains("угроз"), b._rating_skip_reason())
+	b.attention = 45
+	check("«Внимательность» без подсказок (45) — идёт", b._rating_skip_reason() == "", b._rating_skip_reason())
+	b.attention = 0
+	b.map_character = {"id": "drill_two_rooks_2"}
+	check("учебный узел drill_* — не идёт", b._rating_skip_reason().contains("учебн"), b._rating_skip_reason())
+	b.map_character = {"id": "restr_no_queen"}
+	check("узел-испытание — идёт", b._rating_skip_reason() == "", b._rating_skip_reason())
+	b.map_character = {}
 	b.free()
 	print("=== ИТОГО ошибок: %d ===" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
