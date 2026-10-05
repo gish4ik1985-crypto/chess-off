@@ -70,6 +70,14 @@ autowrap_mode = 2
 theme_override_font_sizes/font_size = 12
 theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
 
+[node name="StorageNote" type="Label" parent="CenterPanel/VBox"]
+layout_mode = 2
+text = "Профили хранятся только на этом устройстве (в браузере — только на этом адресе, и пропадают в приватном окне). Чтобы перенести или сохранить, зайдите в Настройки и сохраните профиль в файл."
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
+
 [node name="HSeparator2" type="HSeparator" parent="CenterPanel/VBox"]
 layout_mode = 2
 

@@ -24,7 +24,27 @@ extends Control
 
 var chosen_color := "w"
 
+# Подсказки при наведении: что делает кнопка и что значат термины.
+const TOOLTIPS := {
+	"ProfileBar/HBox/ProfileButton": "Профиль: рейтинг, ступень и Индекс мастерства — оценка 8 навыков (от 0 до 100) с диапазоном неопределённости.",
+	"ProfileBar/HBox/TrophyButton": "Награды: кубки, медали и достижения.",
+	"ProfileBar/HBox/JournalButton": "Дневник: качество ходов, партии и разбор ошибок.",
+	"ProfileBar/HBox/SwitchUserButton": "Выбрать другого игрока. Прогресс каждого хранится отдельно.",
+	"ContentCenter/MainPanel/VBox/MapButton": "Путь по стране: бои с персонажами и задачи. Сложность подстраивается под вас («живая сложность»).",
+	"ContentCenter/MainPanel/VBox/TourneyMenuButton": "Турниры со своим рейтингом, подготовка к ним и база игроков.",
+	"ContentCenter/MainPanel/VBox/PlayMenuButton": "Быстрая партия против компьютера, командная игра и товарищеские партии.",
+	"ContentCenter/MainPanel/VBox/TrainMenuButton": "Задачи, Дорога домой, Внимательность, Школа и разбор партий великих.",
+	"ContentCenter/PlayPanel/VBox/PlayButton": "Партия с выбранной сложностью. Подсказки и откаты не идут в ступень и рейтинг.",
+	"ContentCenter/TrainPanel/VBox/RoadButton": "Личный путь: остановки появляются там, где вы чаще ошибаетесь.",
+	"ContentCenter/TrainPanel/VBox/AttentionButton": "Тренажёр: на доске подсвечены угрозы, подсказки постепенно исчезают.",
+	"ContentCenter/TrainPanel/VBox/SchoolButton": "Упражнения «Что изменилось?» и «Школа терпения»: смотреть и не спешить.",
+}
+
 func _ready() -> void:
+	for path in TOOLTIPS:
+		var n = get_node_or_null(path)
+		if n != null:
+			n.tooltip_text = TOOLTIPS[path]
 	$ContentCenter/MainPanel/VBox/QuitButton.visible = not OS.has_feature("web")
 	if not Profile.has_user():
 		get_tree().change_scene_to_file.call_deferred("res://scenes/Login.tscn")

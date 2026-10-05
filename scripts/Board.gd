@@ -730,6 +730,22 @@ func _show_game_review(score: float) -> void:
 		review_label.text = "Разбор: победа! Но был шаткий момент %s. Хотите поизучать, как выиграть ещё чище?" % where
 	review_label.visible = true
 	replay_button.visible = true
+	_append_better_move(worst)
+
+# К разбору добавляем сам урок: какой ход был сильнее (считается в фоне, текст дописывается позже).
+func _append_better_move(worst: Dictionary) -> void:
+	if not worst.has("snapshot"):
+		return
+	var snap: ChessEngine = worst.snapshot.clone()
+	var result := {"m": null}
+	await Global.run_bg(func(): result.m = hint_ai.best_move_clean(snap, 3))
+	if result.m == null or not is_instance_valid(review_label) or not review_label.visible:
+		return
+	var best_txt: String = ChessEngine.ru_notation(move_notation(snap, result.m))
+	if best_txt == ChessEngine.ru_notation(str(worst.notation)):
+		return
+	review_label.text += "
+Сильнее было: %s." % best_txt
 
 func _on_replay_worst_pressed() -> void:
 	if worst_moments.is_empty():
