@@ -158,36 +158,65 @@ func _ready() -> void:
 		var ms3 := Time.get_ticks_msec() - t1
 		check("уровень %d ходит и укладывается в лимит" % lvl, mv3 != null and ms3 < ai3.move_time_ms + 3000, "%d мс" % ms3)
 	# эндшпиль: ИИ обязан довести ладью/ферзя против голого короля до мата и провести проходную пешку
-	_endgame_mate("K+R против K", "8/8/8/4k3/8/8/8/R3K3 w - - 0 1", 40)
-	_endgame_mate("K+Q против K", "8/8/8/4k3/8/8/8/Q3K3 w - - 0 1", 20)
-	_endgame_mate("K+2R против K", "8/8/8/3k4/8/8/8/R3K2R w - - 0 1", 20)
+	_endgame_mate("K+R против K", "8/8/8/4k3/8/8/8/R3K3 w - - 0 1", 50)
+	_endgame_mate("K+Q против K", "8/8/8/4k3/8/8/8/Q3K3 w - - 0 1", 30)
+	_endgame_mate("K+2R против K", "8/8/8/3k4/8/8/8/R3K2R w - - 0 1", 30)
+	# мат в 1: даже уровни без поиска взятий (1–10) обязаны его ставить, если не выпал случайный ход
+	var mates := [
+		["Ra8#", "6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1"],
+		["Qxf7#", "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4"],
+	]
+	for lvl in [1, 2, 3, 5, 8, 10]:
+		var found := 0
+		var total := 0
+		for mt in mates:
+			for rep in range(10):
+				var e := ChessEngine.new()
+				e.setup_from_fen(mt[1])
+				var mai := ChessAI.new(lvl)
+				mai.custom_blunder = 0.0
+				var m = mai.choose_move(e)
+				e.apply_move(m)
+				total += 1
+				if e.game_status() == "checkmate":
+					found += 1
+		check("уровень %d ставит мат в 1" % lvl, found == total, "%d/%d" % [found, total])
 	print("=== ИТОГО ошибок: %d ===" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
 
 # Играет сильная сторона (ИИ уровня 12) против случайных ходов слабой и проверяет мат за max_moves ходов.
+# Защитник случайный, поэтому длина партии гуляет (замер на 10 семенах: K+Q 5–20, K+2R 4–20, K+R 8–33 ходов);
+# лимиты стоят с запасом, а проверка идёт на нескольких семенах — иначе тест «мигает».
 func _endgame_mate(name: String, fen: String, max_moves: int) -> void:
-	var e := ChessEngine.new()
-	e.setup_from_fen(fen)
-	var ai := ChessAI.new(12)
-	ai.custom_blunder = 0.0
-	ai.move_time_ms = 3000
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 11
+	var worst := 0
+	var mated := 0
+	var seeds := 5
 	var t0 := Time.get_ticks_msec()
-	var n := 0
-	var status := "playing"
-	while n < max_moves:
-		var m = ai.choose_move(e)
-		if m == null:
-			break
-		e.apply_move(m)
-		n += 1
-		status = e.game_status()
-		if status != "playing":
-			break
-		var lm = e.legal_moves()
-		e.apply_move(lm[rng.randi_range(0, lm.size() - 1)])
-		status = e.game_status()
-		if status != "playing":
-			break
-	check("эндшпиль %s: мат за ≤ %d ходов" % [name, max_moves], status == "checkmate", "статус %s, ходов %d, %d мс" % [status, n, Time.get_ticks_msec() - t0])
+	for sd in range(1, seeds + 1):
+		var e := ChessEngine.new()
+		e.setup_from_fen(fen)
+		var ai := ChessAI.new(12)
+		ai.custom_blunder = 0.0
+		ai.move_time_ms = 3000
+		var rng := RandomNumberGenerator.new()
+		rng.seed = sd
+		var n := 0
+		var status := "playing"
+		while n < max_moves:
+			var m = ai.choose_move(e)
+			if m == null:
+				break
+			e.apply_move(m)
+			n += 1
+			status = e.game_status()
+			if status != "playing":
+				break
+			var lm = e.legal_moves()
+			e.apply_move(lm[rng.randi_range(0, lm.size() - 1)])
+			status = e.game_status()
+			if status != "playing":
+				break
+		if status == "checkmate":
+			mated += 1
+		worst = maxi(worst, n)
+	check("эндшпиль %s: мат за ≤ %d ходов (%d семян)" % [name, max_moves, seeds], mated == seeds, "%d/%d, самая долгая %d ходов, %d мс" % [mated, seeds, worst, Time.get_ticks_msec() - t0])

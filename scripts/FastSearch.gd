@@ -692,6 +692,10 @@ func negamax(depth: int, alpha: int, beta: int, ply: int) -> int:
 	if depth <= 0:
 		if qdepth > 0:
 			return qsearch(alpha, beta, qdepth, ply)
+		# без поиска взятий (уровни 1–10) горизонт сам не видел мата: оценка шла по материалу,
+		# и мат в 1 находился только случайно. Под шахом проверяем, есть ли ещё ходы.
+		if in_check() and not _has_legal_move():
+			return -MATE
 		return _eval_side()
 	if ply >= 150:
 		return _eval_side()
@@ -753,6 +757,17 @@ func negamax(depth: int, alpha: int, beta: int, ply: int) -> int:
 	tt[hash] = best_move | (flag2 << 20) | (mini(depth, 255) << 22) | ((best + 200000) << 30)
 	return best
 
+func _has_legal_move() -> bool:
+	var moves := gen(false)
+	for i in range(moves.size()):
+		var m: int = moves[i]
+		make(m)
+		var ok: bool = not _illegal_after_make()
+		unmake(m)
+		if ok:
+			return true
+	return false
+
 func qsearch(alpha: int, beta: int, qd: int, ply: int) -> int:
 	nodes += 1
 	if deadline > 0 and (nodes & 1023) == 0 and Time.get_ticks_msec() > deadline:
@@ -798,6 +813,10 @@ func qsearch(alpha: int, beta: int, qd: int, ply: int) -> int:
 func choose(root: PackedInt32Array, target_depth: int, noise: float, rng: RandomNumberGenerator, budget_ms: int) -> int:
 	if root.size() <= 1:
 		return 0
+	# выигранный эндшпиль с подавляющим перевесом: шум оценки (10–130 сп) больше, чем шаг
+	# «загнать короля к краю» (10 сп), и ИИ бродил без плана — здесь шум отключаем
+	if phase <= 6 and absi(eval_white()) >= 250:
+		noise = 0.0
 	deadline = Time.get_ticks_msec() + budget_ms if budget_ms > 0 else 0
 	aborted = false
 	nodes = 0
