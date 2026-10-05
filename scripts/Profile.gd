@@ -301,6 +301,8 @@ func _reset_defaults() -> void:
 	mix_puzzles_solved = 0
 	road_stage = 0
 	road_blunders_fixed = 0
+	blunders_fixed_fens = {}
+	solved_generated = {}
 	road_focus_done = {}
 	real_rating = 0
 	tournament_rating = Glicko2.DEFAULT_RATING
@@ -464,6 +466,8 @@ func theme_mastered(theme: String) -> bool:
 const ROAD_BLUNDERS_REQUIRED := 3
 var road_stage := 0
 var road_blunders_fixed := 0
+var blunders_fixed_fens: Dictionary = {} # позиции исправленных зевков (без повторов)
+var solved_generated: Dictionary = {} # "тема|fen" решённых сгенерированных задач
 
 # Dynamic road stages ("дорога растёт"): the road watches EVERY logged game
 # (quick play, map battles, road battles) and grows extra remedial stops for
@@ -1076,11 +1080,27 @@ func advance_road(stage_idx: int) -> void:
 		road_stage += 1
 		save_profile()
 
-func record_road_blunder_fix() -> void:
+# fen — позиция исправленного зевка: один и тот же зевок второй раз в зачёт не идёт
+# (раньше этап «Овраг зевков» проходился трёхкратным исправлением одного момента).
+func record_road_blunder_fix(fen: String = "") -> bool:
+	if fen != "":
+		if blunders_fixed_fens.has(fen):
+			return false
+		blunders_fixed_fens[fen] = true
 	road_blunders_fixed += 1
 	if road_blunders_fixed >= ROAD_BLUNDERS_REQUIRED:
 		advance_road(0)
 	save_profile()
+	return true
+
+# Сгенерированные задачи (вилка, связка, ...): true, если эту позицию игрок решает впервые.
+# Только такая победа увеличивает счётчик темы; мат-задачи считаются отдельно (solved_puzzles).
+func mark_solved_once(theme: String, fen: String) -> bool:
+	var key := theme + "|" + fen
+	if solved_generated.has(key):
+		return false
+	solved_generated[key] = true
+	return true
 
 # Pathway Этап 3 — "Микс": puzzles mixing mate/fork/pin at random, without
 # revealing which trick applies, so the player must recognise it themselves.
@@ -1492,6 +1512,8 @@ func save_profile() -> void:
 	cfg.set_value("games", "log", game_log)
 	cfg.set_value("road", "stage", road_stage)
 	cfg.set_value("road", "blunders_fixed", road_blunders_fixed)
+	cfg.set_value("road", "blunders_fixed_fens", blunders_fixed_fens)
+	cfg.set_value("puzzles", "generated_solved", solved_generated)
 	cfg.set_value("road", "focus_done", road_focus_done)
 	cfg.set_value("tourney", "rating", tournament_rating)
 	cfg.set_value("tourney", "real_rating", real_rating)
@@ -1568,6 +1590,8 @@ func load_profile() -> void:
 	game_log = cfg.get_value("games", "log", [])
 	road_stage = cfg.get_value("road", "stage", 0)
 	road_blunders_fixed = cfg.get_value("road", "blunders_fixed", 0)
+	blunders_fixed_fens = cfg.get_value("road", "blunders_fixed_fens", {})
+	solved_generated = cfg.get_value("puzzles", "generated_solved", {})
 	road_focus_done = cfg.get_value("road", "focus_done", {})
 	tournament_rating = cfg.get_value("tourney", "rating", Glicko2.DEFAULT_RATING)
 	real_rating = int(cfg.get_value("tourney", "real_rating", 0))

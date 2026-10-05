@@ -51,5 +51,15 @@ func _init() -> void:
 	assert(profile.dynamic_road_stages().is_empty(), "clean theme must not add a stage")
 	print("tactics OK")
 
+	# ворота нельзя пройти повтором: одна и та же задача/зевок в зачёт идёт один раз
+	var gp = load("res://scripts/Profile.gd").new()
+	assert(gp.mark_solved_once("fork", "fen-a"), "первое решение засчитывается")
+	assert(not gp.mark_solved_once("fork", "fen-a"), "повтор той же задачи не засчитывается")
+	assert(gp.mark_solved_once("pin", "fen-a"), "та же позиция в другой теме — отдельная задача")
+	assert(gp.record_road_blunder_fix("fen-z"), "первое исправление зевка засчитывается")
+	assert(not gp.record_road_blunder_fix("fen-z"), "тот же зевок второй раз не засчитывается")
+	assert(gp.road_blunders_fixed == 1, "счётчик зевков не вырос от повтора")
+	print("gates OK")
+
 	print("ALL DYNAMIC ROAD TESTS PASSED")
 	quit(0)

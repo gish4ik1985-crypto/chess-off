@@ -360,7 +360,12 @@ func _attempt_blunder_move(move: Dictionary) -> void:
 		engine.apply_move(move)
 		solved = true
 		Profile.record_daily_activity()
-		Profile.record_road_blunder_fix()
+		var counted: bool = Profile.record_road_blunder_fix(str(current_blunder.fen))
+		if not counted:
+			feedback_label.text = "Сильный ход! Но этот зевок вы уже исправляли — в зачёт этапа не идёт."
+			feedback_label.modulate = Color(0.85, 0.75, 0.3)
+			board_draw.queue_redraw()
+			return
 		feedback_label.text = "Сильный ход! Зевок исправлен (%d / %d)" % [min(Profile.road_blunders_fixed, Profile.ROAD_BLUNDERS_REQUIRED), Profile.ROAD_BLUNDERS_REQUIRED]
 		if Profile.road_blunders_fixed >= Profile.ROAD_BLUNDERS_REQUIRED:
 			feedback_label.text += " — этап пройден!"
@@ -653,6 +658,15 @@ func _finish_solved() -> void:
 	solved = true
 	Profile.clear_puzzle_state()
 	Profile.record_daily_activity()
+	# повторное решение той же сгенерированной задачи в зачёт темы не идёт —
+	# иначе ворота карты открывались повтором одной простой задачи
+	var theme_kind: String = mix_underlying if mode == "mix3" else mode
+	var fen0: String = str(_current_puzzle().get("fen", ""))
+	if theme_kind != "mate" and fen0 != "" and not Profile.mark_solved_once(theme_kind, fen0):
+		feedback_label.text = "Верно! Но эту задачу вы уже решали — в зачёт темы она не идёт. Возьмите новую."
+		feedback_label.modulate = Color(0.85, 0.75, 0.3)
+		_update_status()
+		return
 	if mode == "mix3":
 		if attempt_clean:
 			Profile.record_theme_clean("mix")
