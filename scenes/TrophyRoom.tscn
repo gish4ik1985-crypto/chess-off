@@ -60,7 +60,7 @@ theme_override_colors/font_color = Color(1, 0.8, 0.2, 1)
 [node name="BackButton" type="Button" parent="UI/TopBar/HBox"]
 custom_minimum_size = Vector2(130, 0)
 layout_mode = 2
-text = "◂ Профиль"
+text = "← Профиль"
 
 [node name="MenuButton" type="Button" parent="UI/TopBar/HBox"]
 custom_minimum_size = Vector2(110, 0)

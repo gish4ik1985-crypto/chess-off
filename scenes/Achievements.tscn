@@ -110,7 +110,7 @@ text = "🏆 Зал наград (комната с кубками)"
 [node name="MenuButton" type="Button" parent="Scroll/VBox"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-text = "◂ В меню"
+text = "← В меню"
 
 [connection signal="pressed" from="Scroll/VBox/TrophyRoomButton" to="." method="_on_trophy_room_pressed"]
 [connection signal="pressed" from="Scroll/VBox/MenuButton" to="." method="_on_menu_pressed"]

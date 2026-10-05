@@ -97,7 +97,7 @@ layout_mode = 0
 offset_right = 36.0
 offset_bottom = 32.0
 tooltip_text = "Свернуть/развернуть список партий"
-text = "◂"
+text = "←"
 
 [node name="BoardDraw" type="Node2D" parent="Main/BoardArea"]
 position = Vector2(10, 46)

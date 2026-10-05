@@ -113,7 +113,7 @@ layout_mode = 2
 [node name="HubButton" type="Button" parent="UI/SidePanel/Content"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-text = "◂ Все задачи (выбор режима)"
+text = "← Все задачи (выбор режима)"
 
 [node name="HSeparator3" type="HSeparator" parent="UI/SidePanel/Content"]
 layout_mode = 2

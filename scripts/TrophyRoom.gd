@@ -75,9 +75,9 @@ func _build_room_buttons() -> void:
 	bar.theme = load("res://theme/NeonTheme.tres")
 	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	bar.offset_left = 24
-	bar.offset_top = 68
+	bar.offset_top = 78
 	bar.offset_right = -24
-	bar.offset_bottom = 106
+	bar.offset_bottom = 116
 	bar.add_theme_constant_override("separation", 8)
 	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	$UI.add_child(bar)

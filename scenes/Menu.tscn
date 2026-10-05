@@ -66,7 +66,7 @@ text = "Достижения: 0/15"
 [node name="ProfileButton" type="Button" parent="ProfileBar/HBox"]
 custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
-text = "Профиль ▸"
+text = "Профиль →"
 
 [node name="TrophyButton" type="Button" parent="ProfileBar/HBox"]
 custom_minimum_size = Vector2(130, 0)
@@ -130,17 +130,17 @@ text = "Карта шахматной страны"
 [node name="TourneyMenuButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-text = "Турниры и соперники  ▸"
+text = "Турниры и соперники  →"
 
 [node name="PlayMenuButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-text = "Играть  ▸"
+text = "Играть  →"
 
 [node name="TrainMenuButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
-text = "Обучение и задачи  ▸"
+text = "Обучение и задачи  →"
 
 [node name="SettingsButton" type="Button" parent="ContentCenter/MainPanel/VBox"]
 custom_minimum_size = Vector2(0, 42)
@@ -246,7 +246,7 @@ text = "Товарищеская партия — выбрать соперни�
 [node name="BackButton" type="Button" parent="ContentCenter/PlayPanel/VBox"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-text = "◂ Назад"
+text = "← Назад"
 
 [node name="TourneyPanel" type="PanelContainer" parent="ContentCenter"]
 visible = false
@@ -283,7 +283,7 @@ text = "База игроков — карточки соперников и л�
 [node name="BackButton" type="Button" parent="ContentCenter/TourneyPanel/VBox"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-text = "◂ Назад"
+text = "← Назад"
 
 [node name="TrainPanel" type="PanelContainer" parent="ContentCenter"]
 visible = false
@@ -292,7 +292,7 @@ layout_mode = 2
 [node name="VBox" type="VBoxContainer" parent="ContentCenter/TrainPanel"]
 custom_minimum_size = Vector2(420, 0)
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="TitleLabel" type="Label" parent="ContentCenter/TrainPanel/VBox"]
 layout_mode = 2
@@ -346,7 +346,7 @@ text = "🎓 Школа юного шахматиста — учимся не с
 [node name="BackButton" type="Button" parent="ContentCenter/TrainPanel/VBox"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-text = "◂ Назад"
+text = "← Назад"
 
 [connection signal="pressed" from="ProfileBar/HBox/ProfileButton" to="." method="_on_profile_pressed"]
 [connection signal="pressed" from="ProfileBar/HBox/TrophyButton" to="." method="_on_trophy_pressed"]

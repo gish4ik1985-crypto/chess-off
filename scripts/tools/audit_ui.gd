@@ -161,6 +161,29 @@ func _scan_global_overlaps(root: Node, out: Array) -> void:
 			if inter.size.x > 2.0 and inter.size.y > 2.0:
 				out.append([pa, pb, "%.0fx%.0fpx" % [inter.size.x, inter.size.y]])
 
+# Все символы интерфейса должны быть в шрифте проекта (с его fallback-цепочкой), а не только в системном:
+# в веб-сборке системных шрифтов нет, и недостающий символ превращается в пустой квадрат.
+var _ui_font: Font = null
+
+func _scan_glyphs(root: Node, n: Node, out: Array) -> void:
+	if _ui_font == null:
+		_ui_font = load("res://theme/NeonTheme.tres").default_font
+	if (n is Label or n is BaseButton or n is RichTextLabel) and n.is_visible_in_tree():
+		var txt := ""
+		if n is RichTextLabel:
+			txt = n.get_parsed_text()
+		elif "text" in n:
+			txt = str(n.text)
+		var missing := ""
+		for i in txt.length():
+			var c := txt.unicode_at(i)
+			if c > 127 and not (c >= 0x400 and c <= 0x4FF) and c != 0xFE0F and c != 0x200D and c != 0xA0 					and not _ui_font.has_char(c) and missing.find(txt[i]) < 0:
+				missing += txt[i]
+		if missing != "":
+			out.append([str(root.get_path_to(n)), "нет в шрифте: " + missing])
+	for ch in n.get_children():
+		_scan_glyphs(root, ch, out)
+
 func _report(label: String, node: Node) -> void:
 	var over := []
 	_scan_container_overflow(node, node, over)
@@ -171,7 +194,9 @@ func _report(label: String, node: Node) -> void:
 	_scan_global_overlaps(node, overlaps)
 	var spill := []
 	_scan_spill(node, node, spill)
-	var bad = over.size() + dead.size() + overlaps.size() + spill.size()
+	var glyphs := []
+	_scan_glyphs(node, node, glyphs)
+	var bad = over.size() + dead.size() + overlaps.size() + spill.size() + glyphs.size()
 	print("--- %s%s" % [label, "" if bad > 0 else "  [OK]"])
 	for o in over:
 		print("    ⚠ КОНТЕЙНЕР ПЕРЕПОЛНЕН: %s (%s)" % o)
@@ -181,6 +206,8 @@ func _report(label: String, node: Node) -> void:
 		print("    ⚠ пересечение: %s <-> %s (%s)" % o)
 	for s in spill:
 		print("    ⚠ не влезает в экран: %s (%s)" % s)
+	for g in glyphs:
+		print("    ⚠ символы вне шрифта проекта: %s (%s)" % g)
 	problems += bad
 
 # ---------------------------------------------------------------- прогоны

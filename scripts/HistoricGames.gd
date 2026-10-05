@@ -85,7 +85,7 @@ func _show_games(p: Dictionary) -> void:
 	back.custom_minimum_size = Vector2(0, 40)
 	back.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_fit_list_button(back)
-	back.text = "◂ Ко всем шахматистам"
+	back.text = "← Ко всем шахматистам"
 	back.pressed.connect(_show_players)
 	list_vbox.add_child(back)
 	for g in p.games:
@@ -345,7 +345,7 @@ func _on_last_pressed() -> void: _seek(states.size() - 1)
 # партии список можно свернуть одной кнопкой, освободив место под доску.
 func _on_list_toggle_pressed() -> void:
 	list_scroll.visible = not list_scroll.visible
-	list_toggle_button.text = "▸" if not list_scroll.visible else "◂"
+	list_toggle_button.text = "→" if not list_scroll.visible else "←"
 
 func _process(delta: float) -> void:
 	if auto_check != null and auto_check.button_pressed and not states.is_empty():

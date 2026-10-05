@@ -246,7 +246,7 @@ func _build_games_list() -> void:
 	var back := Button.new()
 	back.custom_minimum_size = Vector2(0, 40)
 	back.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	back.text = "◂ Ко всем игрокам"
+	back.text = "← Ко всем игрокам"
 	back.pressed.connect(func(): showing_games = false; _build_list())
 	list_vbox.add_child(back)
 
