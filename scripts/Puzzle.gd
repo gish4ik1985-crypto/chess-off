@@ -36,6 +36,7 @@ var mode := "mate" # "mate" (static curated bank), "fork", "pin" or "backrank" (
 # where they blundered (Profile.recent_blunders keeps fen + played move).
 # The task: find any move clearly stronger than the one played back then —
 # verified live by the engine. Fixing your own mistake beats any textbook.
+const ALT_MOVE_MAX_LOSS := 20.0 # сп: насколько хуже лучшего может быть засчитанный альтернативный ход
 var blunder_ai := ChessAI.new(ChessAI.ANALYSIS_LEVEL) # solver only, never an opponent
 var current_blunder: Dictionary = {}
 var blunder_idx := 0
@@ -522,6 +523,14 @@ func _attempt_move(move: Dictionary) -> void:
 			move_progress = _current_moves().size()
 			_finish_solved()
 			return
+		# заложенное решение не всегда единственное лучшее (связка, отвлечение): ход, который
+		# движок оценивает не хуже заложенного, засчитываем — иначе ребёнок наказан за верный ход
+		if blunder_ai.move_loss(engine, move, 3) <= ALT_MOVE_MAX_LOSS:
+			engine.apply_move(move)
+			move_progress = _current_moves().size()
+			_finish_solved()
+			feedback_label.text = "Другой путь, но тоже сильный ход!"
+			return
 		attempt_clean = false
 		feedback_label.text = "Не тот ход — попробуйте ещё раз"
 		feedback_label.modulate = Color(0.9, 0.35, 0.3)
@@ -546,18 +555,7 @@ func _attempt_move(move: Dictionary) -> void:
 # are cleared (they replay the stored line, which no longer applies).
 func _attempt_mate_move(move: Dictionary) -> void:
 	var remaining: int = _current_puzzle().mate_in - move_progress / 2
-	var after = engine.clone()
-	after.apply_move(move)
-	var ok = after.game_status() == "checkmate"
-	if not ok and remaining >= 2 and after.is_in_check("b"):
-		ok = true
-		for r in after.legal_moves("b"):
-			var c2 = after.clone()
-			c2.apply_move(r)
-			if _mate_solutions(c2, remaining - 1).is_empty():
-				ok = false
-				break
-	if not ok:
+	if not _move_forces_mate(engine, move, remaining):
 		attempt_clean = false
 		feedback_label.text = "Этот ход не ведёт к мату — попробуйте ещё раз"
 		feedback_label.modulate = Color(0.9, 0.35, 0.3)
@@ -581,6 +579,26 @@ func _attempt_mate_move(move: Dictionary) -> void:
 		_auto_play_black_reply()
 		_autosave_puzzle()
 	_update_status()
+
+# Ход белых годится, если он ставит мат или после него КАЖДЫЙ ответ чёрных ведёт к мату
+# в оставшиеся ходы. Тихие (нешахующие) первые ходы тоже годятся: у многих задач «мат в 2»
+# есть несколько решений, и верный мат нельзя объявлять ошибкой.
+func _move_forces_mate(e: ChessEngine, move: Dictionary, remaining: int) -> bool:
+	var after = e.clone()
+	after.apply_move(move)
+	if after.game_status() == "checkmate":
+		return true
+	if remaining < 2:
+		return false
+	var replies = after.legal_moves("b")
+	if replies.is_empty():
+		return false # пат — не мат
+	for r in replies:
+		var c2 = after.clone()
+		c2.apply_move(r)
+		if _mate_solutions(c2, remaining - 1).is_empty():
+			return false
+	return true
 
 # First white moves that force mate in <= n (checking moves only for n >= 2,
 # same convention the offline generator was verified with).
