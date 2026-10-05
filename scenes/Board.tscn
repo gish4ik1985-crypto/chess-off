@@ -194,7 +194,7 @@ horizontal_alignment = 1
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.95, 0.85, 0.55, 1)
 
-[node name="PromoPanel" type="Panel" parent="UI"]
+[node name="PromoPanel" type="PanelContainer" parent="UI"]
 theme = ExtResource("2")
 visible = false
 offset_left = 280.0
@@ -204,10 +204,7 @@ offset_bottom = 490.0
 theme_override_styles/panel = SubResource("Panel1")
 
 [node name="VBox" type="VBoxContainer" parent="UI/PromoPanel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="Label" type="Label" parent="UI/PromoPanel/VBox"]
@@ -241,7 +238,7 @@ custom_minimum_size = Vector2(70, 40)
 layout_mode = 2
 text = "Конь"
 
-[node name="LeavePanel" type="Panel" parent="UI"]
+[node name="LeavePanel" type="PanelContainer" parent="UI"]
 theme = ExtResource("2")
 visible = false
 offset_left = 280.0
@@ -251,10 +248,7 @@ offset_bottom = 470.0
 theme_override_styles/panel = SubResource("Panel1")
 
 [node name="VBox" type="VBoxContainer" parent="UI/LeavePanel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+layout_mode = 2
 theme_override_constants/separation = 16
 
 [node name="TitleLabel" type="Label" parent="UI/LeavePanel/VBox"]
@@ -287,7 +281,7 @@ custom_minimum_size = Vector2(140, 44)
 layout_mode = 2
 text = "Остаться"
 
-[node name="GameOverPanel" type="Panel" parent="UI"]
+[node name="GameOverPanel" type="PanelContainer" parent="UI"]
 theme = ExtResource("2")
 visible = false
 offset_left = 240.0
@@ -297,14 +291,19 @@ offset_bottom = 650.0
 theme_override_styles/panel = SubResource("Panel1")
 
 [node name="VBox" type="VBoxContainer" parent="UI/GameOverPanel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="ResultLabel" type="Label" parent="UI/GameOverPanel/VBox"]
+[node name="ResultScroll" type="ScrollContainer" parent="UI/GameOverPanel/VBox"]
+custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ResultLabel" type="Label" parent="UI/GameOverPanel/VBox/ResultScroll"]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+size_flags_horizontal = 3
 text = "Игра окончена"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 20

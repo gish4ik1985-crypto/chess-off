@@ -336,7 +336,7 @@ func _show_blunder(blunders: Array, idx: int) -> void:
 	current_blunder = blunders[idx]
 	_load_from_dict({"fen": current_blunder.fen, "moves": []})
 	title_label.text = "Овраг зевков (Дорога домой)"
-	status_label.text = "Момент из вашей партии! Тогда вы сыграли %s — найдите ход сильнее." % current_blunder.move
+	status_label.text = "Момент из вашей партии! Тогда вы сыграли %s — найдите ход сильнее." % ChessEngine.ru_notation(str(current_blunder.move))
 	feedback_label.text = "Исправлено зевков: %d / %d" % [Profile.road_blunders_fixed, Profile.ROAD_BLUNDERS_REQUIRED]
 
 # Accept any move that doesn't lose serious material (engine-checked on a
@@ -786,7 +786,7 @@ func _on_reset_pressed() -> void:
 	if mode == "blunder":
 		if not current_blunder.is_empty():
 			_load_from_dict({"fen": current_blunder.fen, "moves": []})
-			status_label.text = "Момент из вашей партии! Тогда вы сыграли %s — найдите ход сильнее." % current_blunder.move
+			status_label.text = "Момент из вашей партии! Тогда вы сыграли %s — найдите ход сильнее." % ChessEngine.ru_notation(str(current_blunder.move))
 		return
 	if mode == "mix3":
 		_load_from_dict(_current_puzzle())

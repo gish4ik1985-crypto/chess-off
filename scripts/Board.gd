@@ -19,9 +19,9 @@ const COLOR_HINT := Color(0.25, 0.65, 0.95, 0.6)
 @onready var status_label: Label = $UI/SidePanel/Content/StatusLabel
 @onready var turn_label: Label = $UI/SidePanel/Content/TurnLabel
 @onready var history_label: RichTextLabel = $UI/SidePanel/Content/HistoryLabel
-@onready var promo_panel: Panel = $UI/PromoPanel
-@onready var gameover_panel: Panel = $UI/GameOverPanel
-@onready var gameover_label: Label = $UI/GameOverPanel/VBox/ResultLabel
+@onready var promo_panel: PanelContainer = $UI/PromoPanel
+@onready var gameover_panel: PanelContainer = $UI/GameOverPanel
+@onready var gameover_label: Label = $UI/GameOverPanel/VBox/ResultScroll/ResultLabel
 @onready var board_draw: Node2D = $BoardDraw
 @onready var background_rect: ColorRect = $Background
 @onready var board_frame: Panel = $BoardFrame
@@ -31,7 +31,7 @@ const COLOR_HINT := Color(0.25, 0.65, 0.95, 0.6)
 @onready var hint_label: Label = $UI/SidePanel/Content/HintLabel
 @onready var hint_button: Button = $UI/SidePanel/Content/HintButton
 @onready var nudge_panel: PanelContainer = $UI/NudgePanel
-@onready var leave_panel: Panel = $UI/LeavePanel
+@onready var leave_panel: PanelContainer = $UI/LeavePanel
 
 var pending_leave_target := ""
 
@@ -719,9 +719,9 @@ func _show_game_review(score: float) -> void:
 	var where: String
 	if worst.loss >= 800.0:
 		# losses this big are "missed a decisive tactic", counting pawns is silly
-		where = "на ходу %d (%s) — он резко изменил оценку партии" % [worst.move_no, worst.notation]
+		where = "на ходу %d (%s) — он резко изменил оценку партии" % [worst.move_no, ChessEngine.ru_notation(str(worst.notation))]
 	else:
-		where = "на ходу %d (%s) — он потерял примерно %.1f пешки" % [worst.move_no, worst.notation, worst.loss / 100.0]
+		where = "на ходу %d (%s) — он потерял примерно %.1f пешки" % [worst.move_no, ChessEngine.ru_notation(str(worst.notation)), worst.loss / 100.0]
 	if score < 0.5:
 		review_label.text = "Разбор: партия сломалась %s. Попробуйте сыграть его иначе!" % where
 	elif score < 1.0:
@@ -1250,8 +1250,8 @@ func _refresh_history_label() -> void:
 	var i = 0
 	while i < move_history.size():
 		var num = i / 2 + 1
-		var white_m = move_history[i]
-		var black_m = move_history[i + 1] if i + 1 < move_history.size() else ""
+		var white_m = ChessEngine.ru_notation(move_history[i])
+		var black_m = ChessEngine.ru_notation(move_history[i + 1]) if i + 1 < move_history.size() else ""
 		lines.append(str(num) + ". " + white_m + "  " + black_m)
 		i += 2
 	history_label.text = "\n".join(lines)
@@ -1556,12 +1556,16 @@ func _on_board_draw() -> void:
 					var pos = _square_to_pixel(Vector2i(f, r))
 					if p.color == player_color and show_red and engine.is_square_attacked(f, r, opp):
 						var c = pos + Vector2(SQUARE - 12, 12)
-						board_draw.draw_circle(c, 7.0, Color(1.0, 0.25, 0.25, 0.95))
-						board_draw.draw_arc(c, 10.0, 0, TAU, 16, Color(1.0, 0.25, 0.25, 0.5), 2.0)
+						# красный ТРЕУГОЛЬНИК: форма отличается от зелёного ромба — не только цветом (дальтонизм)
+						var tri := PackedVector2Array([c + Vector2(0, -10), c + Vector2(9.5, 7), c + Vector2(-9.5, 7)])
+						board_draw.draw_colored_polygon(tri, Color(1.0, 0.25, 0.25, 0.95))
+						board_draw.draw_polyline(PackedVector2Array([tri[0], tri[1], tri[2], tri[0]]), Color(1, 1, 1, 0.85), 1.5)
 					elif p.color == opp and show_green and engine.is_square_attacked(f, r, player_color):
 						var c = pos + Vector2(SQUARE - 12, 12)
-						board_draw.draw_circle(c, 7.0, Color(0.25, 0.95, 0.4, 0.95))
-						board_draw.draw_arc(c, 10.0, 0, TAU, 16, Color(0.25, 0.95, 0.4, 0.5), 2.0)
+						# зелёный РОМБ
+						var dia := PackedVector2Array([c + Vector2(0, -9), c + Vector2(9, 0), c + Vector2(0, 9), c + Vector2(-9, 0)])
+						board_draw.draw_colored_polygon(dia, Color(0.25, 0.95, 0.4, 0.95))
+						board_draw.draw_polyline(PackedVector2Array([dia[0], dia[1], dia[2], dia[3], dia[0]]), Color(1, 1, 1, 0.85), 1.5)
 
 	# dragged piece follows the cursor, drawn on top
 	if dragging and drag_from != null and not xray_fog:

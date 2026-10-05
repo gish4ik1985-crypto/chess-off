@@ -100,39 +100,44 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="CardPanel" type="PanelContainer" parent="Main"]
+[node name="CardScroll" type="ScrollContainer" parent="Main"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 0
+
+[node name="CardPanel" type="PanelContainer" parent="Main/CardScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="VBox" type="VBoxContainer" parent="Main/CardPanel"]
+[node name="VBox" type="VBoxContainer" parent="Main/CardScroll/CardPanel"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="NameLabel" type="Label" parent="Main/CardPanel/VBox"]
+[node name="NameLabel" type="Label" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
 theme_override_font_sizes/font_size = 24
 text = "Выберите игрока"
 autowrap_mode = 2
 
-[node name="LeagueLabel" type="Label" parent="Main/CardPanel/VBox"]
+[node name="LeagueLabel" type="Label" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 16
 text = ""
 autowrap_mode = 2
 
-[node name="HSeparator" type="HSeparator" parent="Main/CardPanel/VBox"]
+[node name="HSeparator" type="HSeparator" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 
-[node name="StyleLabel" type="Label" parent="Main/CardPanel/VBox"]
+[node name="StyleLabel" type="Label" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.82, 0.88, 0.95, 1)
 theme_override_font_sizes/font_size = 15
 text = ""
 autowrap_mode = 2
 
-[node name="StatsLabel" type="Label" parent="Main/CardPanel/VBox"]
+[node name="StatsLabel" type="Label" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.72, 0.8, 0.9, 1)
@@ -140,36 +145,36 @@ theme_override_font_sizes/font_size = 15
 text = ""
 autowrap_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="Main/CardPanel/VBox"]
+[node name="HSeparator2" type="HSeparator" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 
-[node name="ChallengeLabel" type="Label" parent="Main/CardPanel/VBox"]
+[node name="ChallengeLabel" type="Label" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.8, 0.35, 1)
 theme_override_font_sizes/font_size = 15
 text = "Вызвать на товарищескую партию"
 autowrap_mode = 2
 
-[node name="FormatRow" type="HBoxContainer" parent="Main/CardPanel/VBox"]
+[node name="FormatRow" type="HBoxContainer" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ColorRow" type="HBoxContainer" parent="Main/CardPanel/VBox"]
+[node name="ColorRow" type="HBoxContainer" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="PlayButton" type="Button" parent="Main/CardPanel/VBox"]
+[node name="PlayButton" type="Button" parent="Main/CardScroll/CardPanel/VBox"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "Играть!"
 
-[node name="WatchButton" type="Button" parent="Main/CardPanel/VBox"]
+[node name="WatchButton" type="Button" parent="Main/CardScroll/CardPanel/VBox"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "📂 Партии игрока"
 
-[node name="HintLabel" type="Label" parent="Main/CardPanel/VBox"]
+[node name="HintLabel" type="Label" parent="Main/CardScroll/CardPanel/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.68, 0.78, 1)
 theme_override_font_sizes/font_size = 13
@@ -177,5 +182,5 @@ text = "В турнире соперники берутся только из в
 autowrap_mode = 2
 
 [connection signal="pressed" from="Main/LeaguePanel/LeagueVBox/NewsButton" to="." method="_on_news_pressed"]
-[connection signal="pressed" from="Main/CardPanel/VBox/WatchButton" to="." method="_on_watch_pressed"]
+[connection signal="pressed" from="Main/CardScroll/CardPanel/VBox/WatchButton" to="." method="_on_watch_pressed"]
 [connection signal="pressed" from="TopBar/HBox/MenuButton" to="." method="_on_menu_pressed"]

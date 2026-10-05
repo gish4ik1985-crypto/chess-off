@@ -501,6 +501,22 @@ func _position_key() -> String:
 func to_fen() -> String:
 	return "%s %d %d" % [_position_key(), halfmove_clock, fullmove_number]
 
+# Запись хода для показа: русские обозначения фигур (Кр, Ф, Л, С, К). Хранится по-прежнему
+# латиницей ("Nf3-g5") — партии в профиле и архивах не требуют миграции.
+static func ru_notation(txt: String) -> String:
+	if txt.begins_with("O-O"):
+		return txt.replace("O", "0")
+	var out := txt
+	if txt.length() > 0:
+		var head: String = {"K": "Кр", "Q": "Ф", "R": "Л", "B": "С", "N": "К"}.get(txt[0], "")
+		if head != "":
+			out = head + txt.substr(1)
+	var i := out.find("=")
+	if i >= 0 and i + 1 < out.length():
+		var promo: String = {"Q": "Ф", "R": "Л", "B": "С", "N": "К"}.get(out[i + 1], out[i + 1])
+		out = out.substr(0, i + 1) + promo + out.substr(i + 2)
+	return out
+
 # Внешний FEN может обещать права рокировки без ладьи/короля на месте и взятие на проходе
 # без пешки — движок на это слепо полагался (король «прыгал» через пустое место). Лишнее убираем.
 func _sanitize_fen_fields() -> void:

@@ -432,9 +432,9 @@ func _moves_list_button(e: Dictionary, is_best: bool) -> void:
 	b.custom_minimum_size = Vector2(0, 40)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	if is_best:
-		b.text = "★ %s — идеальный ход" % e.move
+		b.text = "★ %s — идеальный ход" % ChessEngine.ru_notation(str(e.move))
 	else:
-		b.text = "✘ %s — потеряно ≈%d очков" % [e.move, int(e.loss)]
+		b.text = "✘ %s — потеряно ≈%d очков" % [ChessEngine.ru_notation(str(e.move)), int(e.loss)]
 	b.pressed.connect(func(): _show_move_entry(e, is_best))
 	moves_list_vbox.add_child(b)
 
@@ -516,12 +516,12 @@ func _apply_move_analysis(out: Dictionary) -> void:
 	moves_best_to = out.get("best_to", Vector2i(-1, -1))
 	var lines := []
 	if out.is_best:
-		lines.append("★ Отличный ход %s! Тренер сыграл бы так же — запомните этот приём." % out.move)
+		lines.append("★ Отличный ход %s! Тренер сыграл бы так же — запомните этот приём." % ChessEngine.ru_notation(str(out.move)))
 		moves_caption.add_theme_color_override("font_color", GOOD_COL)
 	else:
 		var loss = int(out.loss)
 		var loss_txt = "%.1f пешки" % (loss / 100.0) if loss < 1500 else "решающее преимущество"
-		lines.append("✘ Сыграно %s (красная стрелка) — потеряно %s." % [out.move, loss_txt])
+		lines.append("✘ Сыграно %s (красная стрелка) — потеряно %s." % [ChessEngine.ru_notation(str(out.move)), loss_txt])
 		if out.has("punish"):
 			lines.append("Почему: %s" % out.punish)
 		if out.has("best_txt"):
@@ -748,7 +748,7 @@ func _analyze_replay(my_color: String, req: int, states: Array, moves: Array, mo
 			if best != null and not (best.from == moves[i].from and best.to == moves[i].to):
 				var victim = before.board[best.to.y][best.to.x]
 				var why = "забирает %s" % PIECE_RU.get(victim.type, "фигуру") if victim != null else "держит позицию без потерь"
-				better_txt = "Сильнее было %s — %s." % [_notation(before, best), why]
+				better_txt = "Сильнее было %s — %s." % [ChessEngine.ru_notation(_notation(before, best)), why]
 		call_deferred("_apply_replay_analysis", i, loss, better_txt, req)
 
 func _apply_replay_analysis(i: int, loss: float, better_txt: String, req: int) -> void:

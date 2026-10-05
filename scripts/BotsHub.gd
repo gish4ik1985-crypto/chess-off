@@ -10,14 +10,14 @@ const BotData = preload("res://scripts/BotData.gd")
 @onready var status_label: Label = $TopBar/HBox/StatusLabel
 @onready var league_vbox: VBoxContainer = $Main/LeaguePanel/LeagueVBox
 @onready var list_vbox: VBoxContainer = $Main/ListScroll/ListVBox
-@onready var card_name: Label = $Main/CardPanel/VBox/NameLabel
-@onready var card_league: Label = $Main/CardPanel/VBox/LeagueLabel
-@onready var card_style: Label = $Main/CardPanel/VBox/StyleLabel
-@onready var card_stats: Label = $Main/CardPanel/VBox/StatsLabel
-@onready var challenge_label: Label = $Main/CardPanel/VBox/ChallengeLabel
-@onready var format_row: HBoxContainer = $Main/CardPanel/VBox/FormatRow
-@onready var color_row: HBoxContainer = $Main/CardPanel/VBox/ColorRow
-@onready var play_button: Button = $Main/CardPanel/VBox/PlayButton
+@onready var card_name: Label = $Main/CardScroll/CardPanel/VBox/NameLabel
+@onready var card_league: Label = $Main/CardScroll/CardPanel/VBox/LeagueLabel
+@onready var card_style: Label = $Main/CardScroll/CardPanel/VBox/StyleLabel
+@onready var card_stats: Label = $Main/CardScroll/CardPanel/VBox/StatsLabel
+@onready var challenge_label: Label = $Main/CardScroll/CardPanel/VBox/ChallengeLabel
+@onready var format_row: HBoxContainer = $Main/CardScroll/CardPanel/VBox/FormatRow
+@onready var color_row: HBoxContainer = $Main/CardScroll/CardPanel/VBox/ColorRow
+@onready var play_button: Button = $Main/CardScroll/CardPanel/VBox/PlayButton
 
 # -1 — показывать все лиги
 var filter_league := -1

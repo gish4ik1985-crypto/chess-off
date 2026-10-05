@@ -82,6 +82,32 @@ const MAX_DIFFICULTY := 25
 
 const SETTINGS_PATH := "user://settings.cfg"
 
+# Esc на любом экране: закрывает открытое окошко («Остаться», «Закрыть») или нажимает «Назад»/«В меню».
+# Кнопки ищем по имени среди видимых и включённых, в порядке важности.
+const ESC_BUTTONS := ["StayButton", "CloseButton", "BackButton", "MenuButton"]
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not event.is_action_pressed("ui_cancel"):
+		return
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	for want in ESC_BUTTONS:
+		var btn := _find_visible_button(scene, want)
+		if btn != null:
+			btn.pressed.emit()
+			get_viewport().set_input_as_handled()
+			return
+
+func _find_visible_button(node: Node, want: String) -> Button:
+	if node is Button and node.name == want and node.is_visible_in_tree() and not node.disabled:
+		return node
+	for c in node.get_children():
+		var r := _find_visible_button(c, want)
+		if r != null:
+			return r
+	return null
+
 func _ready() -> void:
 	load_settings()
 	apply_display_settings()
