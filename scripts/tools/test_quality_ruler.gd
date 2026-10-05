@@ -69,5 +69,22 @@ func _ready() -> void:
 	var pct := 100.0 * good / maxi(total, 1)
 	check("у мастеров не меньше 60% сильных ходов", pct >= 60.0, "%.0f%% из %d ходов, %d мс" % [pct, total, Time.get_ticks_msec() - t0])
 	check("у мастеров зевков не больше 3%", 100.0 * blunders / maxi(total, 1) <= 3.0, "%d зевков" % blunders)
+	# верное решение задачи на мат (в том числе мат в 3) не должно читаться как ошибка
+	var mate_bad := 0
+	var mate_total := 0
+	var worst_loss := 0.0
+	for p in PuzzleData.all():
+		var pe := ChessEngine.new()
+		pe.setup_from_fen(p.fen)
+		var mv0: String = p.moves[0]
+		var pm := find_move(pe, mv0.substr(0, 2), mv0.substr(2, 2))
+		if pm.is_empty():
+			continue
+		mate_total += 1
+		var ml: float = ai.move_loss(pe, pm, 3)
+		worst_loss = maxf(worst_loss, ml)
+		if ChessAI.quality_category(ml) in ["mistake", "blunder"]:
+			mate_bad += 1
+	check("верный первый ход задач на мат не считается ошибкой", mate_bad == 0, "%d из %d, худшая потеря %.0f" % [mate_bad, mate_total, worst_loss])
 	print("=== ИТОГО ошибок: %d ===" % fails)
 	get_tree().quit(1 if fails > 0 else 0)

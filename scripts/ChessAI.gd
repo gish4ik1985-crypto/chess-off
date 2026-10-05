@@ -29,6 +29,7 @@ const ANALYSIS_LEVEL := 12
 const LOSS_INACCURACY := 50.0 # потеря больше — «неточность», сантипешки
 const LOSS_MISTAKE := 150.0
 const LOSS_BLUNDER := 350.0
+const VERIFY_BUDGET_MS := 1500 # перепроверка серьёзной потери на глубине+2
 
 static func quality_category(loss: float) -> String:
 	if loss > LOSS_BLUNDER:
@@ -243,7 +244,16 @@ func move_loss(engine: ChessEngine, move: Dictionary, depth: int = 3) -> float:
 		root.append(FastSearch.encode(move, engine))
 		played = root.size() - 1
 	var fs = _fast(engine)
-	return float(fs.move_loss(root, played, depth))
+	var loss: int = fs.move_loss(root, played, depth)
+	# «Серьёзная» потеря на глубине 3 часто мнимая: форсированный мат в 3 и тактика за горизонтом
+	# в три полухода не видны, и верный ход читался как зевок. Перепроверяем глубже (с лимитом
+	# времени); если не уложились — остаётся мелкая оценка.
+	if float(loss) >= LOSS_MISTAKE:
+		var deep = _fast(engine)
+		var deep_loss: int = deep.move_loss(root, played, depth + 2, VERIFY_BUDGET_MS)
+		if deep_loss >= 0:
+			loss = deep_loss
+	return float(loss)
 
 func choose_move(engine: ChessEngine):
 	var moves = engine.legal_moves(engine.side_to_move)

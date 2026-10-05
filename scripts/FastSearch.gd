@@ -912,8 +912,10 @@ func best_clean(root: PackedInt32Array, depth: int) -> int:
 	return best_i
 
 # сколько сантипешек хуже сыгранный ход лучшего (0 — лучший)
-func move_loss(root: PackedInt32Array, played: int, depth: int) -> int:
-	deadline = 0
+# budget_ms > 0 — лимит времени; при превышении возвращает -1 (потеря не бывает отрицательной)
+func move_loss(root: PackedInt32Array, played: int, depth: int, budget_ms: int = 0) -> int:
+	deadline = Time.get_ticks_msec() + budget_ms if budget_ms > 0 else 0
+	nodes = 0
 	aborted = false
 	tt.clear()
 	killers.fill(0)
@@ -932,4 +934,6 @@ func move_loss(root: PackedInt32Array, played: int, depth: int) -> int:
 		if s > best_score:
 			best_score = s
 		alpha = maxi(alpha, s)
+	if aborted:
+		return -1
 	return best_score - played_score
