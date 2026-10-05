@@ -7,9 +7,8 @@
 
   Путь к Godot берётся из переменной GODOT, иначе ищется в PATH и в папке Загрузки.
 
-  ВАЖНО: часть проверок (AuditUI, TestBots, TestBestMoves) работает с реальными профилями
-  игроков. Скрипт заранее копирует профили и настройки во временную папку и возвращает их
-  на место после запуска, чтобы проверки не портили ваши данные.
+  ВАЖНО: часть проверок (AuditUI, TestBots, TestBestMoves) пишет в user://. Скрипт запускает
+  их с подменённым APPDATA (временная песочница), поэтому живые профили игроков не трогаются.
 #>
 param(
 	[string]$Only = "",
@@ -23,10 +22,12 @@ function Find-Godot {
 	if ($env:GODOT -and (Test-Path $env:GODOT)) { return $env:GODOT }
 	$cmd = Get-Command godot -ErrorAction SilentlyContinue
 	if ($cmd) { return $cmd.Source }
-	$found = Get-ChildItem -Path (Join-Path $env:USERPROFILE "Downloads") -Recurse -Filter "Godot_v4.6*win64*.exe" -ErrorAction SilentlyContinue |
-		Where-Object { $_.Name -notlike "*console*" } | Select-Object -First 1
-	if ($found) { return $found.FullName }
-	throw "Godot не найден: задайте переменную GODOT (полный путь к Godot_v4.6*.exe)."
+	foreach ($dir in @("Downloads", "Desktop")) {
+		$found = Get-ChildItem -Path (Join-Path $env:USERPROFILE $dir) -Recurse -Filter "Godot_v4*win64*.exe" -ErrorAction SilentlyContinue |
+			Where-Object { $_.Name -notlike "*console*" } | Select-Object -First 1
+		if ($found) { return $found.FullName }
+	}
+	throw "Godot не найден: задайте переменную GODOT (полный путь к Godot_v4*.exe)."
 }
 
 # Каждая проверка: имя, сцена (или скрипт для -s), как понять «всё хорошо», долгая ли она.
@@ -50,6 +51,7 @@ $tests = @(
 	@{ Name = "База игроков и лиги (TestBots)";          Scene = "TestBots";         Pass = "ИТОГО ошибок: 0"; Slow = $true },
 	@{ Name = "Интерфейс: наложения, кнопки (AuditUI)";  Scene = "AuditUI";          Pass = "ИТОГО проблем: 0"; Slow = $true },
 	@{ Name = "«Дорога домой» (test_dynamic_road)";      Script = "res://scripts/tools/test_dynamic_road.gd"; Pass = "ALL DYNAMIC ROAD TESTS PASSED" },
+	@{ Name = "Сохранение профиля (test_profile_safety)"; Script = "res://scripts/tools/test_profile_safety.gd"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Турниры (test_tournaments)";              Script = "res://scripts/tools/test_tournaments.gd";  Pass = "ALL TOURNAMENT TESTS PASSED" }
 )
 
@@ -57,22 +59,22 @@ $godot = Find-Godot
 Write-Host "Godot: $godot"
 Write-Host "Проект: $project`n"
 
-# --- защита профилей игроков ---
-$userDir = Join-Path $env:APPDATA "Godot\app_userdata\chessoff"
-$backup = Join-Path $env:TEMP ("chessoff_test_backup_" + (Get-Date -Format "yyyyMMdd_HHmmss"))
-New-Item -ItemType Directory -Force -Path $backup | Out-Null
-foreach ($item in @("users", "session.cfg", "settings.cfg")) {
-	$src = Join-Path $userDir $item
-	if (Test-Path $src) { Copy-Item -Recurse -Force $src (Join-Path $backup $item) }
-}
-Write-Host "Профили сохранены во временную копию: $backup`n"
+# --- изоляция от живых профилей игроков ---
+# Проверки работают с настоящим Profile (AuditUI, TestBots, TestBestMoves), поэтому каждому
+# запуску подсовываем СВОЙ APPDATA: Godot кладёт user:// в %APPDATA%\Godot\app_userdata\<проект>.
+# Живые профили не копируются, не стираются и не возвращаются — их просто не видно тестам,
+# так что обрыв скрипта (Ctrl+C, закрытое окно, kill) ничего не портит.
+$realAppData = $env:APPDATA
+$sandbox = Join-Path $env:TEMP ("chessoff_test_data_" + [guid]::NewGuid().ToString("N"))
+$userDir = Join-Path $sandbox "Godot\app_userdata\chessoff"
+New-Item -ItemType Directory -Force -Path (Join-Path $userDir "users") | Out-Null
+$env:APPDATA = $sandbox
+Write-Host "Тестовое хранилище (живые профили не затрагиваются): $sandbox`n"
 
 # Проверкам нужен текущий игрок (иначе главное меню уходит на экран входа, а аудит
-# интерфейса идёт медленным путём). Создаём временного игрока — после запуска он удаляется.
-New-Item -ItemType Directory -Force -Path (Join-Path $userDir "users") | Out-Null
-Get-ChildItem (Join-Path $userDir "users") -Filter *.cfg -ErrorAction SilentlyContinue | Remove-Item -Force
-[IO.File]::WriteAllText((Join-Path (Join-Path $userDir "users") "testrunner.cfg"), "[meta]`n`ndisplay_name=`"TestRunner`"`n", (New-Object Text.UTF8Encoding($false)))
-[IO.File]::WriteAllText((Join-Path $userDir "session.cfg"), "[session]`n`ncurrent_user=`"testrunner`"`n", (New-Object Text.UTF8Encoding($false)))
+# интерфейса идёт медленным путём), поэтому создаём временного игрока в песочнице.
+[IO.File]::WriteAllText((Join-Path (Join-Path $userDir "users") "testrunner.cfg"), "[meta]`ndisplay_name=`"TestRunner`"`n", (New-Object Text.UTF8Encoding($false)))
+[IO.File]::WriteAllText((Join-Path $userDir "session.cfg"), "[session]`ncurrent_user=`"testrunner`"`n", (New-Object Text.UTF8Encoding($false)))
 
 $results = @()
 try {
@@ -111,21 +113,8 @@ try {
 	}
 }
 finally {
-	# возвращаем профили как были (проверки могли что-то записать)
-	$liveUsers = Join-Path $userDir "users"
-	if (Test-Path (Join-Path $backup "users")) {
-		if (Test-Path $liveUsers) { Get-ChildItem $liveUsers -Filter *.cfg -ErrorAction SilentlyContinue | Remove-Item -Force }
-		New-Item -ItemType Directory -Force -Path $liveUsers | Out-Null
-		Get-ChildItem (Join-Path $backup "users") -Filter *.cfg -ErrorAction SilentlyContinue | Copy-Item -Destination $liveUsers -Force
-	} elseif (Test-Path $liveUsers) {
-		Get-ChildItem $liveUsers -Filter *.cfg -ErrorAction SilentlyContinue | Remove-Item -Force
-	}
-	foreach ($f in @("session.cfg", "settings.cfg")) {
-		$b = Join-Path $backup $f
-		$l = Join-Path $userDir $f
-		if (Test-Path $b) { Copy-Item -Force $b $l } elseif (Test-Path $l) { Remove-Item -Force $l }
-	}
-	Write-Host "`nПрофили и настройки возвращены на место." -ForegroundColor Cyan
+	$env:APPDATA = $realAppData
+	Remove-Item -Recurse -Force $sandbox -ErrorAction SilentlyContinue
 }
 
 $bad = @($results | Where-Object { $_.Status -ne "OK" })

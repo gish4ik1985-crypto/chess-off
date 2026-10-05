@@ -75,6 +75,7 @@ var coop := ""
 # «Помощь» в этой партии: подсказки и откаты ходов. Партия с помощью — не показатель силы игрока,
 # поэтому в рейтинг она не идёт (в турнирах подсказок и откатов нет вовсе).
 var help_hints := 0
+var _leave_defaults: Dictionary = {} # исходные тексты панели подтверждения
 var help_undos := 0
 var partner_ai: ChessAI
 var opp_ai_a: ChessAI
@@ -576,6 +577,10 @@ func _show_game_over(text: String, score: float = -1.0) -> void:
 		elif score >= 0.0 and score < 0.5:
 			sound_fx.play_result(false)
 	clock_running = false
+	# архив соперника — до турнирной ветки: она возвращается раньше, а состояние
+	# турнира (кто соперник) после finish_*_round может уже не найтись
+	if score >= 0.0:
+		_archive_bot_game(score)
 	if score >= 0.0 and not tournament.is_empty():
 		var practice = tournament.get("practice", false)
 		var state: Dictionary
@@ -613,8 +618,6 @@ func _show_game_over(text: String, score: float = -1.0) -> void:
 		if replay_button != null:
 			replay_button.visible = false # the round is already scored — no replays
 		return
-	if score >= 0.0:
-		_archive_bot_game(score)
 	if score >= 0.0:
 		# road (incl. replayed stops) and school are training modes with
 		# controlled/repeatable opponents — they must not feed the main
@@ -1588,9 +1591,16 @@ func _square_to_pixel(sq: Vector2i) -> Vector2:
 func _on_resign_pressed() -> void:
 	if game_over or pending_promotion != null:
 		return
-	_show_game_over("Вы сдались.", 0.0)
+	_ask_confirm("resign", "Сдаться?", "Партия будет засчитана как поражение. Сдаться?", "Сдаться")
 
 func _on_restart_pressed() -> void:
+	# пустую партию стирать не жалко — спрашиваем, только если уже были ходы
+	if game_over or move_coords.is_empty():
+		_do_restart()
+		return
+	_ask_confirm("restart", "Начать заново?", "Текущая партия будет потеряна без результата. Начать заново?", "Начать заново")
+
+func _do_restart() -> void:
 	Profile.clear_game_state()
 	get_tree().reload_current_scene()
 
@@ -1627,11 +1637,39 @@ func _leave_or_confirm(target: String) -> void:
 	if game_over:
 		_do_leave(target)
 		return
+	_ask_confirm(target)
+
+# Одна панель подтверждения на все опасные действия (выход, «Сдаться», «Заново»).
+# Тексты по умолчанию запоминаем при первом показе — турнирный режим подменяет вопрос заранее.
+func _ask_confirm(target: String, title: String = "", question: String = "", yes_text: String = "") -> void:
+	var t_lbl = get_node_or_null("UI/LeavePanel/VBox/TitleLabel")
+	var q_lbl = get_node_or_null("UI/LeavePanel/VBox/QuestionLabel")
+	var y_btn = get_node_or_null("UI/LeavePanel/VBox/HBox/LeaveButton")
+	if _leave_defaults.is_empty():
+		_leave_defaults = {
+			"title": t_lbl.text if t_lbl != null else "",
+			"question": q_lbl.text if q_lbl != null else "",
+			"yes": y_btn.text if y_btn != null else "",
+		}
+	if t_lbl != null:
+		t_lbl.text = title if title != "" else _leave_defaults.title
+	if q_lbl != null:
+		q_lbl.text = question if question != "" else _leave_defaults.question
+	if y_btn != null:
+		y_btn.text = yes_text if yes_text != "" else _leave_defaults.yes
 	pending_leave_target = target
 	leave_panel.visible = true
 
 func _on_leave_confirmed() -> void:
-	_do_leave(pending_leave_target)
+	match pending_leave_target:
+		"resign":
+			leave_panel.visible = false
+			if not game_over:
+				_show_game_over("Вы сдались.", 0.0)
+		"restart":
+			_do_restart()
+		_:
+			_do_leave(pending_leave_target)
 
 func _on_leave_cancel() -> void:
 	leave_panel.visible = false

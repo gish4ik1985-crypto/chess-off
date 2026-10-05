@@ -19,6 +19,10 @@ const LEVEL_RATING := [
 	1040, 1150, 1170, 1300, 1380, 1400, 1420, 1440, 1480, 1510,
 	1515, 1590, 1660, 1690, 1720,
 ]
+const SAVE_VERSION := 1
+const SAVE_DELAY := 1.0 # секунд между отложенными записями (request_save)
+var _save_pending := false
+var _load_failed := false # профиль не прочитался — не перезаписываем его пустым
 const MAX_GAME_SWING := 100.0
 const FARM_MARGIN := 200.0
 const LEVEL_RD := 60.0 # the AI's own strength is considered well-known/stable
@@ -240,7 +244,10 @@ func delete_user(name: String) -> void:
 	var key = sanitize_key(name)
 	var path = USERS_DIR + key + ".cfg"
 	if FileAccess.file_exists(path):
-		DirAccess.remove_absolute(path)
+		# мягкое удаление: файл уходит в _deleted/, а не стирается насовсем
+		DirAccess.make_dir_recursive_absolute(USERS_DIR + "_deleted")
+		var stamp := Time.get_datetime_string_from_system().replace(":", "-")
+		DirAccess.rename_absolute(path, USERS_DIR + "_deleted/" + key + "_" + stamp + ".cfg")
 	if current_user == key:
 		current_user = ""
 		display_name = ""
@@ -377,7 +384,24 @@ func record_game_result(ai_level: int, score: float) -> void:
 
 func save_game_state(state: Dictionary) -> void:
 	game_state = state
-	save_profile()
+	request_save()
+
+# Отложенное сохранение для «горячих» мест (каждый ход): не чаще раза в секунду.
+# Настоящая запись — save_profile(); принудительно она идёт при выходе и сворачивании.
+func request_save() -> void:
+	if _save_pending or current_user == "":
+		return
+	_save_pending = true
+	get_tree().create_timer(SAVE_DELAY).timeout.connect(func():
+		if _save_pending:
+			save_profile())
+
+func _notification(what: int) -> void:
+	var leaving: bool = what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED \
+			or what == NOTIFICATION_APPLICATION_FOCUS_OUT
+	if leaving:
+		if _save_pending:
+			save_profile()
 
 func clear_game_state() -> void:
 	if game_state.is_empty():
@@ -1155,7 +1179,7 @@ func record_move_quality(category: String, loss_cp: float, fen: String, move_not
 	if move_good >= 50:
 		_unlock("moves_good_50")
 	_check_achievements()
-	save_profile()
+	request_save()
 
 func move_quality_total() -> int:
 	return move_good + move_inaccuracy + move_mistake + move_blunder
@@ -1431,8 +1455,9 @@ func import_profile(src_path: String) -> String:
 	return nm
 
 func save_profile() -> void:
-	if current_user == "":
-		return
+	_save_pending = false
+	if current_user == "" or _load_failed:
+		return # не затираем профиль, который не удалось прочитать
 	_update_daily_snapshot()
 	var cfg = ConfigFile.new()
 	cfg.set_value("meta", "display_name", display_name)
@@ -1490,15 +1515,36 @@ func save_profile() -> void:
 	cfg.set_value("session", "game_state", game_state)
 	cfg.set_value("session", "puzzle_state", puzzle_state)
 	cfg.set_value("meta", "last_played_unix", Time.get_unix_time_from_system())
-	cfg.save(USERS_DIR + current_user + ".cfg")
+	cfg.set_value("meta", "save_version", SAVE_VERSION)
+	var path := USERS_DIR + current_user + ".cfg"
+	var tmp := path + ".tmp"
+	# пишем во временный файл и подменяем только после успеха: обрыв записи
+	# не должен оставить половину профиля
+	if cfg.save(tmp) != OK:
+		push_error("Не удалось записать профиль: " + tmp)
+		return
+	if FileAccess.file_exists(path):
+		DirAccess.copy_absolute(path, path + ".bak")
+	if DirAccess.rename_absolute(tmp, path) != OK:
+		push_error("Не удалось заменить профиль: " + path)
 
 func load_profile() -> void:
 	if current_user == "":
 		return
 	var cfg = ConfigFile.new()
-	var err = cfg.load(USERS_DIR + current_user + ".cfg")
+	var path := USERS_DIR + current_user + ".cfg"
+	_load_failed = false
+	var err = cfg.load(path)
 	if err != OK:
-		return
+		if not FileAccess.file_exists(path):
+			return # новый игрок — читать нечего
+		# файл есть, но не читается: пробуем предыдущую копию
+		cfg = ConfigFile.new()
+		if cfg.load(path + ".bak") != OK:
+			_load_failed = true
+			push_error("Профиль повреждён и копии нет: " + path)
+			return
+		push_warning("Профиль повреждён, восстановлен из .bak: " + path)
 	display_name = cfg.get_value("meta", "display_name", display_name)
 	rating = cfg.get_value("rating", "value", Glicko2.DEFAULT_RATING)
 	rd = cfg.get_value("rating", "rd", Glicko2.DEFAULT_RD)

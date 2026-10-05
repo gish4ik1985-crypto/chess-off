@@ -73,8 +73,18 @@ func _login(name: String) -> void:
 	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
 
 func _delete(name: String) -> void:
-	Profile.delete_user(name)
-	_refresh_list()
+	var dlg := ConfirmationDialog.new()
+	dlg.title = "Удалить игрока?"
+	dlg.dialog_text = "Удалить игрока «%s»?\nПрофиль уберётся из списка. Копия сохранится в папке _deleted." % name
+	dlg.ok_button_text = "Удалить"
+	dlg.cancel_button_text = "Отмена"
+	dlg.confirmed.connect(func():
+		Profile.delete_user(name)
+		_refresh_list())
+	dlg.canceled.connect(dlg.queue_free)
+	dlg.confirmed.connect(dlg.queue_free)
+	add_child(dlg)
+	dlg.popup_centered()
 
 func _on_create_pressed() -> void:
 	var name = name_edit.text.strip_edges()
