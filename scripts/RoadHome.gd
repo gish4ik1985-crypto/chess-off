@@ -27,7 +27,7 @@ const NODE_RADIUS := 38.0
 # Positions for dynamic remedial stops — the road keeps winding past "Дом"
 # for as long as the player's recent games show recurring weaknesses.
 const DYNAMIC_POSITIONS := [
-	Vector2(700, 140), Vector2(470, 100), Vector2(240, 160), Vector2(90, 320),
+	Vector2(700, 140), Vector2(470, 100), Vector2(240, 160), Vector2(90, 320), Vector2(330, 270),
 ]
 
 var selected := -1

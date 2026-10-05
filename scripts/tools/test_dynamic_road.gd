@@ -14,7 +14,7 @@ func _init() -> void:
 
 	# 5 games full of blunders and opening errors
 	for i in range(5):
-		profile.game_log.append({"blunder": 2, "err_opening": 1, "err_middlegame": 0, "err_endgame": 0})
+		profile.game_log.append({"level": 10, "good": 20, "blunder": 2, "err_opening": 2, "err_middlegame": 0, "err_endgame": 0})
 	var st = profile.dynamic_road_stages()
 	var kinds = st.map(func(s): return s.kind)
 	assert("focus_blunders" in kinds, "blunder weakness must appear")
@@ -24,8 +24,8 @@ func _init() -> void:
 
 	# mark one done, then play clean games until the window is clean
 	profile.road_focus_done["focus_blunders"] = true
-	for i in range(8):
-		profile.game_log.append({"blunder": 0, "err_opening": 0, "err_middlegame": 0, "err_endgame": 0})
+	for i in range(12):
+		profile.game_log.append({"level": 10, "good": 22, "blunder": 0, "err_opening": 0, "err_middlegame": 0, "err_endgame": 0})
 	st = profile.dynamic_road_stages()
 	assert(st.is_empty(), "clean window must remove all stages")
 	assert(profile.road_focus_done.is_empty(), "stale done marks must be dropped")
@@ -34,7 +34,7 @@ func _init() -> void:
 	# legacy entries without err_* fields fall back to worst_move_no
 	profile.game_log.clear()
 	for i in range(5):
-		profile.game_log.append({"blunder": 0, "worst_move_no": 30})
+		profile.game_log.append({"level": 10, "blunder": 0, "worst_move_no": 30})
 	st = profile.dynamic_road_stages()
 	kinds = st.map(func(s): return s.kind)
 	assert("focus_endgame" in kinds, "legacy worst_move_no must map to endgame")
@@ -50,6 +50,18 @@ func _init() -> void:
 	profile.theme_clean["fork"] = 6
 	assert(profile.dynamic_road_stages().is_empty(), "clean theme must not add a stage")
 	print("tactics OK")
+
+	# нормировка на уровень соперника: то, что для игры с уровнем 10 — провал,
+	# для игры с уровнем 1 — норма; и слабая сторона способна «снять» остановку
+	var np = load("res://scripts/Profile.gd").new()
+	for i in range(8):
+		np.game_log.append({"level": 1, "good": 25, "blunder": 4, "err_opening": 4, "err_middlegame": 14, "err_endgame": 3})
+	assert(np.dynamic_road_stages().is_empty(), "обычные для уровня 1 ошибки не должны давать остановок")
+	var np2 = load("res://scripts/Profile.gd").new()
+	for i in range(8):
+		np2.game_log.append({"level": 10, "good": 25, "blunder": 4, "err_opening": 4, "err_middlegame": 14, "err_endgame": 3})
+	assert(np2.dynamic_road_stages().size() >= 3, "те же ошибки против уровня 10 — серьёзная слабость")
+	print("normalisation OK")
 
 	# ворота нельзя пройти повтором: одна и та же задача/зевок в зачёт идёт один раз
 	var gp = load("res://scripts/Profile.gd").new()

@@ -475,7 +475,15 @@ var solved_generated: Dictionary = {} # "тема|fen" решённых сген
 # once the recent games are clean. road_focus_done remembers which of the
 # currently-visible stops were beaten (a stop can reappear later if the same
 # weakness returns; it will need to be beaten again).
-const ROAD_FOCUS_WINDOW := 8 # how many recent games the road looks at
+const ROAD_FOCUS_WINDOW := 12 # how many recent games the road looks at
+const ROAD_TOLERANCE := 1.5
+# Сколько ошибок делает «ровня» соперника (замер самоигры уровней тем же анализатором):
+# по якорным уровням, между ними — линейная интерполяция (_typical).
+const ROAD_TYPICAL_LEVELS := [1, 3, 6, 10, 15, 25]
+const ROAD_TYPICAL_BLUNDER_SHARE := [0.18, 0.11, 0.13, 0.008, 0.0, 0.0] # доля зевков среди ходов
+const ROAD_TYPICAL_OPENING := [4.5, 5.0, 1.5, 0.5, 0.0, 0.0] # ошибок за партию в первых 10 ходах
+const ROAD_TYPICAL_MIDDLE := [16.0, 9.0, 9.5, 3.0, 1.0, 0.5]
+const ROAD_TYPICAL_ENDING := [4.0, 2.0, 5.5, 0.5, 0.0, 0.0]
 const ROAD_FOCUS_KINDS := {
 	"focus_blunders": {
 		"name": "Крепость без зевков",
@@ -511,14 +519,21 @@ var road_focus_done := {} # kind -> true (for currently active dynamic stops)
 func dynamic_road_stages() -> Array:
 	var window: Array = game_log.slice(max(game_log.size() - ROAD_FOCUS_WINDOW, 0))
 	var stages := []
-	if window.size() >= 3:
+	if window.size() >= 4:
 		var n = window.size()
 		var blunders := 0
+		var moves_total := 0
 		var err_open := 0
 		var err_mid := 0
 		var err_end := 0
+		# что считалось бы «обычным» для игрока, играющего на уровне этих соперников
+		var exp_blunder := 0.0
+		var exp_open := 0.0
+		var exp_mid := 0.0
+		var exp_end := 0.0
 		for g in window:
 			blunders += int(g.get("blunder", 0))
+			moves_total += int(g.get("good", 0)) + int(g.get("inaccuracy", 0)) + int(g.get("mistake", 0)) + int(g.get("blunder", 0))
 			err_open += int(g.get("err_opening", 0))
 			err_mid += int(g.get("err_middlegame", 0))
 			err_end += int(g.get("err_endgame", 0))
@@ -528,13 +543,23 @@ func dynamic_road_stages() -> Array:
 				if no <= 10: err_open += 1
 				elif no <= 25: err_mid += 1
 				else: err_end += 1
-		if blunders >= 4:
+			var lvl := int(g.get("level", 5))
+			exp_blunder += _typical(ROAD_TYPICAL_BLUNDER_SHARE, lvl)
+			exp_open += _typical(ROAD_TYPICAL_OPENING, lvl)
+			exp_mid += _typical(ROAD_TYPICAL_MIDDLE, lvl)
+			exp_end += _typical(ROAD_TYPICAL_ENDING, lvl)
+		# Остановка появляется, когда ошибок заметно БОЛЬШЕ, чем делает «ровня» этих соперников
+		# (в 1,5 раза + небольшой запас на случайность), и их не меньше 3 за окно. Раньше пороги были
+		# абсолютными (4–5 ошибок за 8 партий): слабый игрок не мог их снять, сильный — не достигал.
+		var blunder_share: float = float(blunders) / float(maxi(moves_total, 1))
+		var exp_share: float = exp_blunder / float(n)
+		if blunders >= 3 and blunder_share > exp_share * ROAD_TOLERANCE + 0.03:
 			stages.append(_make_focus_stage("focus_blunders", blunders, n))
-		if err_open >= 4:
+		if err_open >= 3 and float(err_open) > exp_open * ROAD_TOLERANCE + 1.0:
 			stages.append(_make_focus_stage("focus_opening", err_open, n))
-		if err_mid >= 5:
+		if err_mid >= 3 and float(err_mid) > exp_mid * ROAD_TOLERANCE + 1.0:
 			stages.append(_make_focus_stage("focus_middlegame", err_mid, n))
-		if err_end >= 4:
+		if err_end >= 3 and float(err_end) > exp_end * ROAD_TOLERANCE + 1.0:
 			stages.append(_make_focus_stage("focus_endgame", err_end, n))
 	# слабая тема задач: решено не меньше 5, но меньше половины — без подсказок и ошибок
 	var SP = preload("res://scripts/SkillProfile.gd")
@@ -568,6 +593,15 @@ func dynamic_road_stages() -> Array:
 	if changed:
 		save_profile()
 	return stages
+
+func _typical(table: Array, level: int) -> float:
+	var lv := clampi(level, 1, 25)
+	for i in range(1, ROAD_TYPICAL_LEVELS.size()):
+		if lv <= ROAD_TYPICAL_LEVELS[i]:
+			var a: int = ROAD_TYPICAL_LEVELS[i - 1]
+			var b: int = ROAD_TYPICAL_LEVELS[i]
+			return lerpf(float(table[i - 1]), float(table[i]), float(lv - a) / float(b - a))
+	return float(table[table.size() - 1])
 
 func _make_focus_stage(kind: String, count: int, games: int) -> Dictionary:
 	var def: Dictionary = ROAD_FOCUS_KINDS[kind]
