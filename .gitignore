@@ -2,7 +2,17 @@
 .godot/
 /android/
 exe/
-android/build/
 *.tmp
 .claude/
 _tmp_*
+
+# временные пробники и скриншоты
+scripts/tools/zz_*.gd
+scripts/tools/zz_*.gd.uid
+scripts/tools/tmp_*.gd
+scripts/tools/tmp_*.gd.uid
+scripts/tools/ui_probe*.gd
+scripts/tools/ui_probe*.gd.uid
+scenes/tools/UiProbe*.tscn
+scenes/tools/Zz*.tscn
+scenes/tools/Tmp*.tscn
