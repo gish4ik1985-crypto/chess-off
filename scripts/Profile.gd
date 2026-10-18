@@ -1586,6 +1586,26 @@ func save_profile() -> void:
 		DirAccess.copy_absolute(path, path + ".bak")
 	if DirAccess.rename_absolute(tmp, path) != OK:
 		push_error("Не удалось заменить профиль: " + path)
+	Cloud.note_saved() # если выполнен вход в облако — копия профиля уйдёт туда чуть позже
+
+
+# Время последней записи профиля игрока key на этом компьютере (0, если файла нет): по нему
+# решаем, что новее — локальный профиль или облачный.
+func local_saved_unix(key: String) -> int:
+	var cfg := ConfigFile.new()
+	if cfg.load(USERS_DIR + key + ".cfg") != OK:
+		return 0
+	return int(cfg.get_value("meta", "last_played_unix", 0))
+
+# Подменяет файл профиля игрока key содержимым из облака; вызывающий затем делает switch_user.
+func write_profile_bytes(key: String, bytes: PackedByteArray) -> bool:
+	DirAccess.make_dir_recursive_absolute(USERS_DIR)
+	var f := FileAccess.open(USERS_DIR + key + ".cfg", FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_buffer(bytes)
+	f.close()
+	return true
 
 func load_profile() -> void:
 	if current_user == "":

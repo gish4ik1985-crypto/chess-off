@@ -5,6 +5,12 @@ extends Control
 
 func _ready() -> void:
 	_refresh_list()
+	if Cloud.enabled:
+		var online := Button.new()
+		online.text = "Онлайн-вход (школа, любой компьютер)"
+		online.custom_minimum_size = Vector2(0, 48)
+		online.pressed.connect(_open_online_window)
+		$CenterPanel/VBox.add_child(online)
 
 func _refresh_list() -> void:
 	for c in user_list.get_children():
@@ -137,3 +143,122 @@ func _open_new_user_window() -> void:
 	add_child(dlg)
 	dlg.popup_centered()
 	edit.grab_focus()
+
+# --- онлайн-вход -------------------------------------------------------------------------------
+# Отдельное окно: ник + пароль. Аккаунт общий для школы и работает на любом компьютере; профиль
+# (с историей и обучением) подтягивается из облака. Нового игрока можно создать с любого устройства.
+var _online_overlay: Control
+
+func _open_online_window() -> void:
+	if _online_overlay != null:
+		return
+	var overlay := Control.new()
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.7)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	box.custom_minimum_size = Vector2(420, 0)
+	panel.add_child(box)
+	var title := Label.new()
+	title.text = "Онлайн-вход в школу"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 22)
+	box.add_child(title)
+	var nick_edit := LineEdit.new()
+	nick_edit.placeholder_text = "Ник (2–24 символа)"
+	nick_edit.max_length = 24
+	nick_edit.custom_minimum_size = Vector2(0, 44)
+	box.add_child(nick_edit)
+	var pass_edit := LineEdit.new()
+	pass_edit.placeholder_text = "Пароль (от 6 символов)"
+	pass_edit.secret = true
+	pass_edit.custom_minimum_size = Vector2(0, 44)
+	box.add_child(pass_edit)
+	var age_label := Label.new()
+	age_label.text = "Для нового аккаунта — кто играет:"
+	age_label.add_theme_font_size_override("font_size", 12)
+	box.add_child(age_label)
+	var ages := OptionButton.new()
+	ages.custom_minimum_size = Vector2(0, 44)
+	for g in AGE_GROUPS:
+		ages.add_item(g[1])
+	ages.select(2)
+	box.add_child(ages)
+	var status := Label.new()
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status.add_theme_font_size_override("font_size", 13)
+	status.text = "Забыли пароль? Попросите тренера создать вам новый аккаунт."
+	box.add_child(status)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	box.add_child(row)
+	var btn_login := Button.new()
+	btn_login.text = "Войти"
+	var btn_reg := Button.new()
+	btn_reg.text = "Создать аккаунт"
+	var btn_cancel := Button.new()
+	btn_cancel.text = "Отмена"
+	for b in [btn_login, btn_reg, btn_cancel]:
+		b.custom_minimum_size = Vector2(0, 48)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(b)
+	var buttons := [btn_login, btn_reg]
+	var go := func(register: bool):
+		var nm := nick_edit.text.strip_edges()
+		if nm.length() < 2:
+			status.text = "Ник — минимум 2 символа."
+			return
+		if pass_edit.text.length() < 6:
+			status.text = "Пароль — минимум 6 символов."
+			return
+		for b in buttons:
+			b.disabled = true
+		status.text = "Подключаюсь к облаку…"
+		var res: Dictionary
+		if register:
+			res = await Cloud.register(nm, pass_edit.text)
+		else:
+			res = await Cloud.login(nm, pass_edit.text)
+		if not res.ok:
+			status.text = String(res.error)
+			for b in buttons:
+				b.disabled = false
+			return
+		await _finish_online_login(nm, register, AGE_GROUPS[ages.selected][0], status)
+	btn_login.pressed.connect(func(): go.call(false))
+	btn_reg.pressed.connect(func(): go.call(true))
+	pass_edit.text_submitted.connect(func(_t): go.call(false))
+	btn_cancel.pressed.connect(func():
+		overlay.queue_free()
+		_online_overlay = null)
+	add_child(overlay)
+	_online_overlay = overlay
+	nick_edit.grab_focus()
+
+# После успешного входа: решаем, чей профиль новее — локальный или облачный — и переходим в меню.
+func _finish_online_login(nm: String, registered: bool, age: String, status: Label) -> void:
+	var key := Profile.sanitize_key(nm)
+	var existed_local := Profile.user_exists(nm)
+	if not registered:
+		status.text = "Загружаю профиль из облака…"
+		var pulled: Dictionary = await Cloud.pull_profile()
+		if pulled.found and int(pulled.saved) > Profile.local_saved_unix(key):
+			Profile.write_profile_bytes(key, pulled.bytes)
+			existed_local = true
+		elif not pulled.ok:
+			status.text = "Профиль из облака не загрузился (%s). Продолжаю с локальным." % pulled.error
+	Profile.switch_user(nm)
+	if not existed_local:
+		Profile.age_group = age
+		Profile.save_profile()
+	status.text = "Сохраняю в облако…"
+	await Cloud.push_profile()
+	get_tree().change_scene_to_file("res://scenes/Menu.tscn")

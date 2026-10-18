@@ -33,6 +33,7 @@ function Find-Godot {
 # Каждая проверка: имя, сцена (или скрипт для -s), как понять «всё хорошо», долгая ли она.
 $tests = @(
 	@{ Name = "Сцены компилируются (TestScenes)";        Scene = "TestScenes";       Pass = "ошибок 0 ===" },
+	@{ Name = "Облако: кодирование и ник (TestCloud)";   Scene = "TestCloud";      Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Правила шахмат (TestRules)";              Scene = "TestRules";        Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Рейтинг Glicko-2 (TestGlicko)";           Scene = "TestGlicko";       Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Индекс мастерства и навыки (TestSkillProfile)"; Scene = "TestSkillProfile"; Pass = "ИТОГО ошибок: 0" },

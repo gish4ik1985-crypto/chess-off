@@ -64,6 +64,7 @@ func _ready() -> void:
 	white_button.pressed.connect(func(): chosen_color = "w"; _update_color_buttons())
 	black_button.pressed.connect(func(): chosen_color = "b"; _update_color_buttons())
 	bg.draw.connect(_on_bg_draw)
+	_add_players_button()
 	_apply_compact_layout()
 
 # Низкий экран (телефон в альбомной ориентации): верхняя панель ужимается до одной строки,
@@ -80,6 +81,19 @@ func _apply_compact_layout() -> void:
 		var vb := panel.get_child(0) as VBoxContainer
 		if vb != null:
 			vb.add_theme_constant_override("separation", 6)
+
+# Кнопка «Игроки школы» — только когда облако настроено.
+func _add_players_button() -> void:
+	if not Cloud.enabled:
+		return
+	var vb := tourney_panel.get_child(0) as VBoxContainer
+	var b := Button.new()
+	b.text = "Игроки школы — общий рейтинг"
+	b.custom_minimum_size = Vector2(0, 48)
+	b.tooltip_text = "Таблица игроков школы с турнирными рейтингами (нужен онлайн-вход)."
+	b.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Players.tscn"))
+	vb.add_child(b)
+	vb.move_child(b, vb.get_child_count() - 2) # перед «← Назад»
 
 func _show_panel(panel: PanelContainer) -> void:
 	main_panel.visible = panel == main_panel
