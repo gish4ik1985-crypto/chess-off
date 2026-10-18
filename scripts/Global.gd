@@ -111,6 +111,99 @@ func _find_visible_button(node: Node, want: String) -> Button:
 func _ready() -> void:
 	load_settings()
 	apply_display_settings()
+	_setup_small_screen_scaling()
+
+# --- телефоны и маленькие окна -----------------------------------------------
+# Раскладка рассчитана на 1280×800. На телефоне в альбомной ориентации (≈800×360 CSS-пикселей)
+# такой холст ужимается до 0,45 и всё становится мелким. Поэтому на низких экранах опорный размер
+# уменьшаем: интерфейс остаётся тем же, но масштаб не падает ниже ~0,75. Режим «expand» растягивает
+# поле по ширине, так что чёрных полос по бокам нет.
+const MIN_LAYOUT_HEIGHT := 600
+const FULL_LAYOUT_HEIGHT := 800
+const TARGET_UI_SCALE := 0.75
+var _rotate_layer: CanvasLayer
+var _rotate_label: Label
+
+func _css_screen_size() -> Vector2:
+	if OS.has_feature("web"):
+		var w = JavaScriptBridge.eval("window.innerWidth", true)
+		var h = JavaScriptBridge.eval("window.innerHeight", true)
+		if w != null and h != null and float(w) > 0.0 and float(h) > 0.0:
+			return Vector2(float(w), float(h))
+	return Vector2(DisplayServer.window_get_size())
+
+# Сцены с жёсткой раскладкой 1280×800 (доска, задачи, карта): их поле не растягивается, а
+# целиком вписывается в экран, как раньше. Остальные экраны построены на контейнерах и
+# перестраиваются под низкий экран.
+const FIXED_LAYOUT_SCENES := ["Board", "Puzzle", "Map", "BotMatch", "RoadHome", "TrophyRoom"]
+var small_screen := false # низкий экран (телефон в альбомной ориентации): стоит укрупнить шрифты
+
+func _setup_small_screen_scaling() -> void:
+	var win := get_window()
+	win.size_changed.connect(_apply_small_screen_scaling)
+	get_tree().node_added.connect(_on_node_added)
+	_apply_small_screen_scaling()
+
+# Новая сцена — узел прямо под корнем: выбираем для неё режим масштабирования.
+func _on_node_added(node: Node) -> void:
+	if node.get_parent() == get_tree().root and node != self and node.scene_file_path != "":
+		_apply_small_screen_scaling.call_deferred()
+
+func _current_scene_is_fixed() -> bool:
+	var sc := get_tree().current_scene
+	if sc == null:
+		# сцена ещё не стала текущей — смотрим на последнего ребёнка корня
+		var root := get_tree().root
+		sc = root.get_child(root.get_child_count() - 1)
+	return sc != null and sc.name in FIXED_LAYOUT_SCENES
+
+func _apply_small_screen_scaling() -> void:
+	var css := _css_screen_size()
+	small_screen = css.y < 700.0
+	var win := get_window()
+	if _current_scene_is_fixed():
+		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+		win.content_scale_size = Vector2i(1280, 800)
+	else:
+		# высота опорного холста: чем ниже экран, тем меньше, но не ниже MIN_LAYOUT_HEIGHT
+		var layout_h := clampi(roundi(css.y / TARGET_UI_SCALE), MIN_LAYOUT_HEIGHT, FULL_LAYOUT_HEIGHT)
+		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+		win.content_scale_size = Vector2i(roundi(layout_h * 1.6), layout_h)
+	_update_rotate_hint(css)
+
+# Укрупняет шрифты и кнопки внутри node (боковые панели на телефоне). Размер читаем с учётом темы.
+func boost_fonts(node: Node, factor: float) -> void:
+	if node is Control:
+		var c := node as Control
+		for kind in ["font_size", "normal_font_size"]:
+			if c.has_theme_font_size(kind):
+				c.add_theme_font_size_override(kind, roundi(c.get_theme_font_size(kind) * factor))
+		if c is Button:
+			c.custom_minimum_size.y = maxf(c.custom_minimum_size.y, 52.0)
+	for ch in node.get_children():
+		boost_fonts(ch, factor)
+
+# Узкий телефон в портрете: поле не помещается, просим повернуть устройство.
+func _update_rotate_hint(css: Vector2) -> void:
+	var need := css.x < 600.0 and css.y > css.x
+	if need and _rotate_layer == null:
+		_rotate_layer = CanvasLayer.new()
+		_rotate_layer.layer = 100
+		var bg := ColorRect.new()
+		bg.color = Color(0.02, 0.02, 0.05, 0.96)
+		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_rotate_layer.add_child(bg)
+		_rotate_label = Label.new()
+		_rotate_label.text = "Поверните телефон горизонтально\nИгра рассчитана на широкий экран"
+		_rotate_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_rotate_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_rotate_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_rotate_label.add_theme_font_size_override("font_size", 28)
+		_rotate_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		bg.add_child(_rotate_label)
+		add_child(_rotate_layer)
+	if _rotate_layer != null:
+		_rotate_layer.visible = need
 
 # Applies the current fullscreen/resolution choice to the actual OS window.
 # Windowed mode gets re-centered on the screen after resizing so the game
@@ -182,6 +275,7 @@ func save_settings() -> void:
 	cfg.set_value("settings", "move_sound_style", move_sound_style)
 	cfg.set_value("settings", "fullscreen_enabled", fullscreen_enabled)
 	cfg.set_value("settings", "window_resolution_index", window_resolution_index)
+	cfg.set_value("settings", "theme_id", Themes.current_id)
 	cfg.save(SETTINGS_PATH)
 
 func load_settings() -> void:

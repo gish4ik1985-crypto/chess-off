@@ -31,6 +31,7 @@ func _ready() -> void:
 	move_sound_option.item_selected.connect(_on_move_sound_selected)
 	handicap_check.button_pressed = Global.handicap_enabled
 	handicap_check.toggled.connect(_on_handicap_toggled)
+	_build_theme_row()
 	_build_real_rating_row()
 	adaptive_check.button_pressed = Global.adaptive_difficulty
 	adaptive_check.toggled.connect(func(pressed: bool):
@@ -138,6 +139,29 @@ func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
 
 # Ввод настоящего рейтинга (необязательно): точка отсчёта для турнирного рейтинга
+# Выбор темы оформления. Перекраска применяется при загрузке экрана, поэтому после выбора
+# настройки открываются заново — уже в новой теме.
+func _build_theme_row() -> void:
+	var vbox: Node = handicap_check.get_parent().get_parent()
+	var box := VBoxContainer.new()
+	var title := Label.new()
+	title.text = "Тема оформления"
+	box.add_child(title)
+	var opt := OptionButton.new()
+	opt.custom_minimum_size = Vector2(0, 44)
+	var sel := 0
+	for i in range(Themes.PALETTES.size()):
+		opt.add_item(Themes.PALETTES[i].name)
+		if Themes.PALETTES[i].id == Themes.current_id:
+			sel = i
+	opt.select(sel)
+	opt.item_selected.connect(func(i: int):
+		Themes.set_theme_id(Themes.PALETTES[i].id)
+		get_tree().reload_current_scene())
+	box.add_child(opt)
+	vbox.add_child(box)
+	vbox.move_child(box, 0)
+
 func _build_real_rating_row() -> void:
 	var vbox: Node = handicap_check.get_parent().get_parent()
 	var anchor: Node = vbox.get_node("HandicapHint")

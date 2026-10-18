@@ -1,12 +1,10 @@
 extends Control
 
 @onready var user_list: VBoxContainer = $CenterPanel/VBox/UsersScroll/UserList
-@onready var name_edit: LineEdit = $CenterPanel/VBox/NewUserRow/NameEdit
 @onready var empty_label: Label = $CenterPanel/VBox/EmptyLabel
 
 func _ready() -> void:
 	_refresh_list()
-	name_edit.text_submitted.connect(func(_t): _on_create_pressed())
 
 func _refresh_list() -> void:
 	for c in user_list.get_children():
@@ -56,13 +54,13 @@ func _build_user_row(u: Dictionary) -> Control:
 
 	var enter_button = Button.new()
 	enter_button.text = "Войти"
-	enter_button.custom_minimum_size = Vector2(90, 0)
+	enter_button.custom_minimum_size = Vector2(100, 48)
 	enter_button.pressed.connect(func(): _login(String(u.name)))
 	hbox.add_child(enter_button)
 
 	var delete_button = Button.new()
 	delete_button.text = "✕"
-	delete_button.custom_minimum_size = Vector2(40, 0)
+	delete_button.custom_minimum_size = Vector2(48, 48)
 	delete_button.pressed.connect(func(): _delete(String(u.name)))
 	hbox.add_child(delete_button)
 
@@ -86,9 +84,56 @@ func _delete(name: String) -> void:
 	add_child(dlg)
 	dlg.popup_centered()
 
-func _on_create_pressed() -> void:
-	var name = name_edit.text.strip_edges()
-	if name == "":
-		return
-	Profile.switch_user(name)
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+const AGE_GROUPS := [["kid", "Ребёнок (до 12)"], ["teen", "Подросток (12–17)"], ["adult", "Взрослый"]]
+
+# Отдельное окно создания игрока: имя + возрастная группа. Если такое имя уже есть —
+# просто входим в него (профиль не затирается).
+func _open_new_user_window() -> void:
+	var dlg := ConfirmationDialog.new()
+	dlg.title = "Новый игрок"
+	dlg.ok_button_text = "Создать и играть"
+	dlg.cancel_button_text = "Отмена"
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	box.custom_minimum_size = Vector2(380, 0)
+	dlg.add_child(box)
+	var l1 := Label.new()
+	l1.text = "Как тебя зовут?"
+	box.add_child(l1)
+	var edit := LineEdit.new()
+	edit.placeholder_text = "Имя (до 24 символов)"
+	edit.max_length = 24
+	edit.custom_minimum_size = Vector2(0, 48)
+	box.add_child(edit)
+	var l2 := Label.new()
+	l2.text = "Кто играет? (подсказки подстроятся)"
+	box.add_child(l2)
+	var ages := OptionButton.new()
+	ages.custom_minimum_size = Vector2(0, 48)
+	for g in AGE_GROUPS:
+		ages.add_item(g[1])
+	ages.select(2)
+	box.add_child(ages)
+	var note := Label.new()
+	note.add_theme_font_size_override("font_size", 12)
+	note.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(note)
+	var create := func():
+		var nm := edit.text.strip_edges()
+		if nm == "":
+			note.text = "Введите имя."
+			return false
+		var existed := Profile.user_exists(nm)
+		Profile.switch_user(nm)
+		if not existed:
+			Profile.age_group = AGE_GROUPS[ages.selected][0]
+			Profile.save_profile()
+		get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+		return true
+	dlg.confirmed.connect(create)
+	edit.text_submitted.connect(func(_t): dlg.get_ok_button().pressed.emit())
+	dlg.canceled.connect(dlg.queue_free)
+	add_child(dlg)
+	dlg.popup_centered()
+	edit.grab_focus()

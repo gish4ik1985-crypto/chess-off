@@ -841,7 +841,7 @@ func _on_board_draw() -> void:
 		for f in range(8):
 			var pos = BOARD_ORIGIN + Vector2(f * SQUARE, (7 - r) * SQUARE)
 			var is_light = (f + r) % 2 == 1
-			var col = COLOR_LIGHT if is_light else COLOR_DARK
+			var col = Themes.board_light() if is_light else Themes.board_dark()
 			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), col, true)
 
 	if engine.is_in_check(engine.side_to_move):

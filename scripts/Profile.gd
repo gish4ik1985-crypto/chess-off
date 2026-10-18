@@ -55,6 +55,7 @@ const MAX_GAMES_PER_BOT := 12
 
 var current_user: String = "" # sanitized file key; "" means no user logged in yet
 var display_name: String = ""
+var age_group: String = "" # "kid" / "teen" / "adult" / "" — для подбора подсказок и тона обучения
 
 var rating: float = Glicko2.DEFAULT_RATING
 var rd: float = Glicko2.DEFAULT_RD
@@ -269,6 +270,7 @@ func switch_user(name: String, save_current: bool = true) -> void:
 	emit_signal("user_switched", display_name)
 
 func _reset_defaults() -> void:
+	age_group = ""
 	rating = Glicko2.DEFAULT_RATING
 	rd = Glicko2.DEFAULT_RD
 	volatility = Glicko2.DEFAULT_VOLATILITY
@@ -1515,6 +1517,7 @@ func save_profile() -> void:
 	_update_daily_snapshot()
 	var cfg = ConfigFile.new()
 	cfg.set_value("meta", "display_name", display_name)
+	cfg.set_value("meta", "age_group", age_group)
 	cfg.set_value("rating", "value", rating)
 	cfg.set_value("rating", "rd", rd)
 	cfg.set_value("rating", "volatility", volatility)
@@ -1602,6 +1605,7 @@ func load_profile() -> void:
 			return
 		push_warning("Профиль повреждён, восстановлен из .bak: " + path)
 	display_name = cfg.get_value("meta", "display_name", display_name)
+	age_group = cfg.get_value("meta", "age_group", "")
 	rating = cfg.get_value("rating", "value", Glicko2.DEFAULT_RATING)
 	rd = cfg.get_value("rating", "rd", Glicko2.DEFAULT_RD)
 	volatility = cfg.get_value("rating", "volatility", Glicko2.DEFAULT_VOLATILITY)

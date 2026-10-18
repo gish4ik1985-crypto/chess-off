@@ -26,14 +26,14 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -230.0
-offset_top = -260.0
-offset_right = 230.0
-offset_bottom = 260.0
+offset_left = -250.0
+offset_top = -220.0
+offset_right = 250.0
+offset_bottom = 220.0
 
 [node name="VBox" type="VBoxContainer" parent="CenterPanel"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 8
 
 [node name="TitleLabel" type="Label" parent="CenterPanel/VBox"]
 layout_mode = 2
@@ -53,8 +53,9 @@ theme_override_colors/font_color = Color(1, 0.65, 0.95, 1)
 layout_mode = 2
 
 [node name="UsersScroll" type="ScrollContainer" parent="CenterPanel/VBox"]
-custom_minimum_size = Vector2(0, 220)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
+size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
 [node name="UserList" type="VBoxContainer" parent="CenterPanel/VBox/UsersScroll"]
@@ -72,34 +73,15 @@ theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
 
 [node name="StorageNote" type="Label" parent="CenterPanel/VBox"]
 layout_mode = 2
-text = "Профили хранятся только на этом устройстве (в браузере — только на этом адресе, и пропадают в приватном окне). Чтобы перенести или сохранить, зайдите в Настройки и сохраните профиль в файл."
+text = "Профили хранятся на этом устройстве. Перенос на другое — Настройки → «Сохранить профиль»."
 horizontal_alignment = 1
 autowrap_mode = 2
 theme_override_font_sizes/font_size = 12
 theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
 
-[node name="HSeparator2" type="HSeparator" parent="CenterPanel/VBox"]
+[node name="NewUserButton" type="Button" parent="CenterPanel/VBox"]
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
+text = "+ Новый игрок"
 
-[node name="NewUserLabel" type="Label" parent="CenterPanel/VBox"]
-layout_mode = 2
-text = "Новый игрок:"
-theme_override_colors/font_color = Color(0.82, 0.88, 0.95, 1)
-
-[node name="NewUserRow" type="HBoxContainer" parent="CenterPanel/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="NameEdit" type="LineEdit" parent="CenterPanel/VBox/NewUserRow"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-size_flags_horizontal = 3
-placeholder_text = "Введите имя..."
-max_length = 24
-
-[node name="CreateButton" type="Button" parent="CenterPanel/VBox/NewUserRow"]
-custom_minimum_size = Vector2(90, 40)
-layout_mode = 2
-text = "Войти"
-
-[connection signal="pressed" from="CenterPanel/VBox/NewUserRow/CreateButton" to="." method="_on_create_pressed"]
+[connection signal="pressed" from="CenterPanel/VBox/NewUserButton" to="." method="_open_new_user_window"]

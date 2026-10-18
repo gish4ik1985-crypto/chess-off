@@ -64,6 +64,22 @@ func _ready() -> void:
 	white_button.pressed.connect(func(): chosen_color = "w"; _update_color_buttons())
 	black_button.pressed.connect(func(): chosen_color = "b"; _update_color_buttons())
 	bg.draw.connect(_on_bg_draw)
+	_apply_compact_layout()
+
+# Низкий экран (телефон в альбомной ориентации): верхняя панель ужимается до одной строки,
+# а меню получает освободившееся место, чтобы панели не налезали друг на друга.
+func _apply_compact_layout() -> void:
+	if get_viewport_rect().size.y >= 700.0:
+		return
+	achievements_label.visible = false
+	var bar: Control = $ProfileBar
+	bar.offset_top = 8
+	bar.offset_bottom = 60
+	$ContentCenter.offset_top = 68
+	for panel in [main_panel, play_panel, train_panel, tourney_panel]:
+		var vb := panel.get_child(0) as VBoxContainer
+		if vb != null:
+			vb.add_theme_constant_override("separation", 6)
 
 func _show_panel(panel: PanelContainer) -> void:
 	main_panel.visible = panel == main_panel

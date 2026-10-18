@@ -151,6 +151,9 @@ var wisdom_stars := 0
 var wisdom_streak := 0
 
 func _ready() -> void:
+	if Global.small_screen:
+		# телефон: поле вписано целиком и уменьшено — боковую панель делаем крупнее
+		Global.boost_fonts($UI/SidePanel, 1.6)
 	player_color = Global.player_color
 	attention = Global.attention_level
 	if Global.map_character_id != "":
@@ -1480,7 +1483,7 @@ func _on_board_draw() -> void:
 			var disp_r = 7 - r if player_color == "w" else r
 			var pos = BOARD_ORIGIN + Vector2(disp_f * SQUARE, disp_r * SQUARE)
 			var is_light = (f + r) % 2 == 1
-			var col = COLOR_LIGHT if is_light else COLOR_DARK
+			var col = Themes.board_light() if is_light else Themes.board_dark()
 			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), col, true)
 
 	# last move highlight (спрятана, пока в «Что изменилось?» идёт вопрос —
