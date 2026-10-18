@@ -3,13 +3,6 @@ extends Node2D
 const SQUARE := 88.0
 const BOARD_ORIGIN := Vector2(40, 40)
 
-const COLOR_LIGHT := Color(0.93, 0.86, 0.72)
-const COLOR_DARK := Color(0.55, 0.38, 0.26)
-const COLOR_SELECT := Color(0.95, 0.85, 0.25, 0.55)
-const COLOR_MOVE := Color(0.15, 0.55, 0.2, 0.55)
-const COLOR_CAPTURE := Color(0.8, 0.15, 0.15, 0.55)
-const COLOR_HINT := Color(0.25, 0.65, 0.95, 0.55)
-const COLOR_CHECK := Color(0.85, 0.1, 0.1, 0.55)
 
 @onready var board_draw: Node2D = $BoardDraw
 @onready var prev_button: Button = $UI/SidePanel/Content/NavRow/PrevButton
@@ -840,38 +833,36 @@ func _on_board_draw() -> void:
 	for r in range(8):
 		for f in range(8):
 			var pos = BOARD_ORIGIN + Vector2(f * SQUARE, (7 - r) * SQUARE)
-			var is_light = (f + r) % 2 == 1
-			var col = Themes.board_light() if is_light else Themes.board_dark()
-			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), col, true)
+			Themes.draw_square(board_draw, Rect2(pos, Vector2(SQUARE, SQUARE)), (f + r) % 2 == 1, r * 8 + f)
 
 	if engine.is_in_check(engine.side_to_move):
 		var k = engine.find_king(engine.side_to_move)
 		if k.x >= 0:
 			var pos = _square_to_pixel(k)
-			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), COLOR_CHECK, true)
+			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), Themes.hl_check(), true)
 
 	if hint_square != null:
 		var pos = _square_to_pixel(hint_square)
-		board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), COLOR_HINT, true)
+		board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), Themes.hl_hint(), true)
 
 	if selected_square != null:
 		var pos = _square_to_pixel(selected_square)
-		board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), COLOR_SELECT, true)
+		board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), Themes.hl_select(), true)
 		for m in legal_targets:
 			var tpos = _square_to_pixel(m.to)
 			var center = tpos + Vector2(SQUARE, SQUARE) / 2
 			var is_capture = engine.board[m.to.y][m.to.x] != null or m.get("is_ep", false)
 			if is_capture:
-				board_draw.draw_arc(center, SQUARE * 0.42, 0, TAU, 24, COLOR_CAPTURE, 5.0, true)
+				board_draw.draw_arc(center, SQUARE * 0.42, 0, TAU, 24, Themes.capture_ring(), 5.0, true)
 			else:
-				board_draw.draw_circle(center, SQUARE * 0.15, COLOR_MOVE)
+				board_draw.draw_circle(center, SQUARE * 0.15, Themes.move_dot())
 
-	var font = ThemeDB.fallback_font
+	var font = Themes.font_bold()
 	for i in range(8):
-		var fp = BOARD_ORIGIN + Vector2(i * SQUARE + 4, 8 * SQUARE - 2)
-		board_draw.draw_string(font, fp, "abcdefgh"[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0, 0, 0, 0.5))
-		var rp = BOARD_ORIGIN + Vector2(2, i * SQUARE + 14)
-		board_draw.draw_string(font, rp, str(8 - i), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0, 0, 0, 0.5))
+		var fp = BOARD_ORIGIN + Vector2(i * SQUARE + SQUARE - 13, 8 * SQUARE - 5)
+		board_draw.draw_string(font, fp, "abcdefgh"[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Themes.coord_color(i % 2 == 1))
+		var rp = BOARD_ORIGIN + Vector2(4, i * SQUARE + 16)
+		board_draw.draw_string(font, rp, str(8 - i), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Themes.coord_color(i % 2 == 0))
 
 	for r in range(8):
 		for f in range(8):

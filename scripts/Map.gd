@@ -195,6 +195,8 @@ func _on_menu_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
 
 func _draw_soft_backdrop(center: Vector2, palette: Dictionary) -> void:
+	if not Themes.is_dark():
+		return # тёмные подложки областей на светлом фоне выглядят серыми кругами
 	var layers = 5
 	for i in range(layers, 0, -1):
 		var t = float(i) / float(layers)
@@ -215,7 +217,7 @@ func _on_map_draw() -> void:
 		var a = nodes[i].pos
 		var b = nodes[i + 1].pos
 		var unlocked = Profile.is_character_unlocked(nodes[i + 1].id)
-		var col = Color(0.15, 0.9, 1.0, 0.8) if unlocked else Color(0.4, 0.4, 0.45, 0.35)
+		var col = Themes.ink(Color(0.15, 0.9, 1.0, 0.8)) if unlocked else Themes.ink(Color(0.4, 0.4, 0.45, 0.35))
 		_draw_path_segment(a, b, col, unlocked)
 
 	# nodes
@@ -223,11 +225,11 @@ func _on_map_draw() -> void:
 		var unlocked = Profile.is_character_unlocked(c.id)
 		var defeated = Profile.is_character_defeated(c.id)
 		var accent: Color = c.palette.accent
-		var ring_col = accent if unlocked else Color(0.4, 0.4, 0.46)
-		var fill_col = Color(0.05, 0.05, 0.08, 0.95)
+		var ring_col = accent if unlocked else Themes.ink(Color(0.4, 0.4, 0.46))
+		var fill_col = Themes.ink(Color(0.05, 0.05, 0.08, 0.95))
 
 		# soft drop shadow for depth
-		map_draw.draw_circle(c.pos + Vector2(0, 5), NODE_RADIUS * 1.02, Color(0, 0, 0, 0.25))
+		map_draw.draw_circle(c.pos + Vector2(0, 5), NODE_RADIUS * 1.02, Themes.ink(Color(0, 0, 0, 0.25)))
 
 		if unlocked:
 			for i in range(3, 0, -1):
@@ -236,33 +238,33 @@ func _on_map_draw() -> void:
 				glow.a = 0.10 * (1.0 - t) + 0.03
 				map_draw.draw_circle(c.pos, NODE_RADIUS * (1.0 + 0.5 * t), glow)
 		else:
-			map_draw.draw_circle(c.pos, NODE_RADIUS * 1.15, Color(0.2, 0.2, 0.24, 0.12))
+			map_draw.draw_circle(c.pos, NODE_RADIUS * 1.15, Themes.ink(Color(0.2, 0.2, 0.24, 0.12)))
 
 		map_draw.draw_circle(c.pos, NODE_RADIUS, fill_col)
 		map_draw.draw_arc(c.pos, NODE_RADIUS, 0, TAU, 40, ring_col, 3.5, true)
-		map_draw.draw_arc(c.pos, NODE_RADIUS - 5.0, 0, TAU, 40, Color(ring_col.r, ring_col.g, ring_col.b, 0.3), 1.0, true)
+		map_draw.draw_arc(c.pos, NODE_RADIUS - 5.0, 0, TAU, 40, Themes.ink(Color(ring_col.r, ring_col.g, ring_col.b, 0.3)), 1.0, true)
 
 		if unlocked:
 			var piece_color = "w"
 			PieceTextures.draw(map_draw, c.piece, piece_color, c.pos, NODE_RADIUS * 1.3)
 		else:
-			_draw_lock(c.pos, Color(0.55, 0.55, 0.6))
+			_draw_lock(c.pos, Themes.ink(Color(0.55, 0.55, 0.6)))
 
 		# a task node's puzzle quota can fill up before the player actually
 		# reaches it on the path (theme practice happens elsewhere too) —
 		# only show "done" once the node is actually unlocked, or a locked
 		# node would show a checkmark under its own padlock
 		if defeated and unlocked:
-			var check_col = Color(0.4, 0.95, 0.5)
+			var check_col = Themes.ink(Color(0.4, 0.95, 0.5))
 			var p1 = c.pos + Vector2(-NODE_RADIUS * 0.55, NODE_RADIUS * 0.75)
 			var p2 = c.pos + Vector2(-NODE_RADIUS * 0.15, NODE_RADIUS * 1.05)
 			var p3 = c.pos + Vector2(NODE_RADIUS * 0.6, NODE_RADIUS * 0.35)
-			map_draw.draw_circle(c.pos + Vector2(0, NODE_RADIUS * 0.75), 14.0, Color(0.02, 0.1, 0.04, 0.9))
+			map_draw.draw_circle(c.pos + Vector2(0, NODE_RADIUS * 0.75), 14.0, Themes.ink(Color(0.02, 0.1, 0.04, 0.9)))
 			map_draw.draw_polyline(PackedVector2Array([p1, p2, p3]), check_col, 3.0, true)
 
 		var font = ThemeDB.fallback_font
 		var name_pos = c.pos + Vector2(-70, NODE_RADIUS + 20)
-		var label_col = Color(0.9, 0.95, 1.0) if unlocked else Color(0.5, 0.5, 0.55)
+		var label_col = Themes.ink(Color(0.9, 0.95, 1.0)) if unlocked else Themes.ink(Color(0.5, 0.5, 0.55))
 		var label_text = c.name
 
 		# task/mix nodes: fold progress into the same label instead of a
@@ -278,7 +280,7 @@ func _on_map_draw() -> void:
 
 		if c.get("is_boss", false) and unlocked and not defeated:
 			var crown_pos = c.pos + Vector2(0, -NODE_RADIUS - 16)
-			map_draw.draw_string(font, crown_pos, "★ БОСС ★", HORIZONTAL_ALIGNMENT_CENTER, 0, 12, Color(1, 0.8, 0.2))
+			map_draw.draw_string(font, crown_pos, "★ БОСС ★", HORIZONTAL_ALIGNMENT_CENTER, 0, 12, Themes.ink(Color(1, 0.8, 0.2)))
 
 func _draw_path_segment(a: Vector2, b: Vector2, col: Color, unlocked: bool) -> void:
 	# trim the ends so the line starts/ends outside the node circles, then
@@ -290,7 +292,7 @@ func _draw_path_segment(a: Vector2, b: Vector2, col: Color, unlocked: bool) -> v
 	if seg_dist <= 0:
 		return
 	if unlocked:
-		map_draw.draw_line(pa, pb, Color(col.r, col.g, col.b, 0.18), 9.0)
+		map_draw.draw_line(pa, pb, Themes.ink(Color(col.r, col.g, col.b, 0.18)), 9.0)
 	var seg = 16.0
 	var gap = 10.0
 	var t = 0.0
@@ -306,6 +308,6 @@ func _draw_lock(center: Vector2, col: Color) -> void:
 	var shackle_top = center + Vector2(0, -6)
 	map_draw.draw_arc(shackle_top, 8.5, PI, TAU, 16, col, 3.2, true)
 	var body = Rect2(center + Vector2(-10, -2), Vector2(20, 15))
-	map_draw.draw_rect(body, Color(0.14, 0.14, 0.17), true)
+	map_draw.draw_rect(body, Themes.ink(Color(0.14, 0.14, 0.17)), true)
 	map_draw.draw_rect(body, col, false, 2.0)
 	map_draw.draw_circle(center + Vector2(0, 4.5), 2.5, col)

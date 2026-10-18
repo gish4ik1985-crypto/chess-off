@@ -7,14 +7,6 @@ const BOARD_ORIGIN := Vector2(40, 40)
 var attention := 0
 var attention_flash_ms := 0 # когда соперник сходил (для режима "flash")
 
-const COLOR_LIGHT := Color(0.93, 0.86, 0.72)
-const COLOR_DARK := Color(0.55, 0.38, 0.26)
-const COLOR_SELECT := Color(0.95, 0.85, 0.25, 0.55)
-const COLOR_MOVE := Color(0.15, 0.55, 0.2, 0.55)
-const COLOR_CAPTURE := Color(0.8, 0.15, 0.15, 0.55)
-const COLOR_LASTMOVE := Color(0.9, 0.65, 0.15, 0.35)
-const COLOR_CHECK := Color(0.85, 0.1, 0.1, 0.55)
-const COLOR_HINT := Color(0.25, 0.65, 0.95, 0.6)
 
 @onready var status_label: Label = $UI/SidePanel/Content/StatusLabel
 @onready var turn_label: Label = $UI/SidePanel/Content/TurnLabel
@@ -151,6 +143,8 @@ var wisdom_stars := 0
 var wisdom_streak := 0
 
 func _ready() -> void:
+	if not Themes.is_neon():
+		$UI/SidePanel/Content.add_theme_constant_override("separation", 10) # кнопки темы выше неоновых
 	if Global.small_screen:
 		# телефон: поле вписано целиком и уменьшено — боковую панель делаем крупнее
 		Global.boost_fonts($UI/SidePanel, 1.6)
@@ -1482,16 +1476,14 @@ func _on_board_draw() -> void:
 			var disp_f = f if player_color == "w" else 7 - f
 			var disp_r = 7 - r if player_color == "w" else r
 			var pos = BOARD_ORIGIN + Vector2(disp_f * SQUARE, disp_r * SQUARE)
-			var is_light = (f + r) % 2 == 1
-			var col = Themes.board_light() if is_light else Themes.board_dark()
-			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), col, true)
+			Themes.draw_square(board_draw, Rect2(pos, Vector2(SQUARE, SQUARE)), (f + r) % 2 == 1, r * 8 + f)
 
 	# last move highlight (спрятана, пока в «Что изменилось?» идёт вопрос —
 	# иначе ответ виден прямо на доске)
 	if engine.last_move != null and not _spot_hide_last_move():
 		for sqv in [engine.last_move.from, engine.last_move.to]:
 			var pos = _square_to_pixel(sqv)
-			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), COLOR_LASTMOVE, true)
+			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), Themes.hl_last(), true)
 		# an arrow makes the AI's move easier to spot at a glance than the
 		# highlight alone, especially for kids scanning the board quickly
 		if engine.last_move.piece.color != player_color:
@@ -1502,45 +1494,46 @@ func _on_board_draw() -> void:
 		var k = engine.find_king(engine.side_to_move)
 		if k.x >= 0:
 			var pos = _square_to_pixel(k)
-			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), COLOR_CHECK, true)
+			board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), Themes.hl_check(), true)
 
 	# hint highlight
 	if hint_from != null and hint_to != null:
-		board_draw.draw_rect(Rect2(_square_to_pixel(hint_from), Vector2(SQUARE, SQUARE)), COLOR_HINT, true)
-		board_draw.draw_rect(Rect2(_square_to_pixel(hint_to), Vector2(SQUARE, SQUARE)), COLOR_HINT, true)
+		board_draw.draw_rect(Rect2(_square_to_pixel(hint_from), Vector2(SQUARE, SQUARE)), Themes.hl_hint(), true)
+		board_draw.draw_rect(Rect2(_square_to_pixel(hint_to), Vector2(SQUARE, SQUARE)), Themes.hl_hint(), true)
 
 	# selection + legal targets
 	if selected_square != null:
 		var pos = _square_to_pixel(selected_square)
-		board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), COLOR_SELECT, true)
+		board_draw.draw_rect(Rect2(pos, Vector2(SQUARE, SQUARE)), Themes.hl_select(), true)
 		for m in legal_targets:
 			var tpos = _square_to_pixel(m.to)
 			var center = tpos + Vector2(SQUARE, SQUARE) / 2
 			var is_capture = engine.board[m.to.y][m.to.x] != null or m.get("is_ep", false)
 			if is_capture:
-				board_draw.draw_arc(center, SQUARE * 0.42, 0, TAU, 24, COLOR_CAPTURE, 5.0, true)
+				board_draw.draw_arc(center, SQUARE * 0.42, 0, TAU, 24, Themes.capture_ring(), 5.0, true)
 			else:
-				board_draw.draw_circle(center, SQUARE * 0.15, COLOR_MOVE)
+				board_draw.draw_circle(center, SQUARE * 0.15, Themes.move_dot())
 
 	# coordinates
-	var font = ThemeDB.fallback_font
+	# буквы — в нижнем ряду справа, цифры — в левом столбце сверху; цвет — противоположной клетки
+	var font = Themes.font_bold()
 	for i in range(8):
 		var file_char = "abcdefgh"[i if player_color == "w" else 7 - i]
-		var fp = BOARD_ORIGIN + Vector2(i * SQUARE + 4, 8 * SQUARE - 2)
-		board_draw.draw_string(font, fp, file_char, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0,0,0,0.5))
+		var fp = BOARD_ORIGIN + Vector2(i * SQUARE + SQUARE - 13, 8 * SQUARE - 5)
+		board_draw.draw_string(font, fp, file_char, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Themes.coord_color(i % 2 == 1))
 		var rank_char = str(8 - i if player_color == "w" else i + 1)
-		var rp = BOARD_ORIGIN + Vector2(2, i * SQUARE + 14)
-		board_draw.draw_string(font, rp, rank_char, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0,0,0,0.5))
+		var rp = BOARD_ORIGIN + Vector2(4, i * SQUARE + 16)
+		board_draw.draw_string(font, rp, rank_char, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Themes.coord_color(i % 2 == 0))
 
 	# pieces — hidden entirely while the xray fog is down (move from memory!)
 	# or during the «Что изменилось?» vanish-flash right after the AI's move
 	var spot_flash = _spot_flash_active()
 	if xray_fog:
 		var fog_font = ThemeDB.fallback_font
-		board_draw.draw_string(fog_font, BOARD_ORIGIN + Vector2(60, 4 * SQUARE), "☁  ТУМАН — ходите по памяти!  ☁", HORIZONTAL_ALIGNMENT_CENTER, int(8 * SQUARE - 120), 26, Color(0.85, 0.92, 1.0, 0.9))
+		board_draw.draw_string(fog_font, BOARD_ORIGIN + Vector2(60, 4 * SQUARE), "☁  ТУМАН — ходите по памяти!  ☁", HORIZONTAL_ALIGNMENT_CENTER, int(8 * SQUARE - 120), 26, Themes.ink(Color(0.85, 0.92, 1.0, 0.9)))
 	elif spot_flash:
 		var flash_font = ThemeDB.fallback_font
-		board_draw.draw_string(flash_font, BOARD_ORIGIN + Vector2(60, 4 * SQUARE), "✨  Куда сходил соперник?  ✨", HORIZONTAL_ALIGNMENT_CENTER, int(8 * SQUARE - 120), 26, Color(1.0, 0.9, 0.5, 0.95))
+		board_draw.draw_string(flash_font, BOARD_ORIGIN + Vector2(60, 4 * SQUARE), "✨  Куда сходил соперник?  ✨", HORIZONTAL_ALIGNMENT_CENTER, int(8 * SQUARE - 120), 26, Themes.ink(Color(1.0, 0.9, 0.5, 0.95)))
 	for r in range(8):
 		for f in range(8):
 			if xray_fog or spot_flash:
@@ -1577,14 +1570,14 @@ func _on_board_draw() -> void:
 						var c = pos + Vector2(SQUARE - 12, 12)
 						# красный ТРЕУГОЛЬНИК: форма отличается от зелёного ромба — не только цветом (дальтонизм)
 						var tri := PackedVector2Array([c + Vector2(0, -10), c + Vector2(9.5, 7), c + Vector2(-9.5, 7)])
-						board_draw.draw_colored_polygon(tri, Color(1.0, 0.25, 0.25, 0.95))
-						board_draw.draw_polyline(PackedVector2Array([tri[0], tri[1], tri[2], tri[0]]), Color(1, 1, 1, 0.85), 1.5)
+						board_draw.draw_colored_polygon(tri, Themes.ink(Color(1.0, 0.25, 0.25, 0.95)))
+						board_draw.draw_polyline(PackedVector2Array([tri[0], tri[1], tri[2], tri[0]]), Themes.ink(Color(1, 1, 1, 0.85)), 1.5)
 					elif p.color == opp and show_green and engine.is_square_attacked(f, r, player_color):
 						var c = pos + Vector2(SQUARE - 12, 12)
 						# зелёный РОМБ
 						var dia := PackedVector2Array([c + Vector2(0, -9), c + Vector2(9, 0), c + Vector2(0, 9), c + Vector2(-9, 0)])
-						board_draw.draw_colored_polygon(dia, Color(0.25, 0.95, 0.4, 0.95))
-						board_draw.draw_polyline(PackedVector2Array([dia[0], dia[1], dia[2], dia[3], dia[0]]), Color(1, 1, 1, 0.85), 1.5)
+						board_draw.draw_colored_polygon(dia, Themes.ink(Color(0.25, 0.95, 0.4, 0.95)))
+						board_draw.draw_polyline(PackedVector2Array([dia[0], dia[1], dia[2], dia[3], dia[0]]), Themes.ink(Color(1, 1, 1, 0.85)), 1.5)
 
 	# dragged piece follows the cursor, drawn on top
 	if dragging and drag_from != null and not xray_fog:
@@ -1607,7 +1600,7 @@ func _draw_last_move_arrow(from: Vector2i, to: Vector2i) -> void:
 		return
 	var head_len = SQUARE * 0.28
 	var shaft_end = b - dir * head_len * 0.7
-	var col = Color(1.0, 0.7, 0.15, 0.75)
+	var col = Themes.ink(Color(1.0, 0.7, 0.15, 0.75))
 	board_draw.draw_line(a, shaft_end, col, 5.0, true)
 	var perp = Vector2(-dir.y, dir.x)
 	var p1 = b - dir * head_len + perp * head_len * 0.5

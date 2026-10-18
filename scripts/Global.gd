@@ -135,7 +135,7 @@ func _css_screen_size() -> Vector2:
 # Сцены с жёсткой раскладкой 1280×800 (доска, задачи, карта): их поле не растягивается, а
 # целиком вписывается в экран, как раньше. Остальные экраны построены на контейнерах и
 # перестраиваются под низкий экран.
-const FIXED_LAYOUT_SCENES := ["Board", "Puzzle", "Map", "BotMatch", "RoadHome", "TrophyRoom"]
+const FIXED_LAYOUT_SCENES := ["Board", "Puzzle", "Map", "BotMatch", "RoadHome"]
 var small_screen := false # низкий экран (телефон в альбомной ориентации): стоит укрупнить шрифты
 
 func _setup_small_screen_scaling() -> void:
@@ -158,6 +158,8 @@ func _current_scene_is_fixed() -> bool:
 	return sc != null and sc.name in FIXED_LAYOUT_SCENES
 
 func _apply_small_screen_scaling() -> void:
+	if DisplayServer.get_name() == "headless":
+		return # проверки без окна меряют вёрстку на штатных 1280×800
 	var css := _css_screen_size()
 	small_screen = css.y < 700.0
 	var win := get_window()
@@ -275,7 +277,7 @@ func save_settings() -> void:
 	cfg.set_value("settings", "move_sound_style", move_sound_style)
 	cfg.set_value("settings", "fullscreen_enabled", fullscreen_enabled)
 	cfg.set_value("settings", "window_resolution_index", window_resolution_index)
-	cfg.set_value("settings", "theme_id", Themes.current_id)
+	cfg.set_value("settings", Themes.SETTINGS_KEY, Themes.current_id)
 	cfg.save(SETTINGS_PATH)
 
 func load_settings() -> void:

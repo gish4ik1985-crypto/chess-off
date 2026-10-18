@@ -139,28 +139,15 @@ func _on_back_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
 
 # Ввод настоящего рейтинга (необязательно): точка отсчёта для турнирного рейтинга
-# Выбор темы оформления. Перекраска применяется при загрузке экрана, поэтому после выбора
-# настройки открываются заново — уже в новой теме.
+# Кнопка экрана «Оформление» (карточки тем с превью) — первой строкой настроек.
 func _build_theme_row() -> void:
 	var vbox: Node = handicap_check.get_parent().get_parent()
-	var box := VBoxContainer.new()
-	var title := Label.new()
-	title.text = "Тема оформления"
-	box.add_child(title)
-	var opt := OptionButton.new()
-	opt.custom_minimum_size = Vector2(0, 44)
-	var sel := 0
-	for i in range(Themes.PALETTES.size()):
-		opt.add_item(Themes.PALETTES[i].name)
-		if Themes.PALETTES[i].id == Themes.current_id:
-			sel = i
-	opt.select(sel)
-	opt.item_selected.connect(func(i: int):
-		Themes.set_theme_id(Themes.PALETTES[i].id)
-		get_tree().reload_current_scene())
-	box.add_child(opt)
-	vbox.add_child(box)
-	vbox.move_child(box, 0)
+	var btn := Button.new()
+	btn.text = "🎨  Оформление: %s  →" % Themes.current_name()
+	btn.custom_minimum_size = Vector2(0, 50)
+	btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Appearance.tscn"))
+	vbox.add_child(btn)
+	vbox.move_child(btn, 2) # после заголовка и разделителя
 
 func _build_real_rating_row() -> void:
 	var vbox: Node = handicap_check.get_parent().get_parent()

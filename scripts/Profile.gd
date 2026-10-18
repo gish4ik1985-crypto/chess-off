@@ -1586,7 +1586,12 @@ func save_profile() -> void:
 		DirAccess.copy_absolute(path, path + ".bak")
 	if DirAccess.rename_absolute(tmp, path) != OK:
 		push_error("Не удалось заменить профиль: " + path)
-	Cloud.note_saved() # если выполнен вход в облако — копия профиля уйдёт туда чуть позже
+	# если выполнен вход в облако — копия профиля уйдёт туда чуть позже. Узел ищем по пути, а не по
+	# имени автозагрузки: проверки, запускаемые отдельным скриптом, грузят Profile.gd без облака
+	var tree := Engine.get_main_loop() as SceneTree
+	var cloud: Node = tree.root.get_node_or_null("Cloud") if tree != null else null
+	if cloud != null:
+		cloud.note_saved()
 
 
 # Время последней записи профиля игрока key на этом компьютере (0, если файла нет): по нему

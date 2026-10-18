@@ -183,9 +183,9 @@ func _on_draw() -> void:
 	# winding path
 	for i in range(stages.size() - 1):
 		var unlocked = _stage_unlocked(i + 1)
-		var col = Color(0.95, 0.8, 0.35, 0.55) if unlocked else Color(0.4, 0.4, 0.45, 0.3)
+		var col = Themes.ink(Color(0.95, 0.8, 0.35, 0.55)) if unlocked else Themes.ink(Color(0.4, 0.4, 0.45, 0.3))
 		if i + 1 >= base_count:
-			col = Color(0.4, 0.85, 0.95, 0.45) # the "grown" part of the road
+			col = Themes.ink(Color(0.4, 0.85, 0.95, 0.45)) # the "grown" part of the road
 		_draw_dashed(stages[i].pos, stages[i + 1].pos, col)
 	# home glow at the end of the story road
 	var home = stages[base_count - 1].pos
@@ -198,22 +198,22 @@ func _on_draw() -> void:
 		var st = stages[i]
 		var unlocked = _stage_unlocked(i)
 		var done = _stage_done(i)
-		var accent: Color = st.accent if unlocked else Color(0.35, 0.35, 0.4)
-		map_draw.draw_circle(st.pos, NODE_RADIUS, Color(0.05, 0.05, 0.08, 0.95))
+		var accent: Color = st.accent if unlocked else Themes.ink(Color(0.35, 0.35, 0.4))
+		map_draw.draw_circle(st.pos, NODE_RADIUS, Themes.ink(Color(0.05, 0.05, 0.08, 0.95)))
 		map_draw.draw_arc(st.pos, NODE_RADIUS, 0, TAU, 32, accent, 3.0, true)
 		if unlocked:
 			PieceTextures.draw(map_draw, st.icon, "w", st.pos, NODE_RADIUS * 1.25)
 		else:
 			var body = Rect2(st.pos + Vector2(-9, -2), Vector2(18, 14))
-			map_draw.draw_rect(body, Color(0.5, 0.5, 0.55), true)
-			map_draw.draw_arc(st.pos + Vector2(0, -4), 8.0, PI, TAU, 16, Color(0.5, 0.5, 0.55), 3.0, true)
+			map_draw.draw_rect(body, Themes.ink(Color(0.5, 0.5, 0.55)), true)
+			map_draw.draw_arc(st.pos + Vector2(0, -4), 8.0, PI, TAU, 16, Themes.ink(Color(0.5, 0.5, 0.55)), 3.0, true)
 		if done:
-			map_draw.draw_circle(st.pos + Vector2(0, NODE_RADIUS * 0.8), 13.0, Color(0.02, 0.1, 0.04, 0.9))
+			map_draw.draw_circle(st.pos + Vector2(0, NODE_RADIUS * 0.8), 13.0, Themes.ink(Color(0.02, 0.1, 0.04, 0.9)))
 			var p1 = st.pos + Vector2(-NODE_RADIUS * 0.45, NODE_RADIUS * 0.8)
 			var p2 = st.pos + Vector2(-NODE_RADIUS * 0.1, NODE_RADIUS * 1.05)
 			var p3 = st.pos + Vector2(NODE_RADIUS * 0.5, NODE_RADIUS * 0.45)
-			map_draw.draw_polyline(PackedVector2Array([p1, p2, p3]), Color(0.4, 0.95, 0.5), 3.0, true)
-		var label_col = Color(0.9, 0.95, 1.0) if unlocked else Color(0.5, 0.5, 0.55)
+			map_draw.draw_polyline(PackedVector2Array([p1, p2, p3]), Themes.ink(Color(0.4, 0.95, 0.5)), 3.0, true)
+		var label_col = Themes.ink(Color(0.9, 0.95, 1.0)) if unlocked else Themes.ink(Color(0.5, 0.5, 0.55))
 		var label_text = st.name
 		# blunder stage shows its own progress folded into the label
 		if i == 0 and unlocked and not done:

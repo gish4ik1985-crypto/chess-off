@@ -145,14 +145,14 @@ func _on_skills_draw() -> void:
 	var w = get_viewport_rect().size.x
 	var left = maxf((w - 1200.0) / 2.0, 24.0)
 	var prof: Dictionary = SkillProfileScript.compute(Profile.skill_input())
-	var dim := Color(0.55, 0.6, 0.7)
+	var dim := Themes.ink(Color(0.55, 0.6, 0.7))
 
 	# --- индекс мастерства ---
 	var pa := Rect2(left, 8, 640, 150)
 	_panel_on(skills_draw, pa, "ИНДЕКС МАСТЕРСТВА", font)
 	if prof.has_data:
-		skills_draw.draw_string(font, pa.position + Vector2(24, 92), "%d" % int(round(prof.index)), HORIZONTAL_ALIGNMENT_LEFT, 160, 56, Color(0.1, 0.95, 1))
-		skills_draw.draw_string(font, pa.position + Vector2(190, 62), str(prof.band), HORIZONTAL_ALIGNMENT_LEFT, 420, 22, Color(0.95, 0.8, 0.35))
+		skills_draw.draw_string(font, pa.position + Vector2(24, 92), "%d" % int(round(prof.index)), HORIZONTAL_ALIGNMENT_LEFT, 160, 56, Themes.ink(Color(0.1, 0.95, 1)))
+		skills_draw.draw_string(font, pa.position + Vector2(190, 62), str(prof.band), HORIZONTAL_ALIGNMENT_LEFT, 420, 22, Themes.ink(Color(0.95, 0.8, 0.35)))
 		skills_draw.draw_string(font, pa.position + Vector2(190, 90), "диапазон %d–%d · надёжность оценки %d%%" % [int(round(prof.lo)), int(round(prof.hi)), int(round(prof.confidence * 100.0))], HORIZONTAL_ALIGNMENT_LEFT, 430, 13, dim)
 		skills_draw.draw_multiline_string(font, pa.position + Vector2(190, 114), "Это показатель навыков, а не шахматный рейтинг. Чем больше партий и задач, тем точнее.", HORIZONTAL_ALIGNMENT_LEFT, 430, 12, 2, dim)
 	else:
@@ -164,12 +164,12 @@ func _on_skills_draw() -> void:
 	var y := pb.position.y + 50.0
 	for s in prof.skills:
 		var known: bool = float(s.conf) >= 0.3
-		skills_draw.draw_string(font, Vector2(pb.position.x + 20, y + 12), str(s.name), HORIZONTAL_ALIGNMENT_LEFT, 200, 14, Color(0.82, 0.88, 0.95))
+		skills_draw.draw_string(font, Vector2(pb.position.x + 20, y + 12), str(s.name), HORIZONTAL_ALIGNMENT_LEFT, 200, 14, Themes.ink(Color(0.82, 0.88, 0.95)))
 		var bx: float = pb.position.x + 230.0
 		var bw: float = 300.0
-		skills_draw.draw_rect(Rect2(bx, y, bw, 16), Color(1, 1, 1, 0.08), true)
+		skills_draw.draw_rect(Rect2(bx, y, bw, 16), Themes.ink(Color(1, 1, 1, 0.08)), true)
 		if known:
-			var col := Color(0.4, 0.95, 0.5) if s.score >= 66.0 else (Color(0.95, 0.8, 0.35) if s.score >= 33.0 else Color(1.0, 0.45, 0.45))
+			var col := Themes.ink(Color(0.4, 0.95, 0.5)) if s.score >= 66.0 else (Themes.ink(Color(0.95, 0.8, 0.35)) if s.score >= 33.0 else Themes.ink(Color(1.0, 0.45, 0.45)))
 			skills_draw.draw_rect(Rect2(bx, y, bw * float(s.score) / 100.0, 16), col, true)
 			skills_draw.draw_string(font, Vector2(bx + bw + 10, y + 13), "%d" % int(round(s.score)), HORIZONTAL_ALIGNMENT_LEFT, 60, 14, col)
 		else:
@@ -185,13 +185,13 @@ func _on_skills_draw() -> void:
 	else:
 		var sy := pc.position.y + 56.0
 		for lab in prof.style:
-			skills_draw.draw_multiline_string(font, Vector2(pc.position.x + 20, sy), "• " + str(lab), HORIZONTAL_ALIGNMENT_LEFT, 500, 14, 2, Color(0.82, 0.88, 0.95))
+			skills_draw.draw_multiline_string(font, Vector2(pc.position.x + 20, sy), "• " + str(lab), HORIZONTAL_ALIGNMENT_LEFT, 500, 14, 2, Themes.ink(Color(0.82, 0.88, 0.95)))
 			sy += 44.0
 
 	# --- что тренировать ---
 	var pd := Rect2(left + 660, 320, 540, 370)
 	_panel_on(skills_draw, pd, "ЧТО ТРЕНИРОВАТЬ", font)
-	skills_draw.draw_multiline_string(font, pd.position + Vector2(20, 62), "💡 " + str(prof.advice), HORIZONTAL_ALIGNMENT_LEFT, 500, 15, 6, Color(0.95, 0.8, 0.3))
+	skills_draw.draw_multiline_string(font, pd.position + Vector2(20, 62), "💡 " + str(prof.advice), HORIZONTAL_ALIGNMENT_LEFT, 500, 15, 6, Themes.ink(Color(0.95, 0.8, 0.3)))
 	var gl := "Что это за цифры:
 • Турнирный рейтинг — главный. Растёт только от турниров, там нет подсказок и откатов. Его можно сравнивать с настоящим.
 • Ступень — самый сильный уровень компьютера, побеждённый без помощи два раза. Подсказки, откаты и командная игра в зачёт не идут.
@@ -229,21 +229,18 @@ func _phase_stats() -> Dictionary:
 	return out
 
 func _panel(rect: Rect2, title: String, font: Font) -> void:
-	overview_draw.draw_rect(rect, Color(0.05, 0.05, 0.09, 0.92), true)
-	overview_draw.draw_rect(rect, Color(0.11, 0.85, 0.95, 0.4), false, 2.0)
-	overview_draw.draw_string(font, rect.position + Vector2(18, 28), title, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 36, 14, Color(1, 0.65, 0.95, 0.9))
+	Themes.draw_card(overview_draw, rect)
+	overview_draw.draw_string(font, rect.position + Vector2(18, 28), title, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 36, 14, Themes.ink(Color(1, 0.65, 0.95, 0.9)))
 
 func _panel_on(node: Node2D, rect: Rect2, title: String, font: Font) -> void:
-	node.draw_rect(rect, Color(0.05, 0.05, 0.09, 0.92), true)
-	node.draw_rect(rect, Color(0.11, 0.85, 0.95, 0.4), false, 2.0)
-	node.draw_string(font, rect.position + Vector2(18, 28), title, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 36, 14, Color(1, 0.65, 0.95, 0.9))
+	Themes.draw_card(node, rect)
+	node.draw_string(font, rect.position + Vector2(18, 28), title, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 36, 14, Themes.ink(Color(1, 0.65, 0.95, 0.9)))
 
 func _stat_card(rect: Rect2, title: String, value: String, sub: String, val_col: Color, font: Font) -> void:
-	overview_draw.draw_rect(rect, Color(0.05, 0.05, 0.09, 0.92), true)
-	overview_draw.draw_rect(rect, Color(0.11, 0.85, 0.95, 0.4), false, 2.0)
-	overview_draw.draw_string(font, rect.position + Vector2(16, 24), title, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32, 12, Color(0.55, 0.6, 0.7))
+	Themes.draw_card(overview_draw, rect)
+	overview_draw.draw_string(font, rect.position + Vector2(16, 24), title, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32, 12, Themes.ink(Color(0.55, 0.6, 0.7)))
 	overview_draw.draw_string(font, rect.position + Vector2(16, 56), value, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32, 24, val_col)
-	overview_draw.draw_string(font, rect.position + Vector2(16, 78), sub, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32, 11, Color(0.55, 0.6, 0.7))
+	overview_draw.draw_string(font, rect.position + Vector2(16, 78), sub, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 32, 11, Themes.ink(Color(0.55, 0.6, 0.7)))
 
 func _on_overview_draw() -> void:
 	var font = ThemeDB.fallback_font
@@ -256,23 +253,23 @@ func _on_overview_draw() -> void:
 	var delta = Profile.last_tournament_rating_change
 	var delta_txt = "%+d за последний турнир" % int(delta) if delta != 0.0 else ("сыграйте турнир — появится изменение" if Profile.tournaments_played == 0 else "без изменений")
 	_stat_card(Rect2(left, 8, card_w, 92), "ТУРНИРНЫЙ РЕЙТИНГ", str(int(Profile.tournament_rating)),
-		delta_txt, Color(0.1, 0.95, 1), font)
+		delta_txt, Themes.ink(Color(0.1, 0.95, 1)), font)
 	_stat_card(Rect2(left + card_w + 16, 8, card_w, 92), "ПАРТИИ",
 		str(Profile.games_played), "побед %d · ничьих %d · поражений %d" % [Profile.wins, Profile.draws, Profile.losses],
-		Color(0.9, 0.95, 1), font)
+		Themes.ink(Color(0.9, 0.95, 1)), font)
 	var acc = _accuracy()
-	var acc_col = GOOD_COL if acc >= 70.0 else (Color(0.95, 0.8, 0.35) if acc >= 50.0 else BAD_COL)
+	var acc_col = GOOD_COL if acc >= 70.0 else (Themes.ink(Color(0.95, 0.8, 0.35)) if acc >= 50.0 else BAD_COL)
 	_stat_card(Rect2(left + 2 * (card_w + 16), 8, card_w, 92), "ТОЧНОСТЬ ХОДОВ",
 		"%.0f%%" % acc, "доля сильных ходов", acc_col, font)
 	_stat_card(Rect2(left + 3 * (card_w + 16), 8, card_w, 92), "СТУПЕНЬ",
-		str(Profile.clean_step()), "сильнейший уровень без помощи", Color(0.95, 0.8, 0.35), font)
+		str(Profile.clean_step()), "сильнейший уровень без помощи", Themes.ink(Color(0.95, 0.8, 0.35)), font)
 
 	# --- сильные и слабые стороны ---
 	var pr = Rect2(left, 116, 590, 240)
 	_panel(pr, "СИЛЬНОЕ И СЛАБОЕ МЕСТО (последние партии)", font)
 	var ph = _phase_stats()
 	if ph.games == 0:
-		overview_draw.draw_string(font, pr.position + Vector2(18, 70), "Сыграйте несколько партий — здесь появится разбор по фазам.", HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 36, 13, Color(0.55, 0.6, 0.7))
+		overview_draw.draw_string(font, pr.position + Vector2(18, 70), "Сыграйте несколько партий — здесь появится разбор по фазам.", HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 36, 13, Themes.ink(Color(0.55, 0.6, 0.7)))
 	else:
 		var keys = ["Дебют", "Миттельшпиль", "Эндшпиль"]
 		var best_k = keys[0]
@@ -287,15 +284,15 @@ func _on_overview_draw() -> void:
 			max_v = maxf(max_v, ph[k])
 		var by = pr.position.y + 108
 		for k in keys:
-			overview_draw.draw_string(font, Vector2(pr.position.x + 18, by + 14), k, HORIZONTAL_ALIGNMENT_LEFT, 150, 13, Color(0.82, 0.88, 0.95))
+			overview_draw.draw_string(font, Vector2(pr.position.x + 18, by + 14), k, HORIZONTAL_ALIGNMENT_LEFT, 150, 13, Themes.ink(Color(0.82, 0.88, 0.95)))
 			var bx = pr.position.x + 180
 			var bw = pr.size.x - 200
 			var frac = ph[k] / max_v
-			var col = BAD_COL if k == worst_k else (GOOD_COL if k == best_k else Color(0.35, 0.75, 0.95))
-			overview_draw.draw_rect(Rect2(bx, by, bw, 18), Color(1, 1, 1, 0.08), true)
+			var col = BAD_COL if k == worst_k else (GOOD_COL if k == best_k else Themes.ink(Color(0.35, 0.75, 0.95)))
+			overview_draw.draw_rect(Rect2(bx, by, bw, 18), Themes.ink(Color(1, 1, 1, 0.08)), true)
 			var fw = (bw - 130.0) * frac # самая длинная полоса не занимает всю ширину: справа место под подпись
 			overview_draw.draw_rect(Rect2(bx, by, fw, 18), col, true)
-			overview_draw.draw_string(font, Vector2(bx + fw + 8, by + 14), "%.1f ош./партию" % ph[k], HORIZONTAL_ALIGNMENT_LEFT, 130, 11, Color(0.55, 0.6, 0.7))
+			overview_draw.draw_string(font, Vector2(bx + fw + 8, by + 14), "%.1f ош./партию" % ph[k], HORIZONTAL_ALIGNMENT_LEFT, 130, 11, Themes.ink(Color(0.55, 0.6, 0.7)))
 			by += 38
 
 	# --- качество ходов ---
@@ -303,22 +300,22 @@ func _on_overview_draw() -> void:
 	_panel(qr, "КАЧЕСТВО ХОДОВ (за всё время)", font)
 	var rows = [
 		["Сильные", Profile.move_good, GOOD_COL],
-		["Неточности", Profile.move_inaccuracy, Color(0.95, 0.8, 0.35)],
-		["Ошибки", Profile.move_mistake, Color(0.95, 0.6, 0.3)],
+		["Неточности", Profile.move_inaccuracy, Themes.ink(Color(0.95, 0.8, 0.35))],
+		["Ошибки", Profile.move_mistake, Themes.ink(Color(0.95, 0.6, 0.3))],
 		["Зевки", Profile.move_blunder, BAD_COL],
 	]
 	var q_total = maxi(Profile.move_good + Profile.move_inaccuracy + Profile.move_mistake + Profile.move_blunder, 1)
 	var qy = qr.position.y + 52
 	for row in rows:
-		overview_draw.draw_string(font, Vector2(qr.position.x + 18, qy + 14), row[0], HORIZONTAL_ALIGNMENT_LEFT, 120, 13, Color(0.82, 0.88, 0.95))
+		overview_draw.draw_string(font, Vector2(qr.position.x + 18, qy + 14), row[0], HORIZONTAL_ALIGNMENT_LEFT, 120, 13, Themes.ink(Color(0.82, 0.88, 0.95)))
 		var bx = qr.position.x + 150
 		var bw = qr.size.x - 270
 		var frac = float(row[1]) / float(q_total)
-		overview_draw.draw_rect(Rect2(bx, qy, bw, 18), Color(1, 1, 1, 0.08), true)
+		overview_draw.draw_rect(Rect2(bx, qy, bw, 18), Themes.ink(Color(1, 1, 1, 0.08)), true)
 		overview_draw.draw_rect(Rect2(bx, qy, bw * frac, 18), row[2], true)
 		overview_draw.draw_string(font, Vector2(bx + bw + 10, qy + 14), "%d (%.0f%%)" % [row[1], 100.0 * frac], HORIZONTAL_ALIGNMENT_LEFT, 100, 12, row[2])
 		qy += 40
-	overview_draw.draw_string(font, Vector2(qr.position.x + 18, qy + 16), "Зевков меньше — выше индекс мастерства. Худшие ходы ждут на вкладке «Ходы».", HORIZONTAL_ALIGNMENT_LEFT, qr.size.x - 36, 11, Color(0.55, 0.6, 0.7))
+	overview_draw.draw_string(font, Vector2(qr.position.x + 18, qy + 16), "Зевков меньше — выше индекс мастерства. Худшие ходы ждут на вкладке «Ходы».", HORIZONTAL_ALIGNMENT_LEFT, qr.size.x - 36, 11, Themes.ink(Color(0.55, 0.6, 0.7)))
 
 	# --- график рейтинга ---
 	var gr = Rect2(left, 372, 1200, 230)
@@ -328,7 +325,7 @@ func _on_overview_draw() -> void:
 	# --- совет ---
 	var advice = Profile.journal_advice()
 	if advice.size() > 0:
-		overview_draw.draw_string(font, Vector2(left, 632), "💡 Совет: %s" % advice[0], HORIZONTAL_ALIGNMENT_LEFT, 1200, 14, Color(0.95, 0.8, 0.35))
+		overview_draw.draw_string(font, Vector2(left, 632), "💡 Совет: %s" % advice[0], HORIZONTAL_ALIGNMENT_LEFT, 1200, 14, Themes.ink(Color(0.95, 0.8, 0.35)))
 
 func _draw_rating_chart(gr: Rect2, font: Font) -> void:
 	var days = Profile.daily_history.keys()
@@ -336,10 +333,10 @@ func _draw_rating_chart(gr: Rect2, font: Font) -> void:
 	if days.size() > 30:
 		days = days.slice(days.size() - 30)
 	if Profile.tournaments_played == 0:
-		overview_draw.draw_string(font, gr.position + Vector2(18, 70), "Турнирный рейтинг появится после первого турнира — меню «Турниры и соперники».", HORIZONTAL_ALIGNMENT_LEFT, gr.size.x - 36, 13, Color(0.55, 0.6, 0.7))
+		overview_draw.draw_string(font, gr.position + Vector2(18, 70), "Турнирный рейтинг появится после первого турнира — меню «Турниры и соперники».", HORIZONTAL_ALIGNMENT_LEFT, gr.size.x - 36, 13, Themes.ink(Color(0.55, 0.6, 0.7)))
 		return
 	if days.size() < 2:
-		overview_draw.draw_string(font, gr.position + Vector2(18, 70), "Играйте несколько дней подряд — тут вырастет график вашего рейтинга.", HORIZONTAL_ALIGNMENT_LEFT, gr.size.x - 36, 13, Color(0.55, 0.6, 0.7))
+		overview_draw.draw_string(font, gr.position + Vector2(18, 70), "Играйте несколько дней подряд — тут вырастет график вашего рейтинга.", HORIZONTAL_ALIGNMENT_LEFT, gr.size.x - 36, 13, Themes.ink(Color(0.55, 0.6, 0.7)))
 		return
 	var vals := []
 	for d in days:
@@ -347,21 +344,21 @@ func _draw_rating_chart(gr: Rect2, font: Font) -> void:
 	var vmin = vals.min() - 30.0
 	var vmax = vals.max() + 30.0
 	var plot = Rect2(gr.position + Vector2(70, 44), gr.size - Vector2(100, 80))
-	overview_draw.draw_rect(plot, Color(1, 1, 1, 0.04), true)
+	overview_draw.draw_rect(plot, Themes.ink(Color(1, 1, 1, 0.04)), true)
 	for t in [0.0, 0.5, 1.0]:
 		var yy = plot.position.y + plot.size.y * (1.0 - t)
-		overview_draw.draw_line(Vector2(plot.position.x, yy), Vector2(plot.end.x, yy), Color(1, 1, 1, 0.1), 1.0)
-		overview_draw.draw_string(font, Vector2(gr.position.x + 14, yy + 5), str(int(vmin + (vmax - vmin) * t)), HORIZONTAL_ALIGNMENT_LEFT, 52, 11, Color(0.55, 0.6, 0.7))
+		overview_draw.draw_line(Vector2(plot.position.x, yy), Vector2(plot.end.x, yy), Themes.ink(Color(1, 1, 1, 0.1)), 1.0)
+		overview_draw.draw_string(font, Vector2(gr.position.x + 14, yy + 5), str(int(vmin + (vmax - vmin) * t)), HORIZONTAL_ALIGNMENT_LEFT, 52, 11, Themes.ink(Color(0.55, 0.6, 0.7)))
 	var pts := PackedVector2Array()
 	for i in range(vals.size()):
 		var x = plot.position.x + plot.size.x * float(i) / float(vals.size() - 1)
 		var y = plot.position.y + plot.size.y * (1.0 - (vals[i] - vmin) / (vmax - vmin))
 		pts.append(Vector2(x, y))
-	overview_draw.draw_polyline(pts, Color(0.1, 0.95, 1), 3.0, true)
+	overview_draw.draw_polyline(pts, Themes.ink(Color(0.1, 0.95, 1)), 3.0, true)
 	for p in pts:
-		overview_draw.draw_circle(p, 4.0, Color(0.1, 0.95, 1))
-	overview_draw.draw_string(font, Vector2(plot.position.x, plot.end.y + 22), days[0], HORIZONTAL_ALIGNMENT_LEFT, 120, 11, Color(0.55, 0.6, 0.7))
-	overview_draw.draw_string(font, Vector2(plot.end.x - 90, plot.end.y + 22), days[-1], HORIZONTAL_ALIGNMENT_LEFT, 120, 11, Color(0.55, 0.6, 0.7))
+		overview_draw.draw_circle(p, 4.0, Themes.ink(Color(0.1, 0.95, 1)))
+	overview_draw.draw_string(font, Vector2(plot.position.x, plot.end.y + 22), days[0], HORIZONTAL_ALIGNMENT_LEFT, 120, 11, Themes.ink(Color(0.55, 0.6, 0.7)))
+	overview_draw.draw_string(font, Vector2(plot.end.x - 90, plot.end.y + 22), days[-1], HORIZONTAL_ALIGNMENT_LEFT, 120, 11, Themes.ink(Color(0.55, 0.6, 0.7)))
 
 # ============================ ХОДЫ ============================
 
@@ -846,10 +843,10 @@ func _on_replay_board_draw() -> void:
 	var ev = replay_evals[replay_cur]
 	var white_frac = clampf(0.5 + ev / 1200.0, 0.05, 0.95)
 	var bar = Rect2(Vector2(SQ * 8 + 14, 0), Vector2(20, SQ * 8))
-	replay_board_draw.draw_rect(bar, Color(0.12, 0.12, 0.16), true)
-	replay_board_draw.draw_rect(Rect2(bar.position + Vector2(0, bar.size.y * (1.0 - white_frac)), Vector2(bar.size.x, bar.size.y * white_frac)), Color(0.9, 0.92, 0.95), true)
-	replay_board_draw.draw_rect(bar, Color(0.11, 0.85, 0.95, 0.5), false, 1.5)
-	replay_board_draw.draw_line(bar.position + Vector2(-3, bar.size.y / 2), bar.position + Vector2(bar.size.x + 3, bar.size.y / 2), Color(1, 0.65, 0.95, 0.6), 1.5)
+	replay_board_draw.draw_rect(bar, Themes.ink(Color(0.12, 0.12, 0.16)), true)
+	replay_board_draw.draw_rect(Rect2(bar.position + Vector2(0, bar.size.y * (1.0 - white_frac)), Vector2(bar.size.x, bar.size.y * white_frac)), Themes.ink(Color(0.9, 0.92, 0.95)), true)
+	replay_board_draw.draw_rect(bar, Themes.ink(Color(0.11, 0.85, 0.95, 0.5)), false, 1.5)
+	replay_board_draw.draw_line(bar.position + Vector2(-3, bar.size.y / 2), bar.position + Vector2(bar.size.x + 3, bar.size.y / 2), Themes.ink(Color(1, 0.65, 0.95, 0.6)), 1.5)
 
 func _process(delta: float) -> void:
 	if not _stale_threads.is_empty():
@@ -881,17 +878,17 @@ func _draw_board(cr: Node2D, eng: ChessEngine, from: Vector2i, to: Vector2i, fli
 			var col = LIGHT_COL if (f + r) % 2 == 1 else DARK_COL
 			cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), col, true)
 			if Vector2i(f, r) == from:
-				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), Color(0.95, 0.8, 0.35, 0.35), true)
+				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), Themes.ink(Color(0.95, 0.8, 0.35, 0.35)), true)
 			if Vector2i(f, r) == to:
-				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), Color(0.95, 0.8, 0.35, 0.55), true)
-	cr.draw_rect(Rect2(Vector2.ZERO, Vector2(SQ * 8, SQ * 8)), Color(0.11, 0.85, 0.95, 0.5), false, 2.0)
+				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), Themes.ink(Color(0.95, 0.8, 0.35, 0.55)), true)
+	cr.draw_rect(Rect2(Vector2.ZERO, Vector2(SQ * 8, SQ * 8)), Themes.ink(Color(0.11, 0.85, 0.95, 0.5)), false, 2.0)
 	# координаты
 	for f in range(8):
 		var sx = (7 - f) if flip else f
-		cr.draw_string(font, Vector2(sx * SQ + SQ - 14, SQ * 8 - 5), char(97 + f), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45))
+		cr.draw_string(font, Vector2(sx * SQ + SQ - 14, SQ * 8 - 5), char(97 + f), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Themes.ink(Color(1, 1, 1, 0.45)))
 	for r in range(8):
 		var sy = r if flip else (7 - r)
-		cr.draw_string(font, Vector2(4, sy * SQ + 14), str(r + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45))
+		cr.draw_string(font, Vector2(4, sy * SQ + 14), str(r + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Themes.ink(Color(1, 1, 1, 0.45)))
 	if eng == null:
 		return
 	for r in range(8):
@@ -905,9 +902,9 @@ func _draw_board(cr: Node2D, eng: ChessEngine, from: Vector2i, to: Vector2i, fli
 			PieceTextures.draw(cr, p.type, p.color, center, SQ * 0.92)
 	# стрелки: красная — сыгранный ход, зелёная — совет тренера
 	if from.x >= 0 and to.x >= 0:
-		_draw_arrow(cr, from, to, flip, Color(1.0, 0.35, 0.35, 0.9))
+		_draw_arrow(cr, from, to, flip, Themes.ink(Color(1.0, 0.35, 0.35, 0.9)))
 	if best_from.x >= 0 and best_to.x >= 0 and (best_from != from or best_to != to):
-		_draw_arrow(cr, best_from, best_to, flip, Color(0.35, 0.95, 0.45, 0.9))
+		_draw_arrow(cr, best_from, best_to, flip, Themes.ink(Color(0.35, 0.95, 0.45, 0.9)))
 
 func _draw_arrow(cr: Node2D, from: Vector2i, to: Vector2i, flip: bool, col: Color) -> void:
 	var a = _square_center(from, flip)

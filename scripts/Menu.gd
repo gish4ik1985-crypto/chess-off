@@ -213,4 +213,4 @@ func _on_bg_draw() -> void:
 			if (r + f) % 2 == 0:
 				continue
 			var pos = Vector2(f * sq, r * sq)
-			bg.draw_rect(Rect2(pos, Vector2(sq, sq)), Color(1, 1, 1, 0.035), true)
+			bg.draw_rect(Rect2(pos, Vector2(sq, sq)), Themes.ink(Color(1, 1, 1, 0.035)), true)

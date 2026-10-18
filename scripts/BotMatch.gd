@@ -341,17 +341,21 @@ func _on_board_draw() -> void:
 		for f in range(8):
 			var pos = Vector2(f * SQ, (7 - r) * SQ)
 			var light = (f + r) % 2 == 1
-			var col = Color(0.24, 0.28, 0.4) if light else Color(0.13, 0.15, 0.23)
-			cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), col, true)
+			if Themes.is_neon():
+				var col = Themes.ink(Color(0.24, 0.28, 0.4)) if light else Themes.ink(Color(0.13, 0.15, 0.23))
+				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), col, true)
+			else:
+				Themes.draw_square(cr, Rect2(pos, Vector2(SQ, SQ)), light, r * 8 + f)
 			if Vector2i(f, r) == last_from or Vector2i(f, r) == last_to:
-				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), Color(0.95, 0.8, 0.35, 0.35), true)
-	cr.draw_rect(Rect2(Vector2.ZERO, Vector2(SQ * 8, SQ * 8)), Color(0.11, 0.85, 0.95, 0.5), false, 2.0)
+				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), Color(0.95, 0.8, 0.35, 0.35) if Themes.is_neon() else Themes.hl_last(), true)
+	if Themes.is_neon():
+		cr.draw_rect(Rect2(Vector2.ZERO, Vector2(SQ * 8, SQ * 8)), Themes.ink(Color(0.11, 0.85, 0.95, 0.5)), false, 2.0)
 	for f in range(8):
 		cr.draw_string(font, Vector2(f * SQ + SQ - 14, SQ * 8 - 5), char(97 + f),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45) if Themes.is_neon() else Themes.coord_color(f % 2 == 1))
 	for r in range(8):
 		cr.draw_string(font, Vector2(4, (7 - r) * SQ + 14), str(r + 1),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45))
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45) if Themes.is_neon() else Themes.coord_color(r % 2 == 1))
 	if engine == null:
 		return
 	for r in range(8):

@@ -371,17 +371,21 @@ func _draw_board(cr: Node2D, eng: ChessEngine, from: Vector2i, to: Vector2i) -> 
 	for r in range(8):
 		for f in range(8):
 			var pos = Vector2(f * SQ, (7 - r) * SQ)
-			var col = LIGHT_COL if (f + r) % 2 == 1 else DARK_COL
-			cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), col, true)
-			if Vector2i(f, r) == from:
-				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), Color(0.95, 0.8, 0.35, 0.35), true)
-			if Vector2i(f, r) == to:
-				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), Color(0.95, 0.8, 0.35, 0.55), true)
-	cr.draw_rect(Rect2(Vector2.ZERO, Vector2(SQ * 8, SQ * 8)), Color(0.11, 0.85, 0.95, 0.5), false, 2.0)
+			if Themes.is_neon():
+				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), LIGHT_COL if (f + r) % 2 == 1 else DARK_COL, true)
+			else:
+				Themes.draw_square(cr, Rect2(pos, Vector2(SQ, SQ)), (f + r) % 2 == 1, r * 8 + f)
+			if Vector2i(f, r) == from or Vector2i(f, r) == to:
+				var hl := Themes.hl_last()
+				if Themes.is_neon():
+					hl = Color(0.95, 0.8, 0.35, 0.35 if Vector2i(f, r) == from else 0.55)
+				cr.draw_rect(Rect2(pos, Vector2(SQ, SQ)), hl, true)
+	if Themes.is_neon():
+		cr.draw_rect(Rect2(Vector2.ZERO, Vector2(SQ * 8, SQ * 8)), Themes.ink(Color(0.11, 0.85, 0.95, 0.5)), false, 2.0)
 	for f in range(8):
-		cr.draw_string(font, Vector2(f * SQ + SQ - 14, SQ * 8 - 5), char(97 + f), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45))
+		cr.draw_string(font, Vector2(f * SQ + SQ - 14, SQ * 8 - 5), char(97 + f), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45) if Themes.is_neon() else Themes.coord_color(f % 2 == 1))
 	for r in range(8):
-		cr.draw_string(font, Vector2(4, (7 - r) * SQ + 14), str(r + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45))
+		cr.draw_string(font, Vector2(4, (7 - r) * SQ + 14), str(r + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1, 1, 1, 0.45) if Themes.is_neon() else Themes.coord_color(r % 2 == 1))
 	if eng == null:
 		return
 	for r in range(8):
@@ -392,7 +396,7 @@ func _draw_board(cr: Node2D, eng: ChessEngine, from: Vector2i, to: Vector2i) -> 
 			var center = Vector2(f * SQ + SQ / 2, (7 - r) * SQ + SQ / 2)
 			PieceTextures.draw(cr, p.type, p.color, center, SQ * 0.92)
 	if from.x >= 0 and to.x >= 0:
-		_draw_arrow(cr, from, to, Color(1.0, 0.35, 0.35, 0.9))
+		_draw_arrow(cr, from, to, Themes.ink(Color(1.0, 0.35, 0.35, 0.9)))
 	_draw_eval_bar(cr)
 
 # Вертикальная шкала перевеса справа от доски: белая доля снизу, чёрная сверху.
@@ -404,21 +408,21 @@ func _draw_eval_bar(cr: Node2D) -> void:
 	var white_frac = clampf(0.5 + ev / 1200.0, 0.04, 0.96)
 	var h = SQ * 8
 	var bar = Rect2(Vector2(SQ * 8 + 10, 0), Vector2(18, h))
-	cr.draw_rect(bar, Color(0.1, 0.1, 0.14), true)
-	cr.draw_rect(Rect2(bar.position + Vector2(0, h * (1.0 - white_frac)), Vector2(bar.size.x, h * white_frac)), Color(0.9, 0.92, 0.95), true)
-	cr.draw_rect(bar, Color(0.11, 0.85, 0.95, 0.5), false, 1.5)
+	cr.draw_rect(bar, Themes.ink(Color(0.1, 0.1, 0.14)), true)
+	cr.draw_rect(Rect2(bar.position + Vector2(0, h * (1.0 - white_frac)), Vector2(bar.size.x, h * white_frac)), Themes.ink(Color(0.9, 0.92, 0.95)), true)
+	cr.draw_rect(bar, Themes.ink(Color(0.11, 0.85, 0.95, 0.5)), false, 1.5)
 	# отметка середины (равенство)
-	cr.draw_line(bar.position + Vector2(-2, h / 2), bar.position + Vector2(bar.size.x + 2, h / 2), Color(1, 0.65, 0.95, 0.7), 1.5)
+	cr.draw_line(bar.position + Vector2(-2, h / 2), bar.position + Vector2(bar.size.x + 2, h / 2), Themes.ink(Color(1, 0.65, 0.95, 0.7)), 1.5)
 	var font = ThemeDB.fallback_font
-	cr.draw_string(font, bar.position + Vector2(2, 12), "Ч", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.4, 0.45, 0.55))
-	cr.draw_string(font, bar.position + Vector2(2, h - 4), "Б", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.4, 0.45, 0.55))
+	cr.draw_string(font, bar.position + Vector2(2, 12), "Ч", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Themes.ink(Color(0.4, 0.45, 0.55)))
+	cr.draw_string(font, bar.position + Vector2(2, h - 4), "Б", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Themes.ink(Color(0.4, 0.45, 0.55)))
 	# без числа шкала ничего не говорит: подписываем перевес в пешках
 	# (знак — с точки зрения белых, как и сама заливка)
 	var pawns = ev / 100.0
 	var cap_txt = "" if absf(pawns) < 6.0 else "!"
 	cr.draw_string(font, bar.position + Vector2(-6, -6),
 		("=" if absf(pawns) < 0.4 else "%+.1f%s" % [pawns, cap_txt]),
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.85, 0.9, 0.95))
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Themes.ink(Color(0.85, 0.9, 0.95)))
 
 func _draw_arrow(cr: Node2D, from: Vector2i, to: Vector2i, col: Color) -> void:
 	var a = Vector2(from.x * SQ + SQ / 2, (7 - from.y) * SQ + SQ / 2)
