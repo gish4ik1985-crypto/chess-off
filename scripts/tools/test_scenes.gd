@@ -13,7 +13,7 @@ const SCENES := [
 	"res://scenes/HistoricGames.tscn", "res://scenes/Login.tscn", "res://scenes/Map.tscn",
 	"res://scenes/Puzzle.tscn", "res://scenes/PuzzleHub.tscn", "res://scenes/School.tscn",
 	"res://scenes/Settings.tscn", "res://scenes/TournamentPrep.tscn", "res://scenes/Tournaments.tscn",
-	"res://scenes/TrophyRoom.tscn", "res://scenes/BotsHub.tscn", "res://scenes/Admin.tscn", "res://scenes/Homework.tscn", "res://scenes/Notebook.tscn",
+	"res://scenes/TrophyRoom.tscn", "res://scenes/BotsHub.tscn", "res://scenes/Admin.tscn", "res://scenes/Homework.tscn", "res://scenes/Notebook.tscn", "res://scenes/ClubTourneys.tscn", "res://scenes/Chat.tscn", "res://scenes/OnlineGame.tscn",
 ]
 
 func _ready() -> void:

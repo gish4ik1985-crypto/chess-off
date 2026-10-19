@@ -396,6 +396,27 @@ func set_role(uid_target: String, new_role: String, new_award: String, target_ni
 		"role": new_role, "award": new_award.strip_edges().left(40),
 		"nick": target_nick, "by": uid, "at": int(Time.get_unix_time_from_system())})
 
+# Документы вложенной коллекции: parent — путь документа-родителя («chat/school»), sub — имя коллекции («msgs»).
+func query_sub(parent: String, sub: String, order_field: String, limit: int) -> Dictionary:
+	if not await _ensure_token():
+		return {"ok": false, "docs": [], "error": "Нет входа в облако."}
+	var url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/%s:runQuery" % [_project, parent]
+	var q := {"structuredQuery": {
+		"from": [{"collectionId": sub}],
+		"orderBy": [{"field": {"fieldPath": order_field}, "direction": "DESCENDING"}],
+		"limit": limit}}
+	var r := await _http(HTTPClient.METHOD_POST, url, q, true)
+	if not r.ok:
+		return {"ok": false, "docs": [], "error": _friendly(r)}
+	var docs := []
+	if typeof(r.raw) == TYPE_ARRAY:
+		for item in r.raw:
+			if typeof(item) == TYPE_DICTIONARY and item.has("document"):
+				var d := _fields_to_dict(item.document.get("fields", {}))
+				d["_id"] = String(item.document.get("name", "")).get_file()
+				docs.append(d)
+	return {"ok": true, "docs": docs, "error": ""}
+
 # --- профиль игрока ---------------------------------------------------------------------------
 
 # Публичная карточка: то, что видят другие игроки. Никакой статистики ходов.

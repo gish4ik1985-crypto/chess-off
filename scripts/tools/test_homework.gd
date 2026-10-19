@@ -77,5 +77,47 @@ func _ready() -> void:
 	var e3 := ChessEngine.new()
 	e3.setup_from_fen("7k/P7/8/8/8/8/8/K7 w - - 0 1")
 	check("SAN превращение", GameRecord.san(e3, BoardView.find_move(e3, "a7a8q")).begins_with("a8=Q"))
+	# турниры школы
+	var four := []
+	for n in ["А", "Б", "В", "Г"]:
+		four.append({"uid": "u" + n, "name": n})
+	var rr := ClubTourney.round_robin(four)
+	var seen := {}
+	var dup := false
+	for rd in rr:
+		for pr in rd:
+			var k: String = pr.w.uid + "|" + pr.b.uid if pr.w.uid < pr.b.uid else pr.b.uid + "|" + pr.w.uid
+			if seen.has(k):
+				dup = true
+			seen[k] = true
+	check("круговая на 4: 3 тура, 6 разных пар", rr.size() == 3 and seen.size() == 6 and not dup, "%d/%d" % [rr.size(), seen.size()])
+	var five := four.duplicate()
+	five.append({"uid": "uД", "name": "Д"})
+	var rr5 := ClubTourney.round_robin(five)
+	var byes := {}
+	for rd in rr5:
+		for pr in rd:
+			if pr.b == null:
+				byes[pr.w.uid] = true
+	check("круговая на 5: 5 туров, у каждого один пропуск", rr5.size() == 5 and byes.size() == 5)
+	var sw := ClubTourney.swiss_round(four, {"uА": 1.0, "uБ": 1.0, "uВ": 0.0, "uГ": 0.0}, {}, {}, [])
+	check("швейцарка: лидеры играют между собой", sw.size() == 2 and (sw[0].w.uid in ["uА", "uБ"]) and (sw[0].b.uid in ["uА", "uБ"]))
+	var sw5 := ClubTourney.swiss_round(five, {}, {}, {}, [])
+	var has_bye := false
+	for pr in sw5:
+		if pr.b == null:
+			has_bye = true
+	check("швейцарка на 5: один пропуск", sw5.size() == 3 and has_bye)
+	var games := [
+		{"status": "done", "wuid": "uА", "buid": "uБ", "wname": "А", "bname": "Б", "result": "1-0"},
+		{"status": "done", "wuid": "uВ", "buid": "uГ", "wname": "В", "bname": "Г", "result": "1/2-1/2"},
+		{"status": "play", "wuid": "uА", "buid": "uВ", "wname": "А", "bname": "В", "result": ""},
+	]
+	var st := ClubTourney.standings(games)
+	check("таблица: лидер А с 1 очком", st[0].name == "А" and st[0].pts == 1.0)
+	check("таблица: ничья по ½", st[1].pts == 0.5 and st[2].pts == 0.5 and st[3].pts == 0.0)
+	var sm := ClubTourney.summarize(games)
+	check("сводка: очки и сыгранные пары", sm.scores.get("uА", 0.0) == 1.0 and sm.played.size() == 2)
+	check("очки текстом", ClubTourney.pts_text(2.5) == "2½" and ClubTourney.pts_text(0.5) == "½" and ClubTourney.pts_text(3.0) == "3")
 	print("ИТОГО ошибок: %d" % fails)
 	get_tree().quit(1 if fails > 0 else 0)

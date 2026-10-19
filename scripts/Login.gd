@@ -156,7 +156,11 @@ func _brand_header() -> void:
 	sub.text = "Шахматный клуб · кто играет?"
 	var seal := TextureRect.new()
 	seal.texture = load("res://assets/brand/seal_512.png")
-	seal.custom_minimum_size = Vector2(72, 72)
+	var short_screen := get_viewport_rect().size.y < 860.0
+	if short_screen:
+		vbox.add_theme_constant_override("separation", 4)
+		($CenterPanel/VBox/TitleLabel as Label).add_theme_font_size_override("font_size", 34)
+	seal.custom_minimum_size = Vector2(44, 44) if short_screen else Vector2(72, 72)
 	seal.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	seal.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	seal.mouse_filter = Control.MOUSE_FILTER_IGNORE

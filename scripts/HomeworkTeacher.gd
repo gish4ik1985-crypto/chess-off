@@ -73,7 +73,7 @@ func _subs_for(aid: String) -> Array:
 func _show_list() -> void:
 	_clear()
 	var add := Button.new()
-	add.text = "＋ Новое задание"
+	add.text = "+ Новое задание"
 	add.custom_minimum_size = Vector2(0, 50)
 	add.pressed.connect(_show_builder)
 	_view.add_child(add)

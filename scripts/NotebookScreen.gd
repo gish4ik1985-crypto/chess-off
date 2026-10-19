@@ -28,6 +28,7 @@ var _ed_status: Label
 var _edit_headers: Dictionary = {}
 var _res_opt: OptionButton
 var _busy := false
+var _external := false # открыто из турнира: «Назад» возвращает туда, а не к списку записей
 
 func _ready() -> void:
 	var bg := ColorRect.new()
@@ -61,10 +62,16 @@ func _ready() -> void:
 	_view = VBoxContainer.new()
 	_view.add_theme_constant_override("separation", 10)
 	_root.add_child(_view)
-	_show_list()
+	if Global.pending_pgn != "":
+		var t := Global.pending_pgn
+		Global.pending_pgn = ""
+		_external = true
+		_open_record({"id": "", "pgn": t})
+	else:
+		_show_list()
 
 func _on_back() -> void:
-	if _board != null:
+	if _board != null and not _external:
 		_show_list()
 		return
 	Global.go_back()
@@ -96,7 +103,7 @@ func _show_list() -> void:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 8)
 	_view.add_child(top)
-	var add := _btn("＋ Новая запись", 190, 48)
+	var add := _btn("+ Новая запись", 190, 48)
 	add.pressed.connect(func(): _open_record({"id": "", "pgn": ""}))
 	top.add_child(add)
 	var paste := _btn("📋 Вставить PGN из буфера", 250, 48)

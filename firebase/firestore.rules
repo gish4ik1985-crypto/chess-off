@@ -105,6 +105,53 @@ service cloud.firestore {
       allow delete: if request.auth != null && (resource.data.by == request.auth.uid || isTeacher());
     }
 
+    // Турниры школы. Турнир, жеребьёвку и ручные записи ведёт учитель; ученик пишет только свою заявку и
+    // ходы в своих партиях.
+    match /ctourneys/{id} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && isTeacher()
+        && request.resource.data.keys().hasOnly(['name', 'kind', 'rounds', 'tc', 'status', 'round', 'nplayers', 'players', 'by', 'by_name', 'created'])
+        && request.resource.data.name.size() <= 60;
+      allow delete: if request.auth != null && isTeacher();
+    }
+    match /centries/{eid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && eid == request.resource.data.tid + '_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(['tid', 'uid', 'name', 'at']);
+      allow delete: if request.auth != null && (resource.data.uid == request.auth.uid || isTeacher());
+    }
+    match /cgames/{gid} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && isTeacher()
+        && request.resource.data.keys().hasOnly(['tid', 'round', 'wuid', 'wname', 'buid', 'bname', 'fen', 'moves', 'turn', 'status', 'result', 'reason', 'wtime', 'btime', 'last', 'tc', 'draw', 'pgn', 'at']);
+      allow update: if request.auth != null
+        && (isTeacher() || request.auth.uid == resource.data.wuid || request.auth.uid == resource.data.buid)
+        && request.resource.data.tid == resource.data.tid
+        && request.resource.data.wuid == resource.data.wuid
+        && request.resource.data.buid == resource.data.buid
+        && request.resource.data.keys().hasOnly(['tid', 'round', 'wuid', 'wname', 'buid', 'bname', 'fen', 'moves', 'turn', 'status', 'result', 'reason', 'wtime', 'btime', 'last', 'tc', 'draw', 'pgn', 'at'])
+        && request.resource.data.pgn.size() <= 12000;
+      allow delete: if request.auth != null && isTeacher();
+    }
+
+    // Чат: комнаты «school» (общий), «grp_…» (группа) и «dm_…» (личные, в названии — uid обоих). Писать можно
+    // только от своего имени; удалять — своё сообщение или учителю.
+    match /chat/{room}/msgs/{mid} {
+      function canUseRoom() {
+        return room == 'school' || room.matches('grp_.*') || room.matches('dm_.*' + request.auth.uid + '.*');
+      }
+      allow read: if request.auth != null && canUseRoom();
+      allow create: if request.auth != null && canUseRoom()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'at'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 300;
+      allow update: if false;
+      allow delete: if request.auth != null && (resource.data.uid == request.auth.uid || isTeacher());
+    }
+
     // Полный профиль (статистика ходов, сильные и слабые стороны): только хозяин.
     match /private/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;

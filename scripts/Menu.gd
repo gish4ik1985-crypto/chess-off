@@ -103,10 +103,14 @@ func _refresh_role() -> void:
 	await Cloud.refresh_role()
 	await Homework.load_all()
 	await Homework.auto_submit_done()
+	await ClubTourney.load_mine()
+	await ChatScreen.check_unread()
 	if is_inside_tree():
 		_update_profile_bar()
 		_update_bell()
 		_update_hw_button()
+		if _chat_button != null and ChatScreen.has_unread():
+			_chat_button.text = "💬 Чат школы  · новые"
 
 func _update_hw_button() -> void:
 	if _hw_button == null:
@@ -164,6 +168,7 @@ func _apply_compact_layout() -> void:
 # подготовка к турниру — внутри «Турниров», дневник и награды — в «Моём профиле».
 var _bell_button: Button
 var _hw_button: Button
+var _chat_button: Button
 var _notice_layer: Control
 
 func _build_new_layout() -> void:
@@ -195,6 +200,12 @@ func _build_new_layout() -> void:
 	main_vb.move_child(train_b, main_vb.get_child_count() - 1)
 	main_vb.move_child(tourney_b, main_vb.get_child_count() - 1)
 	main_vb.move_child($ContentCenter/MainPanel/VBox/QuitButton, main_vb.get_child_count() - 1)
+	_chat_button = Button.new()
+	_chat_button.text = "💬 Чат школы"
+	_chat_button.custom_minimum_size.y = 52
+	_chat_button.pressed.connect(func(): _open("res://scenes/Chat.tscn"))
+	main_vb.add_child(_chat_button)
+	main_vb.move_child(_chat_button, main_vb.get_child_count() - 2)
 
 	# «Назад» — первой строкой подменю, а не в самом низу
 	for panel in [play_panel, train_panel, tourney_panel]:
@@ -240,6 +251,11 @@ func _build_new_layout() -> void:
 	var tb: Button = cv.get_node("TournamentsButton")
 	tb.text = "Турниры (рейтинг, турнир дня, подготовка)" + ("  · идёт: %d" % running if running > 0 else "")
 	cv.get_node("BotsButton").text = "Лига ботов — рейтинги и карточки соперников"
+	var school_b := Button.new()
+	school_b.text = "🏫 Турниры школы — онлайн, от учителя"
+	school_b.pressed.connect(func(): _open("res://scenes/ClubTourneys.tscn"))
+	cv.add_child(school_b)
+	cv.move_child(school_b, 2)
 
 	# верхняя полоса: профиль, уведомления, настройки
 	var hb: HBoxContainer = $ProfileBar/HBox
@@ -369,6 +385,10 @@ func _notifications() -> Array:
 	for st in Profile.dynamic_road_stages():
 		if not Profile.road_focus_done.has(st.kind):
 			out.append({"text": "На «Дороге домой» новая остановка: «%s»." % st.name, "go": "res://scenes/RoadHome.tscn"})
+	if ChatScreen.has_unread():
+		out.append({"text": "Новые сообщения в чате школы.", "go": "res://scenes/Chat.tscn"})
+	if ClubTourney.my_turn_games.size() > 0:
+		out.append({"text": "Ваш ход в турнирной партии (%d)." % ClubTourney.my_turn_games.size(), "go": "res://scenes/ClubTourneys.tscn"})
 	if Homework.loaded and Homework.pending().size() > 0:
 		out.append({"text": "Новых домашних заданий: %d." % Homework.pending().size(), "go": "res://scenes/Homework.tscn"})
 	var streak := Profile.current_streak()
