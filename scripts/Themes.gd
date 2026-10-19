@@ -630,8 +630,8 @@ func _on_node_added(node: Node) -> void:
 	_apply_to.call_deferred(node)
 
 func _apply_to(node: Node) -> void:
-	if not is_instance_valid(node):
-		return
+	if not is_instance_valid(node) or node.has_meta("brand"):
+		return # элементы с фирменной окраской (экран входа) тема не трогает
 	if node is ColorRect:
 		var cr := node as ColorRect
 		var was_bg := _role(cr.color) == "bg"

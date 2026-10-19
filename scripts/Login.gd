@@ -25,7 +25,7 @@ func _build_user_row(u: Dictionary) -> Control:
 	var row = PanelContainer.new()
 	var sb = StyleBoxFlat.new()
 	sb.bg_color = Color(0.05, 0.05, 0.09, 0.85)
-	sb.border_color = Color(0.11, 0.85, 0.95, 0.4)
+	sb.border_color = Color(0.95, 0.76, 0.31, 0.35)
 	sb.border_width_left = 1
 	sb.border_width_top = 1
 	sb.border_width_right = 1
@@ -39,6 +39,7 @@ func _build_user_row(u: Dictionary) -> Control:
 	sb.content_margin_right = 12
 	sb.content_margin_bottom = 8
 	row.add_theme_stylebox_override("panel", sb)
+	row.set_meta("brand", true) # строка игрока на тёмной карточке не перекрашивается темой
 	var hbox = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 12)
 	row.add_child(hbox)
@@ -49,14 +50,16 @@ func _build_user_row(u: Dictionary) -> Control:
 
 	var name_label = Label.new()
 	name_label.text = String(u.name)
-	name_label.add_theme_color_override("font_color", Color(0.1, 0.95, 1))
+	name_label.add_theme_color_override("font_color", Color("#F4EFE0"))
+	name_label.set_meta("brand", true)
 	name_label.add_theme_font_size_override("font_size", 16)
 	info_vbox.add_child(name_label)
 
 	var sub_label = Label.new()
 	sub_label.text = "Турнирный рейтинг %d · партий: %d" % [int(round(float(u.rating))), int(u.games)]
 	sub_label.add_theme_font_size_override("font_size", 12)
-	sub_label.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
+	sub_label.add_theme_color_override("font_color", Color("#9DA3C4"))
+	sub_label.set_meta("brand", true)
 	info_vbox.add_child(sub_label)
 
 	var enter_button = Button.new()
@@ -163,8 +166,123 @@ func _brand_header() -> void:
 	org.text = Global.CLUB_ORG
 	org.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	org.add_theme_font_size_override("font_size", 12)
-	org.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
+	org.add_theme_color_override("font_color", Color("#9DA3C4"))
+	org.set_meta("brand", true)
 	vbox.add_child(org)
+	_add_backdrop()
+
+# Фон входа в духе экрана загрузки: тёмно-синий градиент, крупная печать клуба водяным знаком,
+# еле заметная шахматная плитка снизу, золотые искры и девиз. Цвета фирменные и не зависят от темы.
+const BRAND_NAVY_TOP := Color("#1D2352")
+const BRAND_NAVY_BOTTOM := Color("#0B0E24")
+const BRAND_GOLD := Color("#F2C14E")
+
+var _backdrop: Control
+
+func _add_backdrop() -> void:
+	$Background.visible = false # старая плоская заливка; тема её перекрашивала бы
+	# карточка входа — в цветах клуба, чтобы сочеталась с фоном; цвет текста и кнопок остаётся от темы
+	var card_style := Themes.card_box()
+	card_style.bg_color = Color(BRAND_NAVY_BOTTOM.r + 0.04, BRAND_NAVY_BOTTOM.g + 0.05, BRAND_NAVY_BOTTOM.b + 0.12, 0.95)
+	card_style.border_color = Color(BRAND_GOLD, 0.5)
+	card_style.set_border_width_all(1)
+	card_style.shadow_color = Color(0, 0, 0, 0.5)
+	$CenterPanel.set_meta("brand", true)
+	$CenterPanel.add_theme_stylebox_override("panel", card_style)
+	# подписи на тёмно-синей карточке — всегда светлые, в какой бы теме ни была игра
+	var title: Label = $CenterPanel/VBox/TitleLabel
+	title.set_meta("brand", true)
+	title.add_theme_color_override("font_color", Color("#F4EFE0"))
+	title.add_theme_font_override("font", Themes.font_bold())
+	var sub: Label = $CenterPanel/VBox/SubtitleLabel
+	sub.set_meta("brand", true)
+	sub.add_theme_color_override("font_color", BRAND_GOLD)
+	for n in [empty_label, $CenterPanel/VBox/StorageNote]:
+		(n as Label).set_meta("brand", true)
+		(n as Label).add_theme_color_override("font_color", Color("#9DA3C4"))
+	_backdrop = Control.new()
+	_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop.set_meta("themed", true)
+	add_child(_backdrop)
+	move_child(_backdrop, 0)
+
+	var g := Gradient.new()
+	g.set_color(0, BRAND_NAVY_TOP)
+	g.set_color(1, BRAND_NAVY_BOTTOM)
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.width = 8
+	gt.height = 256
+	gt.fill_from = Vector2(0.5, 0.0)
+	gt.fill_to = Vector2(0.5, 1.0)
+	var sky := TextureRect.new()
+	sky.texture = gt
+	sky.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sky.stretch_mode = TextureRect.STRETCH_SCALE
+	sky.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sky.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_backdrop.add_child(sky)
+
+	# плитка и искры рисуются одним узлом
+	var deco := Control.new()
+	deco.set_anchors_preset(Control.PRESET_FULL_RECT)
+	deco.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	deco.draw.connect(func(): _draw_deco(deco))
+	deco.resized.connect(deco.queue_redraw)
+	_backdrop.add_child(deco)
+
+	var motto := Label.new()
+	motto.text = "Играй · учись · побеждай"
+	motto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	motto.add_theme_font_size_override("font_size", 16)
+	motto.add_theme_color_override("font_color", Color(BRAND_GOLD, 0.7))
+	motto.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 28)
+	motto.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop.add_child(motto)
+
+# Печать клуба водяным знаком: те же кольцо, шахматные отрезки и молния, но одной золотой линией
+# с малой прозрачностью — фон не спорит с карточкой входа.
+func _draw_watermark(c: Control) -> void:
+	var center := c.size / 2.0
+	var k := minf(c.size.x, c.size.y) * 0.5 * 1.02 / 60.0
+	var col := Color(BRAND_GOLD, 0.14)
+	c.draw_arc(center, 58.0 * k, 0.0, TAU, 96, col, 3.0 * k, true)
+	for i in range(32):
+		var a0 := i * TAU / 32.0
+		c.draw_arc(center, 47.0 * k, a0, a0 + TAU / 64.0, 6, col, 9.0 * k, true)
+	var bolt := PackedVector2Array([Vector2(7, -35), Vector2(-17, 4), Vector2(-2, 4), Vector2(-7.5, 35), Vector2(19, -5), Vector2(3, -5)])
+	for i in range(bolt.size()):
+		bolt[i] = center + bolt[i] * k
+	c.draw_colored_polygon(bolt, Color(BRAND_GOLD, 0.16))
+
+func _draw_deco(c: Control) -> void:
+	var sz := c.size
+	_draw_watermark(c)
+	# шахматная плитка вдоль нижней кромки, растворяющаяся к центру
+	var sq := 64.0
+	var rows := 4
+	for r in range(rows):
+		for f in range(int(ceil(sz.x / sq))):
+			if (r + f) % 2 == 0:
+				continue
+			var y := sz.y - (r + 1) * sq
+			var a := 0.05 * (1.0 - float(r) / rows)
+			c.draw_rect(Rect2(f * sq, y, sq, sq), Color(1, 1, 1, a), true)
+	# золотые искры: расположение фиксированное, не «прыгает» при перерисовке
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1909
+	for i in range(34):
+		var p := Vector2(rng.randf() * sz.x, rng.randf() * sz.y * 0.85)
+		var r := 0.8 + rng.randf() * 1.6
+		c.draw_circle(p, r, Color(BRAND_GOLD, 0.15 + rng.randf() * 0.35))
+	for i in range(5):
+		var p := Vector2(rng.randf() * sz.x, rng.randf() * sz.y * 0.7)
+		var k := 5.0 + rng.randf() * 4.0
+		c.draw_colored_polygon(PackedVector2Array([
+			p + Vector2(0, -k), p + Vector2(k * 0.28, -k * 0.28), p + Vector2(k, 0), p + Vector2(k * 0.28, k * 0.28),
+			p + Vector2(0, k), p + Vector2(-k * 0.28, k * 0.28), p + Vector2(-k, 0), p + Vector2(-k * 0.28, -k * 0.28)]),
+			Color(BRAND_GOLD, 0.5))
 
 # --- онлайн-вход -------------------------------------------------------------------------------
 # Отдельное окно: почта + пароль (+ ник при регистрации). Аккаунт общий для школы и работает на любом
