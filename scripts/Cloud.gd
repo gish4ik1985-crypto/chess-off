@@ -140,17 +140,24 @@ func register(mail: String, password: String, wanted_nick: String) -> Dictionary
 	var res := await _auth("signUp", mail, password)
 	if not res.ok:
 		return res
-	var claim := await _http(HTTPClient.METHOD_PATCH,
-		_doc_url("nicks/" + nick_key(wanted_nick).uri_encode()) + "?currentDocument.exists=false",
-		{"fields": {"uid": _to_fs(uid)}}, true)
+	var claim := await claim_nick(wanted_nick)
 	if not claim.ok:
 		await _delete_current_account()
-		if int(claim.code) == 409 or int(claim.code) == 412:
-			return {"ok": false, "error": "Ник «%s» уже занят. Выберите другой." % wanted_nick.strip_edges()}
-		return {"ok": false, "error": _friendly(claim)}
-	nick = wanted_nick.strip_edges()
-	_save_session()
+		return claim
 	return {"ok": true, "error": ""}
+
+# Занимает ник за текущим аккаунтом. Создание документа (POST) вместо записи поверх (PATCH): так занятый
+# ник даёт 409, а в браузере не нужен метод PATCH, с которым у веб-запросов Godot бывают сбои.
+func claim_nick(wanted_nick: String) -> Dictionary:
+	var url := _doc_url("nicks") + "?documentId=" + nick_key(wanted_nick).uri_encode()
+	var r := await _http(HTTPClient.METHOD_POST, url, {"fields": {"uid": _to_fs(uid)}}, true)
+	if r.ok:
+		nick = wanted_nick.strip_edges()
+		_save_session()
+		return {"ok": true, "error": ""}
+	if int(r.code) == 409:
+		return {"ok": false, "error": "Ник «%s» уже занят. Выберите другой." % wanted_nick.strip_edges()}
+	return {"ok": false, "error": _friendly(r)}
 
 func login(mail: String, password: String) -> Dictionary:
 	if not enabled:
@@ -158,14 +165,14 @@ func login(mail: String, password: String) -> Dictionary:
 	var res := await _auth("signInWithPassword", mail, password)
 	if not res.ok:
 		return res
-	# ник берём из карточки игрока; если её нет (регистрация оборвалась), подставляем часть почты
+	# ник берём из карточки игрока; если её нет (регистрация оборвалась на выборе ника), ник ещё не выбран
 	var card := await get_doc("players/" + uid)
 	if card.ok and card.found and String(card.data.get("nick", "")) != "":
 		nick = String(card.data.nick)
 	else:
-		nick = email.get_slice("@", 0).substr(0, 24)
+		nick = "" # окно входа предложит выбрать ник и завершить регистрацию
 	_save_session()
-	return {"ok": true, "error": ""}
+	return {"ok": true, "error": "", "needs_nick": nick == ""}
 
 # Письмо со ссылкой для нового пароля. Firebase отвечает «успешно» и для незарегистрированной почты
 # (чтобы нельзя было выведать, кто играет), поэтому формулировка осторожная.
@@ -285,14 +292,17 @@ static func _fields_to_dict(fields: Dictionary) -> Dictionary:
 func _doc_url(path: String) -> String:
 	return "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents/%s" % [_project, path]
 
-# Записывает (заменяет) документ path полями data. Возвращает {ok, error}.
+# Записывает (заменяет) документ path полями data. Идёт через :commit (POST): так же работает и в
+# браузере, где метод PATCH у запросов Godot ненадёжен. Возвращает {ok, error}.
 func set_doc(path: String, data: Dictionary) -> Dictionary:
 	if not await _ensure_token():
 		return {"ok": false, "error": "Нет входа в облако."}
 	var fields := {}
 	for k in data:
 		fields[k] = _to_fs(data[k])
-	var r := await _http(HTTPClient.METHOD_PATCH, _doc_url(path), {"fields": fields}, true)
+	var root := "projects/%s/databases/(default)/documents/" % _project
+	var url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:commit" % _project
+	var r := await _http(HTTPClient.METHOD_POST, url, {"writes": [{"update": {"name": root + path, "fields": fields}}]}, true)
 	return {"ok": r.ok, "error": "" if r.ok else _friendly(r)}
 
 # Читает документ. Возвращает {ok, found, data, error}.

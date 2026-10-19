@@ -129,8 +129,14 @@ var hint_ai: ChessAI = ChessAI.new(ChessAI.ANALYSIS_LEVEL) # only used for its s
 # "patience": свой ход разрешён только после паузы на обдумывание; ходы,
 #         сделанные не сразу, копят серию «очков мудрости», зевок сжигает её.
 var school := ""
-const SPOT_FLASH_MS := 1200 # сколько миллисекунд фигуры «исчезают» после хода ИИ
-const SPOT_TRIES := 2 # попыток угадать клетку, потом показываем ответ
+# Уровни «Что изменилось?»: 1 — фигуры исчезают на 1,2 с, нужно найти клетку, КУДА сходил соперник;
+# 2 — на 3 с, нужно показать ОТКУДА и КУДА (два клика); 3 — доска закрыта, пока не ответишь (по памяти).
+const SPOT_FLASH_MS_BY_LEVEL := {1: 1200, 2: 3000, 3: 0}
+const SPOT_TRIES := 2 # попыток на ход, потом показываем ответ
+const SPOT_LEVEL_UP_STREAK := 5 # верных ответов подряд — и уровень растёт
+var spot_level := 1
+var spot_stage := 0 # 0 — ждём клетку «откуда» (уровни 2–3) или «куда» (уровень 1); 1 — ждём «куда»
+var spot_from_pick = null # Vector2i: выбранная клетка «откуда»
 var patience_lock_ms := 10000 # пауза перед ходом (из Profile.school_patience_seconds)
 var awaiting_spot := false # ждём клик-ответ «куда сходил соперник?»
 var spot_flash_until := 0 # ms; пока не наступило — фигуры скрыты
@@ -143,6 +149,8 @@ var wisdom_stars := 0
 var wisdom_streak := 0
 
 func _ready() -> void:
+	# кнопка выхода — наверху панели: на планшете и телефоне не нужно листать вниз
+	$UI/SidePanel/Content.move_child($UI/SidePanel/Content/MenuButton, 0)
 	if not Themes.is_neon():
 		$UI/SidePanel/Content.add_theme_constant_override("separation", 10) # кнопки темы выше неоновых
 	if Global.small_screen:
@@ -261,7 +269,8 @@ func _ready() -> void:
 		Global.difficulty = ai.level
 		map_button.visible = false
 		if school == "spot":
-			turn_label.text = "🔍 Что изменилось? После хода соперника фигуры исчезнут — запомни и покажи, куда он сходил!"
+			spot_level = clampi(Profile.school_spot_level, 1, 3)
+			turn_label.text = _spot_intro()
 		else:
 			patience_lock_ms = clampi(Profile.school_patience_seconds, 3, 60) * 1000
 			turn_label.text = "🐢 Школа терпения: ход откроется после паузы %d с. Обдуманные ходы копят ⭐, зевок сжигает серию!" % (patience_lock_ms / 1000)
@@ -954,14 +963,32 @@ func _school_after_ai_move() -> void:
 		awaiting_spot = true
 		spot_total += 1
 		spot_tries_left = SPOT_TRIES
-		spot_flash_until = Time.get_ticks_msec() + SPOT_FLASH_MS
-		_show_speech("✨ Фигуры спрятались! Куда сходил соперник? Нажми на клетку.", true)
+		spot_stage = 0
+		spot_from_pick = null
+		spot_flash_until = Time.get_ticks_msec() + int(SPOT_FLASH_MS_BY_LEVEL[spot_level])
+		_show_speech(_spot_question(), true)
 		board_draw.queue_redraw()
 	elif school == "patience":
 		patience_unlock_ms = Time.get_ticks_msec() + patience_lock_ms
 
 func _spot_flash_active() -> bool:
-	return school == "spot" and Time.get_ticks_msec() < spot_flash_until
+	if school != "spot":
+		return false
+	if spot_level == 3 and awaiting_spot:
+		return true # «вслепую»: фигуры вернутся только после ответа
+	return Time.get_ticks_msec() < spot_flash_until
+
+func _spot_intro() -> String:
+	match spot_level:
+		1: return "🔍 Что изменилось? Фигуры на миг исчезнут — найди клетку, КУДА сходил соперник."
+		2: return "🔍 Средний уровень: после хода соперника покажи, ОТКУДА и КУДА он сходил — по очереди две клетки."
+	return "🔍 Сложный уровень: доска закрыта. Назови ход соперника по памяти — откуда и куда."
+
+func _spot_question() -> String:
+	match spot_level:
+		1: return "✨ Фигуры спрятались! Куда сходил соперник? Нажми на клетку."
+		2: return "✨ Фигуры спрятались! Сначала нажми клетку, ОТКУДА сходил соперник, потом — КУДА."
+	return "🕶 Доска закрыта! По памяти: нажми клетку, ОТКУДА сходил соперник, затем — КУДА."
 
 # Пока идёт вопрос «куда сходил соперник?», подсветку и стрелку последнего
 # хода рисовать нельзя — иначе ответ виден на доске.
@@ -989,21 +1016,52 @@ func _school_process() -> void:
 func _spot_handle_click(sq) -> void:
 	if sq == null or engine.last_move == null:
 		return
-	if Time.get_ticks_msec() < spot_flash_until:
+	if Time.get_ticks_msec() < spot_flash_until and spot_level < 3:
 		return # фигуры ещё спрятаны — ждём конца вспышки
-	if sq == engine.last_move.to:
-		spot_hits += 1
-		awaiting_spot = false
-		_show_speech("🎯 Точно! Найдено ходов: %d из %d. Теперь твой ход." % [spot_hits, spot_total], true)
-		board_draw.queue_redraw()
+	var want = engine.last_move.to
+	var stage_name := "КУДА"
+	if spot_level >= 2 and spot_stage == 0:
+		want = engine.last_move.from
+		stage_name = "ОТКУДА"
+	if sq == want:
+		if spot_level >= 2 and spot_stage == 0:
+			spot_stage = 1
+			spot_from_pick = sq
+			_show_speech("Верно, оттуда! Теперь нажми клетку, КУДА он пошёл.", true)
+			board_draw.queue_redraw()
+			return
+		_spot_success()
 		return
 	spot_tries_left -= 1
 	if spot_tries_left > 0:
-		_show_speech("Не тут. Посмотри ещё раз — куда сходил соперник? (осталась %d попытка)" % spot_tries_left, true)
+		_show_speech("Не тут. Подумай ещё — %s сходил соперник? (осталась %d попытка)" % [stage_name, spot_tries_left], true)
 	else:
-		awaiting_spot = false
-		_show_speech("Вот его ход — смотри на стрелку! Найдено: %d из %d. Твой ход." % [spot_hits, spot_total], true)
-		board_draw.queue_redraw()
+		_spot_fail()
+
+func _spot_success() -> void:
+	spot_hits += 1
+	awaiting_spot = false
+	spot_stage = 0
+	spot_from_pick = null
+	Profile.school_spot_streak += 1
+	var txt := "🎯 Точно! Найдено ходов: %d из %d. Теперь твой ход." % [spot_hits, spot_total]
+	if Profile.school_spot_streak >= SPOT_LEVEL_UP_STREAK and spot_level < 3:
+		spot_level += 1
+		Profile.school_spot_level = spot_level
+		Profile.school_spot_streak = 0
+		txt = "🚀 %d верных подряд — уровень повышен!\n%s" % [SPOT_LEVEL_UP_STREAK, _spot_intro()]
+	Profile.request_save()
+	_show_speech(txt, true)
+	board_draw.queue_redraw()
+
+func _spot_fail() -> void:
+	awaiting_spot = false
+	spot_stage = 0
+	spot_from_pick = null
+	Profile.school_spot_streak = 0
+	Profile.request_save()
+	_show_speech("Вот его ход — смотри на стрелку! Найдено: %d из %d. Твой ход." % [spot_hits, spot_total], true)
+	board_draw.queue_redraw()
 
 # Начисление «очков мудрости» при собственном ходе в «Школе терпения».
 func _school_on_player_move() -> void:
@@ -1501,6 +1559,10 @@ func _on_board_draw() -> void:
 		board_draw.draw_rect(Rect2(_square_to_pixel(hint_from), Vector2(SQUARE, SQUARE)), Themes.hl_hint(), true)
 		board_draw.draw_rect(Rect2(_square_to_pixel(hint_to), Vector2(SQUARE, SQUARE)), Themes.hl_hint(), true)
 
+	# «Что изменилось?»: выбранная клетка «откуда» остаётся подсвеченной, пока ждём «куда»
+	if school == "spot" and awaiting_spot and spot_from_pick != null:
+		board_draw.draw_rect(Rect2(_square_to_pixel(spot_from_pick), Vector2(SQUARE, SQUARE)), Themes.hl_select(), true)
+
 	# selection + legal targets
 	if selected_square != null:
 		var pos = _square_to_pixel(selected_square)
@@ -1533,7 +1595,10 @@ func _on_board_draw() -> void:
 		board_draw.draw_string(fog_font, BOARD_ORIGIN + Vector2(60, 4 * SQUARE), "☁  ТУМАН — ходите по памяти!  ☁", HORIZONTAL_ALIGNMENT_CENTER, int(8 * SQUARE - 120), 26, Themes.ink(Color(0.85, 0.92, 1.0, 0.9)))
 	elif spot_flash:
 		var flash_font = ThemeDB.fallback_font
-		board_draw.draw_string(flash_font, BOARD_ORIGIN + Vector2(60, 4 * SQUARE), "✨  Куда сходил соперник?  ✨", HORIZONTAL_ALIGNMENT_CENTER, int(8 * SQUARE - 120), 26, Themes.ink(Color(1.0, 0.9, 0.5, 0.95)))
+		var flash_text := "✨  Куда сходил соперник?  ✨"
+		if spot_level >= 2:
+			flash_text = ("🕶  Доска закрыта: %s?  🕶" if spot_level == 3 else "✨  %s сходил соперник?  ✨") % ("КУДА" if spot_stage == 1 else "ОТКУДА")
+		board_draw.draw_string(flash_font, BOARD_ORIGIN + Vector2(60, 4 * SQUARE), flash_text, HORIZONTAL_ALIGNMENT_CENTER, int(8 * SQUARE - 120), 26, Themes.ink(Color(1.0, 0.9, 0.5, 0.95)))
 	for r in range(8):
 		for f in range(8):
 			if xray_fog or spot_flash:

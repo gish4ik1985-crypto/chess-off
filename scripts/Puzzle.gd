@@ -64,6 +64,10 @@ var drag_from = null
 var drag_pos := Vector2.ZERO
 
 func _ready() -> void:
+	# кнопки выхода — наверху панели, а не в самом низу
+	var content: VBoxContainer = $UI/SidePanel/Content
+	content.move_child($UI/SidePanel/Content/MenuButton, 0)
+	content.move_child($UI/SidePanel/Content/HubButton, 0)
 	var origin := _origin_scene()
 	if origin != "":
 		$UI/SidePanel/Content/HubButton.text = "← К карте" if origin.ends_with("/Map.tscn") else "← К дороге"

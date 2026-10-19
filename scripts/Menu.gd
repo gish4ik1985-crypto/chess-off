@@ -127,6 +127,13 @@ func _build_new_layout() -> void:
 	main_vb.move_child(tourney_b, main_vb.get_child_count() - 1)
 	main_vb.move_child($ContentCenter/MainPanel/VBox/QuitButton, main_vb.get_child_count() - 1)
 
+	# «Назад» — первой строкой подменю, а не в самом низу
+	for panel in [play_panel, train_panel, tourney_panel]:
+		var vb := panel.get_child(0) as VBoxContainer
+		var back_b: Button = vb.get_node("BackButton")
+		vb.move_child(back_b, 0)
+		back_b.custom_minimum_size.y = 44
+
 	# «Играть»
 	$ContentCenter/PlayPanel/VBox/FriendlyButton.text = "Сыграть с ботом — выбрать соперника"
 	# «Учиться»: карта стала частью обучения; дневник переехал в профиль

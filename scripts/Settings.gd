@@ -16,6 +16,10 @@ var _preview_fx: SoundFX
 const RESOLUTION_NAMES := ["1024 × 640", "1280 × 800 (по умолчанию)", "1366 × 768", "1600 × 900", "1920 × 1080"]
 
 func _ready() -> void:
+	# «Назад» вверху слева, а не в конце длинного списка настроек
+	var old_back: Button = $ContentCenter/InnerCenter/CenterPanel/VBox/BackButton
+	old_back.visible = false
+	Global.add_floating_back(self, _on_back_pressed)
 	_preview_fx = SoundFX.new()
 	add_child(_preview_fx)
 	for name in RESOLUTION_NAMES:

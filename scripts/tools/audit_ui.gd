@@ -31,6 +31,8 @@ var problems := 0
 const MODAL_OVERLAYS := [
 	"UI/GameOverPanel", "UI/LeavePanel", "UI/PromoPanel", "UI/NudgePanel",
 	"UI/SpeechPanel", "UI/DetailPanel",
+	"BackButton", # плавающая «← Назад» в углу экрана (Настройки, Школа) — по замыслу поверх содержимого
+	"Backdrop", # фирменный фон экрана входа лежит под карточкой
 ]
 
 func _is_modal(path: String) -> bool:

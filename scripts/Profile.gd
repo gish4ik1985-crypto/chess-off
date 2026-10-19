@@ -321,6 +321,8 @@ func _reset_defaults() -> void:
 	bot_games = {}
 	historic_games_viewed = {}
 	school_spot_record = 0
+	school_spot_level = 1
+	school_spot_streak = 0
 	school_wisdom_record = 0
 	school_patience_seconds = 10
 	daily_history = {}
@@ -675,6 +677,8 @@ var historic_games_viewed: Dictionary = {}
 # Лучшие результаты за одну партию: найдено ходов соперника («Что
 # изменилось?») и очков мудрости («Школа терпения»).
 var school_spot_record := 0
+var school_spot_level := 1 # «Что изменилось?»: 1 лёгкий, 2 средний (откуда и куда), 3 сложный (доска закрыта)
+var school_spot_streak := 0 # верных ответов подряд на текущем уровне: 5 — уровень растёт
 var school_wisdom_record := 0
 var school_patience_seconds := 10 # длительность паузы в «Школе терпения»: 5 / 10 / 15
 
@@ -1571,6 +1575,8 @@ func save_profile() -> void:
 	cfg.set_value("tourney", "bot_games", bot_games)
 	cfg.set_value("historic_games", "viewed", historic_games_viewed)
 	cfg.set_value("school", "spot_record", school_spot_record)
+	cfg.set_value("school", "spot_level", school_spot_level)
+	cfg.set_value("school", "spot_streak", school_spot_streak)
 	cfg.set_value("school", "wisdom_record", school_wisdom_record)
 	cfg.set_value("school", "patience_seconds", school_patience_seconds)
 	cfg.set_value("history", "daily", daily_history)
@@ -1675,6 +1681,8 @@ func load_profile() -> void:
 	bot_games = cfg.get_value("tourney", "bot_games", {})
 	historic_games_viewed = cfg.get_value("historic_games", "viewed", {})
 	school_spot_record = cfg.get_value("school", "spot_record", 0)
+	school_spot_level = clampi(int(cfg.get_value("school", "spot_level", 1)), 1, 3)
+	school_spot_streak = int(cfg.get_value("school", "spot_streak", 0))
 	school_wisdom_record = cfg.get_value("school", "wisdom_record", 0)
 	school_patience_seconds = cfg.get_value("school", "patience_seconds", 10)
 	daily_history = cfg.get_value("history", "daily", {})

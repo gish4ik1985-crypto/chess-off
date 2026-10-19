@@ -201,6 +201,7 @@ func _add_backdrop() -> void:
 		(n as Label).set_meta("brand", true)
 		(n as Label).add_theme_color_override("font_color", Color("#9DA3C4"))
 	_backdrop = Control.new()
+	_backdrop.name = "Backdrop"
 	_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_backdrop.set_meta("themed", true)
@@ -375,6 +376,7 @@ func _open_online_window() -> void:
 	btn_forgot.custom_minimum_size = Vector2(0, 40)
 	box.add_child(btn_forgot)
 	var buttons := [btn_login, btn_reg, btn_forgot]
+	var state := {"needs_nick": false}
 
 	var busy := func(on: bool):
 		for b in buttons:
@@ -395,9 +397,32 @@ func _open_online_window() -> void:
 			status.text = String(res.error)
 			busy.call(false)
 			return
+		if res.get("needs_nick", false):
+			# аккаунт есть, но регистрация оборвалась до выбора ника: просим выбрать ник и завершаем
+			state.needs_nick = true
+			reg_box.visible = true
+			btn_login.visible = false
+			btn_reg.text = "Сохранить ник"
+			busy.call(false)
+			status.text = "Аккаунт найден. Осталось придумать ник — он будет виден всем в школе."
+			nick_edit.grab_focus()
+			return
 		await _finish_online_login(Cloud.nick, false, "", status)
 
 	var do_register := func():
+		if state.needs_nick:
+			if not Cloud.valid_nick(nick_edit.text):
+				status.text = "Ник — от 2 до 24 символов."
+				return
+			busy.call(true)
+			status.text = "Сохраняю ник…"
+			var claim: Dictionary = await Cloud.claim_nick(nick_edit.text)
+			if not claim.ok:
+				status.text = String(claim.error)
+				busy.call(false)
+				return
+			await _finish_online_login(Cloud.nick, true, AGE_GROUPS[ages.selected][0], status)
+			return
 		if not reg_box.visible:
 			# первое нажатие открывает поля ника; второе — создаёт аккаунт
 			reg_box.visible = true
