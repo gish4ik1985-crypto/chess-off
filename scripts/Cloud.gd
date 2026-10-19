@@ -69,7 +69,8 @@ static func valid_nick(n: String) -> bool:
 # Возвращает {ok, code, data}. Не бросает ошибок: сеть может быть недоступна.
 func _http(method: int, url: String, body: Variant = null, auth: bool = false, form: bool = false) -> Dictionary:
 	var req := HTTPRequest.new()
-	req.timeout = 15.0
+	req.timeout = 30.0
+	req.accept_gzip = false # браузер сам договаривается о сжатии; лишний заголовок в вебе бывает причиной сбоя
 	add_child(req)
 	var headers := PackedStringArray()
 	var payload := ""
@@ -84,7 +85,8 @@ func _http(method: int, url: String, body: Variant = null, auth: bool = false, f
 	var err := req.request(url, headers, method, payload)
 	if err != OK:
 		req.queue_free()
-		return {"ok": false, "code": 0, "data": {}, "net": true}
+		print("Cloud: запрос не отправлен, ошибка ", err, " ", url.get_slice("?", 0))
+		return {"ok": false, "code": 0, "data": {}, "net": true, "detail": "запрос не отправлен, код %d" % err}
 	var res: Array = await req.request_completed
 	req.queue_free()
 	var code := int(res[1])
@@ -93,11 +95,15 @@ func _http(method: int, url: String, body: Variant = null, auth: bool = false, f
 	var raw = parsed # runQuery отвечает массивом, остальные запросы — словарём
 	if typeof(parsed) != TYPE_DICTIONARY:
 		parsed = {}
-	return {"ok": code >= 200 and code < 300, "code": code, "data": parsed, "raw": raw, "net": int(res[0]) != HTTPRequest.RESULT_SUCCESS}
+	var net_fail := int(res[0]) != HTTPRequest.RESULT_SUCCESS
+	if net_fail:
+		print("Cloud: нет ответа от ", url.get_slice("?", 0), ", результат ", int(res[0]))
+	return {"ok": code >= 200 and code < 300, "code": code, "data": parsed, "raw": raw, "net": net_fail,
+		"detail": "результат сети %d" % int(res[0]) if net_fail else ""}
 
 func _friendly(r: Dictionary) -> String:
 	if r.get("net", false) or int(r.code) == 0:
-		return "Нет связи с облаком. Проверьте интернет."
+		return "Нет связи с облаком (%s). Проверьте интернет; если включены VPN, блокировщик рекламы или антивирус с веб-защитой — попробуйте их отключить для этого сайта или другой браузер." % String(r.get("detail", "нет ответа"))
 	var msg := String(r.data.get("error", {}).get("message", ""))
 	if msg.begins_with("EMAIL_EXISTS"):
 		return "Эта почта уже зарегистрирована. Нажмите «Войти» или «Забыли пароль?»."
