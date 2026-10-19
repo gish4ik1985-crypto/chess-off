@@ -116,7 +116,7 @@ func _friendly(r: Dictionary) -> String:
 	if msg.begins_with("TOO_MANY_ATTEMPTS"):
 		return "Слишком много попыток. Подождите немного."
 	if msg.begins_with("PERMISSION_DENIED") or int(r.code) == 403:
-		return "Нет доступа. Проверьте правила базы (firestore.rules)."
+		return "Нет доступа. Проверьте правила базы (firestore.rules). %s" % msg
 	return "Ошибка облака (%d). %s" % [int(r.code), msg]
 
 # --- аккаунт --------------------------------------------------------------------------------------
@@ -343,6 +343,7 @@ func query_top(collection: String, order_field: String, limit: int) -> Dictionar
 func public_card() -> Dictionary:
 	return {
 		"nick": Profile.display_name,
+		"key": nick_key(Profile.display_name), # ключ ника в базе (строчными): правила сверяют по нему, т.к. lower() в правилах плохо дружит с кириллицей
 		"rating": int(round(Profile.tournament_rating)),
 		"title": Profile.title_for_rating(Profile.tournament_rating),
 		"games": Profile.games_played,
@@ -368,7 +369,7 @@ func push_profile() -> Dictionary:
 	if not res.ok:
 		# правила базы ещё старые (без новых полей анкеты) — отправляем короткую карточку
 		var basic := public_card()
-		for k in ["avatar", "hidden", "city", "about", "rank"]:
+		for k in ["avatar", "hidden", "city", "about", "rank", "key"]:
 			basic.erase(k)
 		res = await set_doc("players/" + uid, basic)
 	if res.ok:
