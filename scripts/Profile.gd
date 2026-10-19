@@ -1111,6 +1111,11 @@ func prune_daily_tournaments(today_id: String) -> void:
 	if changed:
 		save_profile()
 
+# «Турнир дня» сгорает в 0:00: вчерашний уже нельзя ни продолжить, ни увидеть в «Продолжить» и
+# уведомлениях. Вызывается всюду, где читается список идущих турниров, — не только на экране турниров.
+func expire_daily() -> void:
+	prune_daily_tournaments("daily_" + Time.get_date_string_from_system())
+
 func advance_road(stage_idx: int) -> void:
 	if road_stage == stage_idx:
 		road_stage += 1

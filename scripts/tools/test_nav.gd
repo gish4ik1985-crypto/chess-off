@@ -31,9 +31,25 @@ func _ready() -> void:
 	for f in ["Map", "RoadHome"]:
 		var src := FileAccess.get_file_as_string("res://scripts/%s.gd" % f)
 		check("%s: задачи открываются с запоминанием возврата" % f, src.contains('Global.open("res://scenes/Puzzle.tscn"'))
+	_daily_expiry_test()
 	await _flow_tests()
 	print("=== ИТОГО ошибок: %d ===" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
+
+# «Турнир дня» сгорает в полночь: вчерашний исчезает, сегодняшний и постоянные турниры остаются.
+func _daily_expiry_test() -> void:
+	var saved: Dictionary = Profile.active_tournaments
+	var today := "daily_" + Time.get_date_string_from_system()
+	Profile.active_tournaments = {
+		"daily_2000-01-01": {"name": "вчерашний", "done": false, "round": 1, "rounds": 3},
+		today: {"name": "сегодняшний", "done": false, "round": 0, "rounds": 3},
+		"school_cup": {"name": "кубок", "done": false, "round": 1, "rounds": 3},
+	}
+	Profile.expire_daily()
+	check("вчерашний турнир дня сгорел", not Profile.active_tournaments.has("daily_2000-01-01"))
+	check("сегодняшний турнир дня остался", Profile.active_tournaments.has(today))
+	check("постоянный турнир не тронут", Profile.active_tournaments.has("school_cup"))
+	Profile.active_tournaments = saved
 
 # Живой прогон: экраны открываются по-настоящему, «Назад» должен вернуть в то же подменю.
 func _enter(path: String) -> Node:

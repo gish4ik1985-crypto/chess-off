@@ -172,6 +172,7 @@ func _build_new_layout() -> void:
 	_update_bell()
 
 func _running_tournaments() -> int:
+	Profile.expire_daily()
 	var n := 0
 	for id in Profile.active_tournaments:
 		var st: Dictionary = Profile.active_tournaments[id]
@@ -189,6 +190,7 @@ func _new_road_stops() -> int:
 
 # Что продолжить: незаконченная партия → идущий турнир → следующий шаг на карте.
 func _continue_info() -> Dictionary:
+	Profile.expire_daily()
 	var gs: Dictionary = Profile.game_state
 	if not gs.is_empty():
 		var mv := int((gs.get("move_history", []) as Array).size())
@@ -255,6 +257,7 @@ func _on_continue_pressed(kind: String) -> void:
 # Напоминания, собранные из профиля. Системные уведомления на телефон появятся вместе с облаком:
 # тогда сюда же придут приглашения в турниры от других игроков.
 func _notifications() -> Array:
+	Profile.expire_daily() # меню могло простоять открытым через полночь
 	var out := []
 	if not Profile.game_state.is_empty():
 		out.append({"text": "Партия не закончена — можно продолжить.", "go": "continue"})
