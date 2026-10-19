@@ -342,6 +342,11 @@ func _open_online_window() -> void:
 	reg_box.add_theme_constant_override("separation", 8)
 	reg_box.visible = false
 	box.add_child(reg_box)
+	var fio_edit := LineEdit.new()
+	fio_edit.placeholder_text = "ФИО: фамилия, имя, отчество"
+	fio_edit.max_length = 60
+	fio_edit.custom_minimum_size = Vector2(0, 44)
+	reg_box.add_child(fio_edit)
 	var nick_edit := LineEdit.new()
 	nick_edit.placeholder_text = "Ник в школе (2–24 символа, будет виден всем)"
 	nick_edit.max_length = 24
@@ -414,13 +419,16 @@ func _open_online_window() -> void:
 			btn_login.visible = false
 			btn_reg.text = "Сохранить ник"
 			busy.call(false)
-			status.text = "Аккаунт найден. Осталось придумать ник — он будет виден всем в школе."
-			nick_edit.grab_focus()
+			status.text = "Аккаунт найден. Осталось указать ФИО и придумать ник — ник будет виден всем в школе."
+			fio_edit.grab_focus()
 			return
 		await _finish_online_login(Cloud.nick, false, "", status)
 
 	var do_register := func():
 		if state.needs_nick:
+			if fio_edit.text.strip_edges().length() < 3:
+				status.text = "Впишите ФИО — так вас будут видеть в игре."
+				return
 			if not Cloud.valid_nick(nick_edit.text):
 				status.text = "Ник — от 2 до 24 символов."
 				return
@@ -431,14 +439,14 @@ func _open_online_window() -> void:
 				status.text = String(claim.error)
 				busy.call(false)
 				return
-			await _finish_online_login(Cloud.nick, true, AGE_GROUPS[ages.selected][0], status)
+			await _finish_online_login(Cloud.nick, true, AGE_GROUPS[ages.selected][0], status, fio_edit.text.strip_edges())
 			return
 		if not reg_box.visible:
 			# первое нажатие открывает поля ника; второе — создаёт аккаунт
 			reg_box.visible = true
 			btn_login.visible = false
-			status.text = "Придумайте ник и нажмите «Создать аккаунт» ещё раз."
-			nick_edit.grab_focus()
+			status.text = "Впишите ФИО, придумайте ник и нажмите «Создать аккаунт» ещё раз."
+			fio_edit.grab_focus()
 			return
 		var mail := mail_edit.text.strip_edges()
 		if not Cloud.valid_email(mail):
@@ -446,6 +454,9 @@ func _open_online_window() -> void:
 			return
 		if pass_edit.text.length() < 6:
 			status.text = "Пароль — минимум 6 символов."
+			return
+		if fio_edit.text.strip_edges().length() < 3:
+			status.text = "Впишите ФИО — так вас будут видеть в игре."
 			return
 		if not Cloud.valid_nick(nick_edit.text):
 			status.text = "Ник — от 2 до 24 символов."
@@ -457,7 +468,7 @@ func _open_online_window() -> void:
 			status.text = String(res.error)
 			busy.call(false)
 			return
-		await _finish_online_login(Cloud.nick, true, AGE_GROUPS[ages.selected][0], status)
+		await _finish_online_login(Cloud.nick, true, AGE_GROUPS[ages.selected][0], status, fio_edit.text.strip_edges())
 
 	btn_login.pressed.connect(func(): do_login.call())
 	btn_reg.pressed.connect(func(): do_register.call())
@@ -484,7 +495,7 @@ func _open_online_window() -> void:
 	mail_edit.grab_focus()
 
 # После успешного входа: решаем, чей профиль новее — локальный или облачный — и переходим в меню.
-func _finish_online_login(nm: String, registered: bool, age: String, status: Label) -> void:
+func _finish_online_login(nm: String, registered: bool, age: String, status: Label, full_name: String = "") -> void:
 	var key := Profile.sanitize_key(nm)
 	var existed_local := Profile.user_exists(nm)
 	if not registered:
@@ -498,6 +509,9 @@ func _finish_online_login(nm: String, registered: bool, age: String, status: Lab
 	Profile.switch_user(nm)
 	if not existed_local:
 		Profile.age_group = age
+		Profile.save_profile()
+	if full_name != "":
+		Profile.full_name = full_name
 		Profile.save_profile()
 	status.text = "Сохраняю в облако…"
 	await Cloud.push_profile()

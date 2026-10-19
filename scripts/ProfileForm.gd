@@ -13,6 +13,7 @@ const AVATARS := ["♞", "♛", "♜", "♝", "♚", "♟", "⚡", "🦁", "🐯
 var _avatar := ""
 var _avatar_buttons: Dictionary = {}
 var _avatar_big: Label
+var _fio: LineEdit
 var _call: LineEdit
 var _age: OptionButton
 var _city: LineEdit
@@ -73,9 +74,14 @@ func _ready() -> void:
 	card_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card_row.add_child(card_col)
 	var nick := Label.new()
-	nick.text = Profile.display_name
+	nick.text = Profile.shown_name()
 	nick.add_theme_font_size_override("font_size", 24)
 	card_col.add_child(nick)
+	if Profile.shown_name() != Profile.display_name:
+		var nk := Label.new()
+		nk.text = "Ник: %s" % Profile.display_name
+		nk.add_theme_font_size_override("font_size", 13)
+		card_col.add_child(nk)
 	var acc := Label.new()
 	acc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	acc.add_theme_font_size_override("font_size", 12)
@@ -109,6 +115,7 @@ func _ready() -> void:
 
 	# личное
 	col.add_child(_section("О вас"))
+	_fio = _line(col, "ФИО", Profile.full_name, "Фамилия Имя Отчество", 60)
 	_call = _line(col, "Как к вам обращаться", Profile.call_name, "Например: Саша", 24)
 	_age = _option(col, "Возрастная группа", AGE_GROUPS.map(func(g): return g[1]), _age_index())
 	_city = _line(col, "Город", Profile.city, "Ярославль", 30)
@@ -126,7 +133,7 @@ func _ready() -> void:
 	_visible_chk.button_pressed = Profile.public_visible
 	col.add_child(_visible_chk)
 	_details_chk = CheckButton.new()
-	_details_chk.text = "Показывать другим мой город и «пару слов о себе»"
+	_details_chk.text = "Показывать другим моё ФИО, город и «пару слов о себе»"
 	_details_chk.button_pressed = Profile.public_details
 	col.add_child(_details_chk)
 	var priv := Label.new()
@@ -208,6 +215,7 @@ func _pick_avatar(a: String) -> void:
 func _on_save() -> void:
 	_save_btn.disabled = true
 	Profile.avatar = _avatar
+	Profile.full_name = _fio.text.strip_edges()
 	Profile.call_name = _call.text.strip_edges()
 	Profile.age_group = AGE_GROUPS[_age.selected][0]
 	Profile.city = _city.text.strip_edges()

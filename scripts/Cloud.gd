@@ -350,6 +350,7 @@ func public_card() -> Dictionary:
 		"cups": Profile.tournaments_won,
 		"age": Profile.age_group,
 		"avatar": Profile.avatar,
+		"name": Profile.full_name if Profile.public_details else "",
 		"hidden": not Profile.public_visible,
 		"city": Profile.city if Profile.public_details else "",
 		"about": Profile.about if Profile.public_details else "",
@@ -369,7 +370,7 @@ func push_profile() -> Dictionary:
 	if not res.ok:
 		# правила базы ещё старые (без новых полей анкеты) — отправляем короткую карточку
 		var basic := public_card()
-		for k in ["avatar", "hidden", "city", "about", "rank", "key"]:
+		for k in ["avatar", "hidden", "city", "about", "rank", "key", "name"]:
 			basic.erase(k)
 		res = await set_doc("players/" + uid, basic)
 	if res.ok:

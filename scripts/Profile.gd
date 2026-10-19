@@ -57,6 +57,7 @@ var current_user: String = "" # sanitized file key; "" means no user logged in y
 var display_name: String = ""
 var age_group: String = "" # "kid" / "teen" / "adult" / "" — для подбора подсказок и тона обучения
 # Личная информация (вкладка «Обо мне» в профиле)
+var full_name: String = "" # ФИО — показывается в меню и профиле вместо ника
 var avatar: String = ""
 var call_name: String = ""
 var city: String = ""
@@ -269,6 +270,14 @@ func delete_user(name: String) -> void:
 # Switches the active user, saving the previously active one first (unless
 # save_current is false, e.g. on first app launch when nothing is loaded yet).
 # Creates a fresh profile automatically if this user has never played before.
+# Как показывать игрока людям: ФИО, иначе «как обращаться», иначе ник.
+func shown_name() -> String:
+	if full_name.strip_edges() != "":
+		return full_name.strip_edges()
+	if call_name.strip_edges() != "":
+		return call_name.strip_edges()
+	return display_name
+
 func switch_user(name: String, save_current: bool = true) -> void:
 	if save_current and current_user != "":
 		save_profile()
@@ -282,6 +291,7 @@ func switch_user(name: String, save_current: bool = true) -> void:
 
 func _reset_defaults() -> void:
 	age_group = ""
+	full_name = ""
 	avatar = ""
 	call_name = ""
 	city = ""
@@ -1548,6 +1558,7 @@ func save_profile() -> void:
 	var cfg = ConfigFile.new()
 	cfg.set_value("meta", "display_name", display_name)
 	cfg.set_value("meta", "age_group", age_group)
+	cfg.set_value("about", "full_name", full_name)
 	cfg.set_value("about", "avatar", avatar)
 	cfg.set_value("about", "call_name", call_name)
 	cfg.set_value("about", "city", city)
@@ -1673,6 +1684,7 @@ func load_profile() -> void:
 		push_warning("Профиль повреждён, восстановлен из .bak: " + path)
 	display_name = cfg.get_value("meta", "display_name", display_name)
 	age_group = cfg.get_value("meta", "age_group", "")
+	full_name = String(cfg.get_value("about", "full_name", ""))
 	avatar = String(cfg.get_value("about", "avatar", ""))
 	call_name = String(cfg.get_value("about", "call_name", ""))
 	city = String(cfg.get_value("about", "city", ""))

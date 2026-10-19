@@ -106,7 +106,9 @@ func _row(place: int, d: Dictionary) -> Control:
 	name_box.add_child(nm)
 	var sub := Label.new()
 	sub.text = "%s · партий: %d · кубков: %d" % [d.get("title", ""), int(d.get("games", 0)), int(d.get("cups", 0))]
-	var extra := String(d.get("city", ""))
+	var extra := String(d.get("name", ""))
+	if String(d.get("city", "")) != "":
+		extra += (" · " if extra != "" else "") + String(d.get("city", ""))
 	if String(d.get("about", "")) != "":
 		extra += (" · " if extra != "" else "") + String(d.get("about", ""))
 	if extra != "":

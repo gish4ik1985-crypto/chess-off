@@ -19,7 +19,8 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['nick', 'rating', 'title', 'games', 'cups', 'age', 'seen', 'avatar', 'hidden', 'city', 'about', 'rank', 'key'])
+        && request.resource.data.keys().hasOnly(['nick', 'rating', 'title', 'games', 'cups', 'age', 'seen', 'avatar', 'hidden', 'city', 'about', 'rank', 'key', 'name'])
+        && (!('name' in request.resource.data) || request.resource.data.name.size() <= 60)
         && (!('about' in request.resource.data) || request.resource.data.about.size() <= 80)
         && (!('city' in request.resource.data) || request.resource.data.city.size() <= 30)
         && request.resource.data.nick is string

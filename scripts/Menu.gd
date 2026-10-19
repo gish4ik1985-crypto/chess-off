@@ -74,6 +74,51 @@ func _ready() -> void:
 		"play": _show_panel(play_panel)
 		"train": _show_panel(train_panel)
 		"tourney": _show_panel(tourney_panel)
+	_equalize_panels.call_deferred()
+	_ask_full_name_if_needed.call_deferred()
+
+# Все четыре панели (главная и три раздела) одного размера — при переходах рамка не «прыгает»,
+# а «Назад» в подменю всегда на одном и том же месте.
+func _equalize_panels() -> void:
+	await get_tree().process_frame
+	var panels := [main_panel, play_panel, train_panel, tourney_panel]
+	var need := Vector2.ZERO
+	for p in panels:
+		var m: Vector2 = (p as Control).get_combined_minimum_size()
+		need = Vector2(maxf(need.x, m.x), maxf(need.y, m.y))
+	need.y = minf(need.y, get_viewport_rect().size.y - 140.0)
+	for p in panels:
+		(p as Control).custom_minimum_size = need
+
+# После онлайн-входа без ФИО (старые аккаунты) один раз за сеанс просим его вписать.
+static var _fio_asked := false
+
+func _ask_full_name_if_needed() -> void:
+	if _fio_asked or Profile.full_name.strip_edges() != "" or not (Cloud.enabled and Cloud.signed_in):
+		return
+	_fio_asked = true
+	var dlg := ConfirmationDialog.new()
+	dlg.title = "Как вас зовут?"
+	dlg.dialog_text = "Впишите ФИО — оно будет показано в игре вместо ника."
+	dlg.ok_button_text = "Сохранить"
+	dlg.cancel_button_text = "Позже"
+	var edit := LineEdit.new()
+	edit.placeholder_text = "Фамилия Имя Отчество"
+	edit.max_length = 60
+	dlg.add_child(edit)
+	dlg.register_text_enter(edit)
+	dlg.confirmed.connect(func():
+		var t := edit.text.strip_edges()
+		if t.length() >= 3:
+			Profile.full_name = t
+			Profile.save_profile()
+			_update_profile_bar()
+			Cloud.push_profile())
+	dlg.canceled.connect(dlg.queue_free)
+	dlg.confirmed.connect(dlg.queue_free)
+	add_child(dlg)
+	dlg.popup_centered(Vector2i(460, 150))
+	edit.grab_focus()
 
 # Низкий экран (телефон в альбомной ориентации): верхняя панель ужимается до одной строки,
 # а меню получает освободившееся место, чтобы панели не налезали друг на друга.
@@ -382,7 +427,7 @@ func _on_back_pressed() -> void:
 	_show_panel(main_panel)
 
 func _update_profile_bar() -> void:
-	user_label.text = (Profile.avatar + " " if Profile.avatar != "" else "") + (Profile.call_name if Profile.call_name != "" else Profile.display_name)
+	user_label.text = (Profile.avatar + " " if Profile.avatar != "" else "") + Profile.shown_name()
 	rating_label.text = "Турнирный рейтинг: %d (%s) · Ступень %d" % [round(Profile.tournament_rating), Profile.rating_title(), Profile.clean_step()]
 	rating_label.tooltip_text = "Турнирный рейтинг растёт от турниров. Ступень — сильнейший уровень компьютера, побеждённый без помощи."
 	rating_label.mouse_filter = Control.MOUSE_FILTER_STOP

@@ -131,14 +131,19 @@ func go_back(fallback: String = MENU_SCENE) -> void:
 			menu_panel = String(t.panel)
 	get_tree().change_scene_to_file(scene)
 
-# Кнопка «← Назад» в левом верхнем углу экрана — всегда на виду, даже если страница длинная и
+# Кнопка «← Назад» в правом верхнем углу экрана — всегда на виду, даже если страница длинная и
 # прокручена. Для экранов, где кнопка раньше лежала внизу списка (Настройки, Школа).
 func add_floating_back(screen: Control, on_press: Callable) -> Button:
 	var b := Button.new()
 	b.name = "BackButton" # по Esc нажимается так же, как обычная «Назад»
 	b.text = "← Назад"
 	b.custom_minimum_size = Vector2(140, 48)
-	b.position = Vector2(16, 12)
+	b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	b.offset_left = -156.0
+	b.offset_right = -16.0
+	b.offset_top = 12.0
+	b.offset_bottom = 60.0
+	b.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	b.z_index = 60
 	b.pressed.connect(on_press)
 	screen.add_child(b)
