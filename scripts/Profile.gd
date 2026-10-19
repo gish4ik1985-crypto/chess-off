@@ -57,6 +57,8 @@ var current_user: String = "" # sanitized file key; "" means no user logged in y
 var display_name: String = ""
 var age_group: String = "" # "kid" / "teen" / "adult" / "" — для подбора подсказок и тона обучения
 # Личная информация (вкладка «Обо мне» в профиле)
+var role: String = "player" # роль из облака (запоминается, чтобы показывать без сети)
+var award: String = "" # именной титул от тренера
 var full_name: String = "" # ФИО — показывается в меню и профиле вместо ника
 var avatar: String = ""
 var call_name: String = ""
@@ -291,6 +293,8 @@ func switch_user(name: String, save_current: bool = true) -> void:
 
 func _reset_defaults() -> void:
 	age_group = ""
+	role = "player"
+	award = ""
 	full_name = ""
 	avatar = ""
 	call_name = ""
@@ -1559,6 +1563,8 @@ func save_profile() -> void:
 	cfg.set_value("meta", "display_name", display_name)
 	cfg.set_value("meta", "age_group", age_group)
 	cfg.set_value("about", "full_name", full_name)
+	cfg.set_value("about", "role", role)
+	cfg.set_value("about", "award", award)
 	cfg.set_value("about", "avatar", avatar)
 	cfg.set_value("about", "call_name", call_name)
 	cfg.set_value("about", "city", city)
@@ -1685,6 +1691,10 @@ func load_profile() -> void:
 	display_name = cfg.get_value("meta", "display_name", display_name)
 	age_group = cfg.get_value("meta", "age_group", "")
 	full_name = String(cfg.get_value("about", "full_name", ""))
+	role = String(cfg.get_value("about", "role", "player"))
+	if not Roles.valid(role):
+		role = "player"
+	award = String(cfg.get_value("about", "award", ""))
 	avatar = String(cfg.get_value("about", "avatar", ""))
 	call_name = String(cfg.get_value("about", "call_name", ""))
 	city = String(cfg.get_value("about", "city", ""))

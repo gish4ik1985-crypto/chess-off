@@ -25,6 +25,8 @@ var signed_in := false
 var nick := ""
 var email := ""
 var uid := ""
+var role := "player" # роль в школе (roles/{uid}); обновляется при входе
+var award := "" # именной титул от тренера
 var _api_key := ""
 var _project := ""
 var _id_token := ""
@@ -204,6 +206,8 @@ func logout() -> void:
 	uid = ""
 	nick = ""
 	email = ""
+	role = "player"
+	award = ""
 	DirAccess.remove_absolute(SESSION_PATH)
 
 func _take_tokens(d: Dictionary) -> void:
@@ -337,6 +341,42 @@ func query_top(collection: String, order_field: String, limit: int) -> Dictionar
 				docs.append(d)
 	return {"ok": true, "docs": docs, "error": ""}
 
+# --- роли ---------------------------------------------------------------------------------------
+
+# Узнаёт роль и именной титул текущего пользователя и запоминает их в профиле (для показа без сети).
+# Адреса из Roles.BOOTSTRAP_ADMINS — администраторы сразу; для них создаётся и документ роли.
+func refresh_role() -> void:
+	if not (enabled and signed_in) or Profile.current_user != Profile.sanitize_key(nick):
+		return # роль применяем только к тому профилю, под которым выполнен вход
+	var found_role := "player"
+	var found_award := ""
+	var r := await get_doc("roles/" + uid)
+	if r.ok and r.found:
+		found_role = String(r.data.get("role", "player"))
+		found_award = String(r.data.get("award", ""))
+		if not Roles.valid(found_role):
+			found_role = "player"
+	elif not r.ok:
+		return # нет связи — оставляем то, что запомнено
+	if email.strip_edges().to_lower() in Roles.BOOTSTRAP_ADMINS and found_role != "admin":
+		found_role = "admin"
+		await set_role(uid, "admin", found_award, nick)
+	role = found_role
+	award = found_award
+	Profile.role = role
+	Profile.award = award
+	Profile.request_save()
+
+# Все выданные роли: {_id (uid), role, award, nick}.
+func list_roles() -> Dictionary:
+	return await query_top("roles", "role", 300)
+
+# Назначает роль и титул пользователю uid_target. Права проверяют правила базы.
+func set_role(uid_target: String, new_role: String, new_award: String, target_nick: String) -> Dictionary:
+	return await set_doc("roles/" + uid_target, {
+		"role": new_role, "award": new_award.strip_edges().left(40),
+		"nick": target_nick, "by": uid, "at": int(Time.get_unix_time_from_system())})
+
 # --- профиль игрока ---------------------------------------------------------------------------
 
 # Публичная карточка: то, что видят другие игроки. Никакой статистики ходов.
@@ -345,7 +385,7 @@ func public_card() -> Dictionary:
 		"nick": Profile.display_name,
 		"key": nick_key(Profile.display_name), # ключ ника в базе (строчными): правила сверяют по нему, т.к. lower() в правилах плохо дружит с кириллицей
 		"rating": int(round(Profile.tournament_rating)),
-		"title": Profile.title_for_rating(Profile.tournament_rating),
+		"title": Roles.class_text(Profile.tournament_rating),
 		"games": Profile.games_played,
 		"cups": Profile.tournaments_won,
 		"age": Profile.age_group,

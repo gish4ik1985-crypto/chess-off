@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1792407123|5685031';
+const CACHE_VERSION = '1792407609|5494053';
 /** @type {string} */
 const CACHE_PREFIX = 'chessoff-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;

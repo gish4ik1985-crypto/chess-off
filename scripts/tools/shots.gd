@@ -7,7 +7,7 @@ extends Node
 
 const SCENES := ["Login", "Menu", "Board", "Puzzle", "PuzzleHub", "Map", "RoadHome", "Tournaments",
 	"TournamentPrep", "BotsHub", "Diary", "Achievements", "TrophyRoom", "AttentionHub", "School",
-	"HistoricGames", "Settings", "Players", "Appearance"]
+	"HistoricGames", "Settings", "Players", "Appearance", "Admin"]
 
 func _ready() -> void:
 	var args := {}
@@ -29,6 +29,8 @@ func _ready() -> void:
 		Profile.game_state = {"fen": "", "move_history": ["e4", "e5", "Nf3"], "difficulty": 5, "player_color": "w"}
 		Profile.streak_count = 4
 		Profile.streak_last_day = "2000-01-01"
+	if args.has("admin"):
+		Profile.role = "admin"
 	await get_tree().process_frame
 	for t in themes:
 		Themes.set_theme_id(t)

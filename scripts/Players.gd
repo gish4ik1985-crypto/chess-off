@@ -74,6 +74,11 @@ func _load() -> void:
 	_status.text = "Загружаю…"
 	await Cloud.push_profile() # свежая карточка — чтобы свой рейтинг в таблице был актуален
 	var r: Dictionary = await Cloud.query_top("players", "rating", 100)
+	var rl: Dictionary = await Cloud.list_roles()
+	_roles = {}
+	if rl.ok:
+		for rd in rl.docs:
+			_roles[String(rd.get("_id", ""))] = rd
 	if not r.ok:
 		_status.text = String(r.error)
 		return
@@ -86,7 +91,10 @@ func _load() -> void:
 		place += 1
 		_list.add_child(_row(place, d))
 
+var _roles: Dictionary = {}
+
 func _row(place: int, d: Dictionary) -> Control:
+	var rrole: Dictionary = _roles.get(String(d.get("_id", "")), {})
 	var mine := String(d.get("nick", "")) == Cloud.nick
 	var panel := PanelContainer.new()
 	var h := HBoxContainer.new()
@@ -100,13 +108,17 @@ func _row(place: int, d: Dictionary) -> Control:
 	name_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(name_box)
 	var nm := Label.new()
-	nm.text = ("⭐ " if mine else "") + String(d.get("avatar", "")) + (" " if String(d.get("avatar", "")) != "" else "") + String(d.get("nick", "?"))
+	nm.text = ("⭐ " if mine else "") + String(d.get("avatar", "")) + (" " if String(d.get("avatar", "")) != "" else "") + String(d.get("nick", "?")) + (("  " + Roles.icon_for(String(rrole.get("role", "player")))) if Roles.icon_for(String(rrole.get("role", "player"))) != "" else "")
 	nm.add_theme_font_size_override("font_size", 17)
 	nm.add_theme_color_override("font_color", Color(1, 0.65, 0.95) if mine else Color(0.1, 0.95, 1))
 	name_box.add_child(nm)
 	var sub := Label.new()
 	sub.text = "%s · партий: %d · кубков: %d" % [d.get("title", ""), int(d.get("games", 0)), int(d.get("cups", 0))]
-	var extra := String(d.get("name", ""))
+	var extra := ""
+	if String(rrole.get("award", "")) != "":
+		extra = "🏅 " + String(rrole.award)
+	if String(d.get("name", "")) != "":
+		extra += (" · " if extra != "" else "") + String(d.get("name", ""))
 	if String(d.get("city", "")) != "":
 		extra += (" · " if extra != "" else "") + String(d.get("city", ""))
 	if String(d.get("about", "")) != "":

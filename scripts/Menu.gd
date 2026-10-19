@@ -75,6 +75,7 @@ func _ready() -> void:
 		"train": _show_panel(train_panel)
 		"tourney": _show_panel(tourney_panel)
 	_equalize_panels.call_deferred()
+	_refresh_role.call_deferred()
 	_ask_full_name_if_needed.call_deferred()
 
 # Все четыре панели (главная и три раздела) одного размера — при переходах рамка не «прыгает»,
@@ -91,6 +92,17 @@ func _equalize_panels() -> void:
 		(p as Control).custom_minimum_size = need
 
 # После онлайн-входа без ФИО (старые аккаунты) один раз за сеанс просим его вписать.
+static var _role_checked := false
+
+# Роль (ученик / тренер / администратор) подтягивается из облака один раз за сеанс.
+func _refresh_role() -> void:
+	if _role_checked or not (Cloud.enabled and Cloud.signed_in):
+		return
+	_role_checked = true
+	await Cloud.refresh_role()
+	if is_inside_tree():
+		_update_profile_bar()
+
 static var _fio_asked := false
 
 func _ask_full_name_if_needed() -> void:
@@ -427,7 +439,7 @@ func _on_back_pressed() -> void:
 	_show_panel(main_panel)
 
 func _update_profile_bar() -> void:
-	user_label.text = (Profile.avatar + " " if Profile.avatar != "" else "") + Profile.shown_name()
+	user_label.text = (Profile.avatar + " " if Profile.avatar != "" else "") + Profile.shown_name() + ("  " + Roles.icon_for(Profile.role) if Roles.icon_for(Profile.role) != "" else "")
 	rating_label.text = "Турнирный рейтинг: %d (%s) · Ступень %d" % [round(Profile.tournament_rating), Profile.rating_title(), Profile.clean_step()]
 	rating_label.tooltip_text = "Турнирный рейтинг растёт от турниров. Ступень — сильнейший уровень компьютера, побеждённый без помощи."
 	rating_label.mouse_filter = Control.MOUSE_FILTER_STOP

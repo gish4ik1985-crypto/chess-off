@@ -33,18 +33,18 @@ func _ready() -> void:
 		move_sound_option.add_item(st.name)
 	move_sound_option.selected = clampi(Global.move_sound_style, 0, SoundFX.MOVE_STYLES.size() - 1)
 	move_sound_option.item_selected.connect(_on_move_sound_selected)
-	handicap_check.button_pressed = Global.handicap_enabled
-	handicap_check.toggled.connect(_on_handicap_toggled)
 	_build_theme_row()
-	_build_real_rating_row()
-	adaptive_check.button_pressed = Global.adaptive_difficulty
-	adaptive_check.toggled.connect(func(pressed: bool):
-		Global.adaptive_difficulty = pressed
-		Global.save_settings())
-	fifty_move_check.button_pressed = Global.fifty_move_rule_enabled
-	fifty_move_check.toggled.connect(func(pressed: bool):
-		Global.fifty_move_rule_enabled = pressed
-		Global.save_settings())
+	# игра с форой, живая сложность, правило 50 ходов и настоящий рейтинг — теперь в панели управления
+	var vb: Node = handicap_check.get_parent().get_parent()
+	for n in ["HandicapRow", "HandicapHint", "AdaptiveRow", "AdaptiveHint", "FiftyMoveRow", "FiftyMoveHint"]:
+		(vb.get_node(n) as Control).visible = false
+	if Roles.can(Profile.role, "open_admin"):
+		var adm := Button.new()
+		adm.text = "🛠  Панель управления (%s)  →" % Roles.role_name(Profile.role)
+		adm.custom_minimum_size = Vector2(0, 50)
+		adm.pressed.connect(func(): Global.open("res://scenes/Admin.tscn", "res://scenes/Settings.tscn"))
+		vb.add_child(adm)
+		vb.move_child(adm, 3)
 	export_button.pressed.connect(_on_export_pressed)
 	import_button.pressed.connect(_on_import_pressed)
 	if OS.has_feature("web"):
@@ -135,14 +135,9 @@ func _on_resolution_selected(idx: int) -> void:
 	Global.save_settings()
 	Global.apply_display_settings()
 
-func _on_handicap_toggled(pressed: bool) -> void:
-	Global.handicap_enabled = pressed
-	Global.save_settings()
-
 func _on_back_pressed() -> void:
 	Global.go_back()
 
-# Ввод настоящего рейтинга (необязательно): точка отсчёта для турнирного рейтинга
 # Кнопка экрана «Оформление» (карточки тем с превью) — первой строкой настроек.
 func _build_theme_row() -> void:
 	var vbox: Node = handicap_check.get_parent().get_parent()
@@ -152,40 +147,3 @@ func _build_theme_row() -> void:
 	btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Appearance.tscn"))
 	vbox.add_child(btn)
 	vbox.move_child(btn, 2) # после заголовка и разделителя
-
-func _build_real_rating_row() -> void:
-	var vbox: Node = handicap_check.get_parent().get_parent()
-	var anchor: Node = vbox.get_node("HandicapHint")
-	var box := VBoxContainer.new()
-	var title := Label.new()
-	title.text = "Настоящий рейтинг (если есть)"
-	box.add_child(title)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	var spin := SpinBox.new()
-	spin.min_value = 0
-	spin.max_value = Profile.REAL_RATING_MAX
-	spin.step = 10
-	spin.value = Profile.real_rating
-	spin.editable = Profile.has_user()
-	row.add_child(spin)
-	var btn := Button.new()
-	btn.text = "Применить"
-	btn.disabled = not Profile.has_user()
-	row.add_child(btn)
-	var msg := Label.new()
-	msg.add_theme_font_size_override("font_size", 12)
-	msg.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
-	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	msg.text = "Например, рейтинг федерации или клуба. Турнирный рейтинг начнётся с него и дальше изменится по результатам в игре. 0 — рейтинга нет."
-	box.add_child(row)
-	box.add_child(msg)
-	btn.pressed.connect(func():
-		var v := int(spin.value)
-		if v != 0 and v < Profile.REAL_RATING_MIN:
-			msg.text = "Рейтинг должен быть от %d до %d или 0." % [Profile.REAL_RATING_MIN, Profile.REAL_RATING_MAX]
-			return
-		Profile.set_real_rating(v)
-		msg.text = "Сохранено. Турнирный рейтинг: %d." % int(Profile.tournament_rating) if v > 0 else "Настоящий рейтинг убран.")
-	vbox.add_child(box)
-	vbox.move_child(box, anchor.get_index() + 1)
