@@ -95,6 +95,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Записи партий, которыми поделились: пишет автор, удалить может автор или учитель.
+    match /gamebook/{gid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.keys().hasOnly(['title', 'pgn', 'by', 'by_name', 'at'])
+        && request.resource.data.pgn.size() <= 12000;
+      allow delete: if request.auth != null && (resource.data.by == request.auth.uid || isTeacher());
+    }
+
     // Полный профиль (статистика ходов, сильные и слабые стороны): только хозяин.
     match /private/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;

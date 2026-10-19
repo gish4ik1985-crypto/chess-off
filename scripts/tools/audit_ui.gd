@@ -21,7 +21,7 @@ const SCENES := [
 	"res://scenes/HistoricGames.tscn", "res://scenes/Login.tscn", "res://scenes/Map.tscn",
 	"res://scenes/Puzzle.tscn", "res://scenes/PuzzleHub.tscn", "res://scenes/School.tscn",
 	"res://scenes/Settings.tscn", "res://scenes/TournamentPrep.tscn", "res://scenes/Tournaments.tscn",
-	"res://scenes/TrophyRoom.tscn", "res://scenes/BotsHub.tscn", "res://scenes/Admin.tscn", "res://scenes/Homework.tscn",
+	"res://scenes/TrophyRoom.tscn", "res://scenes/BotsHub.tscn", "res://scenes/Admin.tscn", "res://scenes/Homework.tscn", "res://scenes/Notebook.tscn",
 ]
 
 var problems := 0

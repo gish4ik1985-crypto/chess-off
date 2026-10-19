@@ -7,7 +7,7 @@ extends Node
 
 const SCENES := ["Login", "Menu", "Board", "Puzzle", "PuzzleHub", "Map", "RoadHome", "Tournaments",
 	"TournamentPrep", "BotsHub", "Diary", "Achievements", "TrophyRoom", "AttentionHub", "School",
-	"HistoricGames", "Settings", "Players", "Appearance", "Admin", "Homework"]
+	"HistoricGames", "Settings", "Players", "Appearance", "Admin", "Homework", "Notebook"]
 
 func _ready() -> void:
 	var args := {}
@@ -40,6 +40,8 @@ func _ready() -> void:
 			await _shot("res://scenes/%s.tscn" % s, "%s/%s_%s.png" % [out, t, s])
 			if s == "Homework":
 				await _shot("res://scenes/Homework.tscn", "%s/%s_HomeworkBuilder.png" % [out, t], "_open_builder_for_shot")
+			if s == "Notebook":
+				await _shot("res://scenes/Notebook.tscn", "%s/%s_NotebookEdit.png" % [out, t], "_open_demo_for_shot")
 			if s == "Diary":
 				await _shot("res://scenes/Diary.tscn", "%s/%s_DiaryAbout.png" % [out, t], "_open_about_tab")
 			if s == "Login" and Cloud.enabled:

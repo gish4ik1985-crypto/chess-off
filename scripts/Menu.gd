@@ -221,6 +221,11 @@ func _build_new_layout() -> void:
 	_hw_button.pressed.connect(func(): _open("res://scenes/Homework.tscn"))
 	tv.add_child(_hw_button)
 	tv.move_child(_hw_button, 3)
+	var nb := Button.new()
+	nb.text = "📓 Записная книжка партий — записать, разобрать, сыграть"
+	nb.pressed.connect(func(): _open("res://scenes/Notebook.tscn"))
+	tv.add_child(nb)
+	tv.move_child(nb, 4)
 	tv.get_node("RoadHint").visible = false # смысл «Дороги» теперь в подсказке кнопки и на главном экране
 	var road_b: Button = tv.get_node("RoadButton")
 	road_b.tooltip_text = "Дорога растёт из твоих партий: новые остановки для твоих слабых мест."
