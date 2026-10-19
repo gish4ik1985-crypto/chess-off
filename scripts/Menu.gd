@@ -74,16 +74,97 @@ func _ready() -> void:
 		"play": _show_panel(play_panel)
 		"train": _show_panel(train_panel)
 		"tourney": _show_panel(tourney_panel)
+		"school": _show_panel(school_panel)
 	_equalize_panels.call_deferred()
 	_refresh_role.call_deferred()
 	_update_hw_button.call_deferred()
 	_ask_full_name_if_needed.call_deferred()
 
+# Раздел «Школа»: всё, что связывает учеников и учителя.
+func _build_school_panel() -> void:
+	school_panel = PanelContainer.new()
+	school_panel.visible = false
+	$ContentCenter.add_child(school_panel)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 8)
+	vb.custom_minimum_size = Vector2(420, 0)
+	school_panel.add_child(vb)
+	var back := Button.new()
+	back.text = "← Назад"
+	back.custom_minimum_size.y = 44
+	back.pressed.connect(func(): _show_panel(main_panel))
+	back.name = "BackButton"
+	vb.add_child(back)
+	var title := Label.new()
+	title.text = "ШКОЛА"
+	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_color_override("font_color", Color(0.95, 0.8, 0.35))
+	vb.add_child(title)
+	vb.add_child(HSeparator.new())
+	_ann_button = _school_item(vb, "📢 Объявления", "res://scenes/Announcements.tscn")
+	_school_item(vb, "📅 Расписание и планы", "res://scenes/Schedule.tscn")
+	_hw_button = _school_item(vb, "📚 Домашние задания", "res://scenes/Homework.tscn")
+	_school_item(vb, "🏫 Турниры школы — онлайн", "res://scenes/ClubTourneys.tscn")
+	_chat_button = _school_item(vb, "💬 Чат школы", "res://scenes/Chat.tscn")
+	if Roles.can(Profile.role, "open_admin"):
+		_school_item(vb, "📒 Задачник учителя", "res://scenes/Planner.tscn")
+
+func _school_item(vb: VBoxContainer, text: String, scene: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size.y = 46
+	b.pressed.connect(func(): _open(scene))
+	vb.add_child(b)
+	return b
+
+func _update_school_badges() -> void:
+	if _ann_button != null:
+		var n := SchoolData.unread_announcements().size() if SchoolData.loaded else 0
+		_ann_button.text = "📢 Объявления" + ("  · новых: %d" % n if n > 0 else "")
+	if _chat_button != null:
+		_chat_button.text = "💬 Чат школы" + ("  · новые сообщения" if ChatScreen.has_unread() else "")
+	if _school_btn != null:
+		var total := (SchoolData.unread_announcements().size() if SchoolData.loaded else 0) + (Homework.pending().size() if Homework.loaded else 0)
+		_school_btn.text = "Школа  →" + ("   · %d нов." % total if total > 0 else "")
+
+# Новое объявление показываем всплывающим окном сразу после входа (один раз, пока не прочитано).
+static var _ann_popup_shown_for := 0
+
+func _show_announcement_popup() -> void:
+	if not SchoolData.loaded:
+		return
+	var fresh := SchoolData.unread_announcements()
+	if fresh.is_empty():
+		return
+	var newest := 0
+	for a in fresh:
+		newest = maxi(newest, int(a.get("at", 0)))
+	if _ann_popup_shown_for >= newest:
+		return
+	_ann_popup_shown_for = newest
+	var dlg := AcceptDialog.new()
+	dlg.title = "📢 Объявление" if fresh.size() == 1 else "📢 Новые объявления: %d" % fresh.size()
+	var text := ""
+	for a in fresh.slice(0, 3):
+		text += "%s\n%s\n\n" % [String(a.get("title", "")), String(a.get("text", ""))]
+	dlg.dialog_text = text.strip_edges()
+	dlg.ok_button_text = "Понятно"
+	dlg.confirmed.connect(func():
+		SchoolData.mark_announcements_seen()
+		_update_school_badges()
+		dlg.queue_free())
+	dlg.canceled.connect(func():
+		SchoolData.mark_announcements_seen()
+		_update_school_badges()
+		dlg.queue_free())
+	add_child(dlg)
+	dlg.popup_centered(Vector2i(520, 260))
+
 # Все четыре панели (главная и три раздела) одного размера — при переходах рамка не «прыгает»,
 # а «Назад» в подменю всегда на одном и том же месте.
 func _equalize_panels() -> void:
 	await get_tree().process_frame
-	var panels := [main_panel, play_panel, train_panel, tourney_panel]
+	var panels := [main_panel, play_panel, train_panel, tourney_panel, school_panel]
 	var need := Vector2.ZERO
 	for p in panels:
 		var m: Vector2 = (p as Control).get_combined_minimum_size()
@@ -105,12 +186,13 @@ func _refresh_role() -> void:
 	await Homework.auto_submit_done()
 	await ClubTourney.load_mine()
 	await ChatScreen.check_unread()
+	await SchoolData.load_all()
 	if is_inside_tree():
 		_update_profile_bar()
 		_update_bell()
 		_update_hw_button()
-		if _chat_button != null and ChatScreen.has_unread():
-			_chat_button.text = "💬 Чат школы  · новые"
+		_update_school_badges()
+		_show_announcement_popup()
 
 func _update_hw_button() -> void:
 	if _hw_button == null:
@@ -157,7 +239,7 @@ func _apply_compact_layout() -> void:
 	bar.offset_top = 8
 	bar.offset_bottom = 60
 	$ContentCenter.offset_top = 68
-	for panel in [main_panel, play_panel, train_panel, tourney_panel]:
+	for panel in [main_panel, play_panel, train_panel, tourney_panel, school_panel]:
 		var vb := panel.get_child(0) as VBoxContainer
 		if vb != null:
 			vb.add_theme_constant_override("separation", 6)
@@ -169,6 +251,9 @@ func _apply_compact_layout() -> void:
 var _bell_button: Button
 var _hw_button: Button
 var _chat_button: Button
+var _school_btn: Button
+var _ann_button: Button
+var school_panel: PanelContainer
 var _notice_layer: Control
 
 func _build_new_layout() -> void:
@@ -200,12 +285,14 @@ func _build_new_layout() -> void:
 	main_vb.move_child(train_b, main_vb.get_child_count() - 1)
 	main_vb.move_child(tourney_b, main_vb.get_child_count() - 1)
 	main_vb.move_child($ContentCenter/MainPanel/VBox/QuitButton, main_vb.get_child_count() - 1)
-	_chat_button = Button.new()
-	_chat_button.text = "💬 Чат школы"
-	_chat_button.custom_minimum_size.y = 52
-	_chat_button.pressed.connect(func(): _open("res://scenes/Chat.tscn"))
-	main_vb.add_child(_chat_button)
-	main_vb.move_child(_chat_button, main_vb.get_child_count() - 2)
+	_school_btn = Button.new()
+	_school_btn.text = "Школа  →"
+	_school_btn.tooltip_text = "Объявления, расписание, домашние задания, турниры школы и чат."
+	_school_btn.custom_minimum_size.y = 52
+	_school_btn.pressed.connect(func(): _show_panel(school_panel))
+	main_vb.add_child(_school_btn)
+	main_vb.move_child(_school_btn, main_vb.get_child_count() - 2)
+	_build_school_panel()
 
 	# «Назад» — первой строкой подменю, а не в самом низу
 	for panel in [play_panel, train_panel, tourney_panel]:
@@ -226,17 +313,11 @@ func _build_new_layout() -> void:
 	map_b.pressed.connect(func(): _open("res://scenes/Map.tscn"))
 	tv.add_child(map_b)
 	tv.move_child(map_b, 2)
-	_hw_button = Button.new()
-	_hw_button.text = "📚 Домашние задания"
-	_hw_button.tooltip_text = "Задания от учителя: выполняйте дома, результат уходит учителю сам."
-	_hw_button.pressed.connect(func(): _open("res://scenes/Homework.tscn"))
-	tv.add_child(_hw_button)
-	tv.move_child(_hw_button, 3)
 	var nb := Button.new()
 	nb.text = "📓 Записная книжка партий — записать, разобрать, сыграть"
 	nb.pressed.connect(func(): _open("res://scenes/Notebook.tscn"))
 	tv.add_child(nb)
-	tv.move_child(nb, 4)
+	tv.move_child(nb, 3)
 	tv.get_node("RoadHint").visible = false # смысл «Дороги» теперь в подсказке кнопки и на главном экране
 	var road_b: Button = tv.get_node("RoadButton")
 	road_b.tooltip_text = "Дорога растёт из твоих партий: новые остановки для твоих слабых мест."
@@ -251,11 +332,6 @@ func _build_new_layout() -> void:
 	var tb: Button = cv.get_node("TournamentsButton")
 	tb.text = "Турниры (рейтинг, турнир дня, подготовка)" + ("  · идёт: %d" % running if running > 0 else "")
 	cv.get_node("BotsButton").text = "Лига ботов — рейтинги и карточки соперников"
-	var school_b := Button.new()
-	school_b.text = "🏫 Турниры школы — онлайн, от учителя"
-	school_b.pressed.connect(func(): _open("res://scenes/ClubTourneys.tscn"))
-	cv.add_child(school_b)
-	cv.move_child(school_b, 2)
 
 	# верхняя полоса: профиль, уведомления, настройки
 	var hb: HBoxContainer = $ProfileBar/HBox
@@ -385,6 +461,11 @@ func _notifications() -> Array:
 	for st in Profile.dynamic_road_stages():
 		if not Profile.road_focus_done.has(st.kind):
 			out.append({"text": "На «Дороге домой» новая остановка: «%s»." % st.name, "go": "res://scenes/RoadHome.tscn"})
+	if SchoolData.loaded:
+		for a in SchoolData.unread_announcements().slice(0, 2):
+			out.append({"text": "Объявление: «%s»." % String(a.get("title", "")), "go": "res://scenes/Announcements.tscn"})
+		for ev in SchoolData.upcoming(3).slice(0, 3):
+			out.append({"text": "Скоро: %s — %s%s." % [SchoolData.fmt_date(String(ev.get("date", ""))), String(ev.get("title", "")), (", " + String(ev.get("place", ""))) if String(ev.get("place", "")) != "" else ""], "go": "res://scenes/Schedule.tscn"})
 	if ChatScreen.has_unread():
 		out.append({"text": "Новые сообщения в чате школы.", "go": "res://scenes/Chat.tscn"})
 	if ClubTourney.my_turn_games.size() > 0:
@@ -470,6 +551,8 @@ func _show_panel(panel: PanelContainer) -> void:
 	play_panel.visible = panel == play_panel
 	train_panel.visible = panel == train_panel
 	tourney_panel.visible = panel == tourney_panel
+	if school_panel != null:
+		school_panel.visible = panel == school_panel
 
 func _on_play_menu_pressed() -> void:
 	_show_panel(play_panel)
@@ -575,6 +658,7 @@ func _open(scene: String) -> void:
 	if play_panel.visible: panel = "play"
 	elif train_panel.visible: panel = "train"
 	elif tourney_panel.visible: panel = "tourney"
+	elif school_panel != null and school_panel.visible: panel = "school"
 	Global.open(scene, Global.MENU_SCENE, panel)
 
 func _on_quit_pressed() -> void:
@@ -592,3 +676,7 @@ func _on_bg_draw() -> void:
 				continue
 			var pos = Vector2(f * sq, r * sq)
 			bg.draw_rect(Rect2(pos, Vector2(sq, sq)), Themes.ink(Color(1, 1, 1, 0.035)), true)
+
+# Для снимков экрана (инструмент Shots).
+func _show_school_for_shot() -> void:
+	_show_panel(school_panel)

@@ -152,6 +152,36 @@ service cloud.firestore {
       allow delete: if request.auth != null && (resource.data.uid == request.auth.uid || isTeacher());
     }
 
+    // Расписание, события и годовой план: видят все вошедшие, пишет только учитель.
+    match /events/{eid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && isTeacher()
+        && request.resource.data.keys().hasOnly(['title', 'kind', 'date', 'time', 'time_end', 'weekday', 'place', 'text', 'group', 'by', 'by_name', 'at'])
+        && request.resource.data.kind in ['lesson', 'event', 'tournament', 'plan']
+        && request.resource.data.title.size() <= 80 && request.resource.data.text.size() <= 1000;
+      allow delete: if request.auth != null && isTeacher();
+    }
+
+    // Объявления учителя.
+    match /announcements/{nid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && isTeacher()
+        && request.resource.data.keys().hasOnly(['title', 'text', 'group', 'pinned', 'until', 'by', 'by_name', 'at'])
+        && request.resource.data.title.size() <= 80 && request.resource.data.text.size() <= 2000;
+      allow delete: if request.auth != null && isTeacher();
+    }
+
+    // Задачник учителя: заметки и задачи видит и правит только их владелец (и только учитель).
+    match /tnotes/{tid} {
+      allow read: if request.auth != null && isTeacher() && resource.data.owner == request.auth.uid;
+      allow create: if request.auth != null && isTeacher() && request.resource.data.owner == request.auth.uid
+        && request.resource.data.keys().hasOnly(['owner', 'kind', 'title', 'text', 'done', 'due', 'at']);
+      allow update: if request.auth != null && isTeacher() && resource.data.owner == request.auth.uid
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.keys().hasOnly(['owner', 'kind', 'title', 'text', 'done', 'due', 'at']);
+      allow delete: if request.auth != null && isTeacher() && resource.data.owner == request.auth.uid;
+    }
+
     // Полный профиль (статистика ходов, сильные и слабые стороны): только хозяин.
     match /private/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;

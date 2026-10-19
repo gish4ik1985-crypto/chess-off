@@ -57,6 +57,7 @@ var current_user: String = "" # sanitized file key; "" means no user logged in y
 var display_name: String = ""
 var age_group: String = "" # "kid" / "teen" / "adult" / "" — для подбора подсказок и тона обучения
 # Личная информация (вкладка «Обо мне» в профиле)
+var ann_seen := 0 # время последнего прочитанного объявления
 var chat_seen: Dictionary = {} # комната чата -> время последнего прочитанного сообщения
 var notebook: Array = [] # записная книжка партий: {id, title, pgn, at}
 var homework_base: Dictionary = {} # id задания -> значение счётчика на момент «Начать»
@@ -296,6 +297,7 @@ func switch_user(name: String, save_current: bool = true) -> void:
 
 func _reset_defaults() -> void:
 	age_group = ""
+	ann_seen = 0
 	chat_seen = {}
 	notebook = []
 	homework_base = {}
@@ -1573,6 +1575,7 @@ func save_profile() -> void:
 	cfg.set_value("homework", "base", homework_base)
 	cfg.set_value("notebook", "items", notebook)
 	cfg.set_value("chat", "seen", chat_seen)
+	cfg.set_value("school", "ann_seen", ann_seen)
 	cfg.set_value("about", "award", award)
 	cfg.set_value("about", "avatar", avatar)
 	cfg.set_value("about", "call_name", call_name)
@@ -1703,6 +1706,7 @@ func load_profile() -> void:
 	homework_base = cfg.get_value("homework", "base", {})
 	notebook = cfg.get_value("notebook", "items", [])
 	chat_seen = cfg.get_value("chat", "seen", {})
+	ann_seen = int(cfg.get_value("school", "ann_seen", 0))
 	role = String(cfg.get_value("about", "role", "player"))
 	if not Roles.valid(role):
 		role = "player"

@@ -7,7 +7,7 @@ extends Node
 
 const SCENES := ["Login", "Menu", "Board", "Puzzle", "PuzzleHub", "Map", "RoadHome", "Tournaments",
 	"TournamentPrep", "BotsHub", "Diary", "Achievements", "TrophyRoom", "AttentionHub", "School",
-	"HistoricGames", "Settings", "Players", "Appearance", "Admin", "Homework", "Notebook"]
+	"HistoricGames", "Settings", "Players", "Appearance", "Admin", "Homework", "Notebook", "Schedule", "Announcements", "Planner"]
 
 func _ready() -> void:
 	var args := {}
@@ -42,13 +42,17 @@ func _ready() -> void:
 				await _shot("res://scenes/Homework.tscn", "%s/%s_HomeworkBuilder.png" % [out, t], "_open_builder_for_shot")
 			if s == "Notebook":
 				await _shot("res://scenes/Notebook.tscn", "%s/%s_NotebookEdit.png" % [out, t], "_open_demo_for_shot")
+			if s == "Schedule":
+				await _shot("res://scenes/Schedule.tscn", "%s/%s_ScheduleForm.png" % [out, t], "_open_form_for_shot")
+			if s == "Planner":
+				await _shot("res://scenes/Planner.tscn", "%s/%s_PlannerWeek.png" % [out, t], "_open_demo_for_shot")
 			if s == "Diary":
 				await _shot("res://scenes/Diary.tscn", "%s/%s_DiaryAbout.png" % [out, t], "_open_about_tab")
 			if s == "Login" and Cloud.enabled:
 				await _shot("res://scenes/Login.tscn", "%s/%s_LoginOnline.png" % [out, t], "_open_online_window")
 			if s == "Menu":
 				for extra in [["MenuPlay", "_on_play_menu_pressed"], ["MenuTrain", "_on_train_menu_pressed"],
-						["MenuTourney", "_on_tourney_menu_pressed"], ["MenuBell", "_show_notifications"]]:
+						["MenuTourney", "_on_tourney_menu_pressed"], ["MenuBell", "_show_notifications"], ["MenuSchool", "_show_school_for_shot"]]:
 					await _shot("res://scenes/Menu.tscn", "%s/%s_%s.png" % [out, t, extra[0]], extra[1])
 	get_tree().quit()
 

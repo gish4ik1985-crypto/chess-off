@@ -119,5 +119,27 @@ func _ready() -> void:
 	var sm := ClubTourney.summarize(games)
 	check("сводка: очки и сыгранные пары", sm.scores.get("uА", 0.0) == 1.0 and sm.played.size() == 2)
 	check("очки текстом", ClubTourney.pts_text(2.5) == "2½" and ClubTourney.pts_text(0.5) == "½" and ClubTourney.pts_text(3.0) == "3")
+	# расписание и даты
+	check("19.10.2026 — понедельник", SchoolData.weekday_of("2026-10-19") == 1)
+	check("25.10.2026 — воскресенье", SchoolData.weekday_of("2026-10-25") == 7)
+	check("+7 дней через конец месяца", SchoolData.add_days("2026-10-28", 7) == "2026-11-04")
+	check("−1 день через начало года", SchoolData.add_days("2027-01-01", -1) == "2026-12-31")
+	check("понедельник недели", SchoolData.monday_of("2026-10-22") == "2026-10-19")
+	check("февраль високосного года", SchoolData.days_in_month(2028, 2) == 29 and SchoolData.days_in_month(2026, 2) == 28)
+	check("учебный год: октябрь 2026 → 2026", SchoolData.school_year_of("2026-10-05") == 2026)
+	check("учебный год: апрель 2027 → 2026", SchoolData.school_year_of("2027-04-05") == 2026)
+	check("дата текстом", SchoolData.fmt_date("2026-11-05") == "5 ноября, чт")
+	Profile.club_group = "Младшая"
+	check("группа: пусто — всем, своя — да, чужая — нет", SchoolData.group_ok("") and SchoolData.group_ok("младшая") and not SchoolData.group_ok("Старшая"))
+	var far := int(Time.get_unix_time_from_system()) + 100000
+	SchoolData.announcements = [
+		{"title": "А", "at": 100, "until": 0, "group": "", "pinned": false},
+		{"title": "Б", "at": 200, "until": 1, "group": "", "pinned": false},
+		{"title": "В", "at": 300, "until": far, "group": "Старшая", "pinned": false},
+		{"title": "Г", "at": 50, "until": far, "group": "", "pinned": true}]
+	var vis := SchoolData.visible_announcements()
+	check("объявления: просроченное и чужой группы скрыты, закреплённое первое", vis.size() == 2 and vis[0].title == "Г", str(vis.size()))
+	Profile.ann_seen = 60
+	check("непрочитанные — новее отметки", SchoolData.unread_announcements().size() == 1)
 	print("ИТОГО ошибок: %d" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
