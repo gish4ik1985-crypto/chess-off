@@ -1737,6 +1737,8 @@ func _do_leave(target: String) -> void:
 		get_tree().change_scene_to_file("res://scenes/BotsHub.tscn")
 		return
 	var scene = "res://scenes/Map.tscn" if target == "map" else "res://scenes/Menu.tscn"
+	if scene.ends_with("Menu.tscn"):
+		Global.menu_panel = "play" # быстрая партия закончилась — возвращаем в подменю «Играть»
 	get_tree().change_scene_to_file(scene)
 
 # Партии игрока против бота — ЕДИНСТВЕННЫЕ партии с ботами, которые уже

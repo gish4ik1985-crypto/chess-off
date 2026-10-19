@@ -434,4 +434,4 @@ func _draw_arrow(cr: Node2D, from: Vector2i, to: Vector2i, col: Color) -> void:
 	cr.draw_colored_polygon(PackedVector2Array([tip, tip - dir * 18.0 + side, tip - dir * 18.0 - side]), col)
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()

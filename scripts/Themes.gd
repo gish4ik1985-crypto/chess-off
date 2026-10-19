@@ -595,7 +595,7 @@ func ink(c: Color) -> Color:
 const COLOR_NAMES := ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color",
 	"font_disabled_color", "default_color", "font_placeholder_color", "caret_color", "font_outline_color"]
 const STYLE_NAMES := ["panel", "normal", "hover", "pressed", "focus", "disabled", "background", "fill"]
-const PRIMARY_NAMES := ["PlayButton", "CreateButton", "StartButton", "NewUserButton", "PlayMenuButton"]
+const PRIMARY_NAMES := ["PlayButton", "CreateButton", "StartButton", "NewUserButton", "ContinueButton"]
 const PRIMARY_TEXTS := ["Играть", "Быстрая игра", "Записаться", "Войти", "Создать", "Начать", "Сыграть", "Продолжить"]
 const DANGER_TEXTS := ["Сдаться", "Удалить", "✕"]
 
@@ -699,6 +699,8 @@ func _style_button(b: Button) -> void:
 	if b.name in PRIMARY_NAMES:
 		b.theme_type_variation = "PrimaryButton"
 		return
+	if txt.contains("→") or txt.length() > 24:
+		return # пункты-переходы и длинные подписи — обычные кнопки; акцентом выделяем одно действие
 	for p in PRIMARY_TEXTS:
 		if txt.begins_with(p):
 			b.theme_type_variation = "PrimaryButton"

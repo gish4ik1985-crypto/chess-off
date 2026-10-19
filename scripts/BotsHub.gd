@@ -351,4 +351,4 @@ func _on_news_pressed() -> void:
 	card_stats.text = "\n".join(lines)
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()

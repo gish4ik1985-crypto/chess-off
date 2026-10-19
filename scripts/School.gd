@@ -56,4 +56,4 @@ func _on_patience_pressed() -> void:
 	_launch("patience")
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()

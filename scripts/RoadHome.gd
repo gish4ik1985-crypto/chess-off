@@ -157,11 +157,11 @@ func _on_play_pressed() -> void:
 	var st = stages[selected]
 	if st.kind == "blunders":
 		Global.puzzle_theme = "blunders"
-		get_tree().change_scene_to_file("res://scenes/Puzzle.tscn")
+		Global.open("res://scenes/Puzzle.tscn", "res://scenes/RoadHome.tscn")
 		return
 	if st.kind == "focus_tactics":
 		Global.puzzle_theme = str(st.theme)
-		get_tree().change_scene_to_file("res://scenes/Puzzle.tscn")
+		Global.open("res://scenes/Puzzle.tscn", "res://scenes/RoadHome.tscn")
 		return
 	Global.road_mode = st.kind
 	# dynamic (focus_*) stops don't advance the base road counter
@@ -176,7 +176,7 @@ func _on_close_pressed() -> void:
 	detail_panel.visible = false
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()
 
 func _on_draw() -> void:
 	var font = ThemeDB.fallback_font

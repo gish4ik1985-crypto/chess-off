@@ -64,6 +64,9 @@ var drag_from = null
 var drag_pos := Vector2.ZERO
 
 func _ready() -> void:
+	var origin := _origin_scene()
+	if origin != "":
+		$UI/SidePanel/Content/HubButton.text = "← К карте" if origin.ends_with("/Map.tscn") else "← К дороге"
 	puzzles = PuzzleData.all()
 	fork_rng.randomize()
 	pin_rng.randomize()
@@ -821,11 +824,19 @@ func _on_prev_pressed() -> void:
 	elif mode == "mate":
 		_load_puzzle((current_index - 1 + puzzles.size()) % puzzles.size())
 
+# Задачи открыты с карты или с «Дороги домой» — кнопка «все задачи» возвращает туда, откуда пришли.
+func _origin_scene() -> String:
+	var c := Global.came_from()
+	return c if c.ends_with("/Map.tscn") or c.ends_with("/RoadHome.tscn") else ""
+
 func _on_hub_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/PuzzleHub.tscn")
+	if _origin_scene() != "":
+		Global.go_back()
+	else:
+		get_tree().change_scene_to_file("res://scenes/PuzzleHub.tscn")
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()
 
 func _on_board_draw() -> void:
 	if engine == null:

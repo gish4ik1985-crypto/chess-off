@@ -26,6 +26,9 @@ func _ready() -> void:
 			Profile.unlocked_achievements[id] = true
 		Profile.tournament_titles = {"school_cup": 2, "daily": 1}
 		Profile.fork_puzzles_solved = 6
+		Profile.game_state = {"fen": "", "move_history": ["e4", "e5", "Nf3"], "difficulty": 5, "player_color": "w"}
+		Profile.streak_count = 4
+		Profile.streak_last_day = "2000-01-01"
 	await get_tree().process_frame
 	for t in themes:
 		Themes.set_theme_id(t)
@@ -34,7 +37,9 @@ func _ready() -> void:
 				continue
 			await _shot("res://scenes/%s.tscn" % s, "%s/%s_%s.png" % [out, t, s])
 			if s == "Menu":
-				await _shot("res://scenes/Menu.tscn", "%s/%s_MenuPlay.png" % [out, t], "_on_play_menu_pressed")
+				for extra in [["MenuPlay", "_on_play_menu_pressed"], ["MenuTrain", "_on_train_menu_pressed"],
+						["MenuTourney", "_on_tourney_menu_pressed"], ["MenuBell", "_show_notifications"]]:
+					await _shot("res://scenes/Menu.tscn", "%s/%s_%s.png" % [out, t, extra[0]], extra[1])
 	get_tree().quit()
 
 # Экран добавляется рядом с инструментом (change_scene_to_file выгрузил бы сам инструмент).

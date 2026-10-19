@@ -49,6 +49,7 @@ func _ready() -> void:
 	if not Profile.has_user():
 		get_tree().change_scene_to_file.call_deferred("res://scenes/Login.tscn")
 		return
+	Global.back_stack.clear() # главный экран — начало любого пути
 	Global.tournament_game = {} # safety: no stale tournament context after returning to menu
 	Global.friendly_game = {} # safety: товарищеская партия начинается только из базы игроков
 	Global.attention_level = 0 # safety: attention mode only starts from its hub
@@ -65,7 +66,14 @@ func _ready() -> void:
 	black_button.pressed.connect(func(): chosen_color = "b"; _update_color_buttons())
 	bg.draw.connect(_on_bg_draw)
 	_add_players_button()
+	_build_new_layout()
 	_apply_compact_layout()
+	var want := Global.menu_panel
+	Global.menu_panel = ""
+	match want:
+		"play": _show_panel(play_panel)
+		"train": _show_panel(train_panel)
+		"tourney": _show_panel(tourney_panel)
 
 # Низкий экран (телефон в альбомной ориентации): верхняя панель ужимается до одной строки,
 # а меню получает освободившееся место, чтобы панели не налезали друг на друга.
@@ -81,6 +89,246 @@ func _apply_compact_layout() -> void:
 		var vb := panel.get_child(0) as VBoxContainer
 		if vb != null:
 			vb.add_theme_constant_override("separation", 6)
+
+# --- новая структура меню ---------------------------------------------------------------------
+# Главный экран: «Продолжить» + три раздела (Играть / Учиться / Соревнования). Профиль, уведомления и
+# настройки — в верхней полосе. Остальные пункты разложены по смыслу: карта — в «Учиться»,
+# подготовка к турниру — внутри «Турниров», дневник и награды — в «Моём профиле».
+var _bell_button: Button
+var _notice_layer: Control
+
+func _build_new_layout() -> void:
+	var main_vb: VBoxContainer = $ContentCenter/MainPanel/VBox
+	$ContentCenter/MainPanel/VBox/MapButton.visible = false
+	$ContentCenter/MainPanel/VBox/SettingsButton.visible = false
+	var play_b: Button = $ContentCenter/MainPanel/VBox/PlayMenuButton
+	var train_b: Button = $ContentCenter/MainPanel/VBox/TrainMenuButton
+	var tourney_b: Button = $ContentCenter/MainPanel/VBox/TourneyMenuButton
+	play_b.text = "Играть  →"
+	train_b.text = "Учиться  →"
+	tourney_b.text = "Соревнования  →"
+	for b in [play_b, train_b, tourney_b]:
+		(b as Button).custom_minimum_size.y = 52
+	_add_continue_block(main_vb)
+	# порядок: заголовок, подзаголовок, черта, «Продолжить» + подписи, затем Играть / Учиться / Соревнования
+	var base := play_b.get_index()
+	main_vb.move_child(play_b, main_vb.get_child_count() - 1)
+	main_vb.move_child(train_b, main_vb.get_child_count() - 1)
+	main_vb.move_child(tourney_b, main_vb.get_child_count() - 1)
+	main_vb.move_child($ContentCenter/MainPanel/VBox/QuitButton, main_vb.get_child_count() - 1)
+
+	# «Играть»
+	$ContentCenter/PlayPanel/VBox/FriendlyButton.text = "Сыграть с ботом — выбрать соперника"
+	# «Учиться»: карта стала частью обучения; дневник переехал в профиль
+	var tv: VBoxContainer = $ContentCenter/TrainPanel/VBox
+	tv.get_node("TitleLabel").text = "УЧИТЬСЯ"
+	tv.get_node("ProgressButton").visible = false
+	var map_b := Button.new()
+	map_b.text = "Карта шахматной страны — основной путь"
+	map_b.tooltip_text = "Путь по стране: бои с персонажами и задачи. Сложность подстраивается под вас."
+	map_b.pressed.connect(func(): _open("res://scenes/Map.tscn"))
+	tv.add_child(map_b)
+	tv.move_child(map_b, 2)
+	tv.get_node("RoadHint").visible = false # смысл «Дороги» теперь в подсказке кнопки и на главном экране
+	var road_b: Button = tv.get_node("RoadButton")
+	road_b.tooltip_text = "Дорога растёт из твоих партий: новые остановки для твоих слабых мест."
+	var new_stops := _new_road_stops()
+	if new_stops > 0:
+		road_b.text = "Дорога домой · новых остановок: %d" % new_stops
+	# «Соревнования»
+	var cv: VBoxContainer = $ContentCenter/TourneyPanel/VBox
+	cv.get_node("TitleLabel").text = "СОРЕВНОВАНИЯ"
+	cv.get_node("TournamentPrepButton").visible = false
+	var running := _running_tournaments()
+	var tb: Button = cv.get_node("TournamentsButton")
+	tb.text = "Турниры (рейтинг, турнир дня, подготовка)" + ("  · идёт: %d" % running if running > 0 else "")
+	cv.get_node("BotsButton").text = "Лига ботов — рейтинги и карточки соперников"
+
+	# верхняя полоса: профиль, уведомления, настройки
+	var hb: HBoxContainer = $ProfileBar/HBox
+	achievements_label.visible = false
+	for n in ["TrophyButton", "JournalButton", "SwitchUserButton"]:
+		hb.get_node(n).visible = false
+	var prof: Button = hb.get_node("ProfileButton")
+	prof.text = "Мой профиль"
+	prof.custom_minimum_size.x = 150
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hb.add_child(spacer)
+	hb.move_child(spacer, prof.get_index())
+	_bell_button = Button.new()
+	_bell_button.custom_minimum_size = Vector2(70, 0)
+	_bell_button.tooltip_text = "Уведомления: турниры, новые остановки дороги, серия дней."
+	_bell_button.pressed.connect(_show_notifications)
+	hb.add_child(_bell_button)
+	hb.move_child(_bell_button, prof.get_index() + 1)
+	var gear := Button.new()
+	gear.text = "⚙"
+	gear.custom_minimum_size = Vector2(52, 0)
+	gear.tooltip_text = "Настройки: звук, оформление, игра «с форой», профиль в файл."
+	gear.pressed.connect(func(): _open("res://scenes/Settings.tscn"))
+	hb.add_child(gear)
+	hb.move_child(gear, prof.get_index() + 2)
+	_update_bell()
+
+func _running_tournaments() -> int:
+	var n := 0
+	for id in Profile.active_tournaments:
+		var st: Dictionary = Profile.active_tournaments[id]
+		if not st.get("done", false):
+			n += 1
+	return n
+
+# Остановки «Дороги домой», выросшие из ошибок игрока и ещё не пройденные.
+func _new_road_stops() -> int:
+	var n := 0
+	for st in Profile.dynamic_road_stages():
+		if not Profile.road_focus_done.has(st.kind):
+			n += 1
+	return n
+
+# Что продолжить: незаконченная партия → идущий турнир → следующий шаг на карте.
+func _continue_info() -> Dictionary:
+	var gs: Dictionary = Profile.game_state
+	if not gs.is_empty():
+		var mv := int((gs.get("move_history", []) as Array).size())
+		var who := "партия против компьютера"
+		if String(gs.get("map_character_id", "")) != "":
+			var ch = MapData.by_id(String(gs.map_character_id))
+			who = "бой на карте: %s" % String(ch.get("name", "соперник"))
+		return {"title": "Продолжить партию", "sub": "%s, сыграно ходов: %d" % [who, mv], "kind": "game"}
+	for id in Profile.active_tournaments:
+		var st: Dictionary = Profile.active_tournaments[id]
+		if not st.get("done", false):
+			return {"title": "Продолжить турнир", "sub": "«%s»: тур %d из %d" % [st.name, int(st.round) + 1, int(st.rounds)], "kind": "tourney"}
+	return {"title": "Играть дальше", "sub": "Следующий шаг на карте шахматной страны", "kind": "map"}
+
+func _add_continue_block(main_vb: VBoxContainer) -> void:
+	var info := _continue_info()
+	var b := Button.new()
+	b.name = "ContinueButton"
+	b.text = String(info.title)
+	b.custom_minimum_size = Vector2(0, 62)
+	b.theme_type_variation = "PrimaryButton"
+	b.add_theme_font_size_override("font_size", 20)
+	b.pressed.connect(_on_continue_pressed.bind(String(info.kind)))
+	main_vb.add_child(b)
+	var sub := Label.new()
+	sub.text = String(info.sub)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sub.add_theme_font_size_override("font_size", 13)
+	sub.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
+	main_vb.add_child(sub)
+	var hint := _road_hint()
+	if hint != "":
+		var l := Label.new()
+		l.text = hint
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.add_theme_font_size_override("font_size", 13)
+		l.add_theme_color_override("font_color", Color(0.95, 0.8, 0.35))
+		main_vb.add_child(l)
+
+func _road_hint() -> String:
+	for st in Profile.dynamic_road_stages():
+		if not Profile.road_focus_done.has(st.kind):
+			return "Дорога домой: новая остановка — «%s»" % st.name
+	return ""
+
+func _on_continue_pressed(kind: String) -> void:
+	match kind:
+		"game":
+			var gs: Dictionary = Profile.game_state
+			Global.difficulty = int(gs.get("difficulty", Global.difficulty))
+			Global.player_color = String(gs.get("player_color", "w"))
+			Global.map_character_id = String(gs.get("map_character_id", ""))
+			Global.map_assist = bool(gs.get("map_assist", false))
+			Global.coop_team = bool(gs.get("coop_team", false))
+			Global.open("res://scenes/Board.tscn")
+		"tourney":
+			Global.open("res://scenes/Tournaments.tscn", Global.MENU_SCENE)
+		_:
+			Global.open("res://scenes/Map.tscn", Global.MENU_SCENE)
+
+# --- уведомления --------------------------------------------------------------------------------
+# Напоминания, собранные из профиля. Системные уведомления на телефон появятся вместе с облаком:
+# тогда сюда же придут приглашения в турниры от других игроков.
+func _notifications() -> Array:
+	var out := []
+	if not Profile.game_state.is_empty():
+		out.append({"text": "Партия не закончена — можно продолжить.", "go": "continue"})
+	for id in Profile.active_tournaments:
+		var st: Dictionary = Profile.active_tournaments[id]
+		if not st.get("done", false):
+			out.append({"text": "Турнир «%s»: ждёт тур %d из %d." % [st.name, int(st.round) + 1, int(st.rounds)], "go": "res://scenes/Tournaments.tscn"})
+	var daily_id := "daily_" + Time.get_date_string_from_system()
+	var dst: Dictionary = Profile.active_tournaments.get(daily_id, {})
+	if dst.is_empty():
+		out.append({"text": "Сегодня новый «Турнир дня» — можно записаться.", "go": "res://scenes/Tournaments.tscn"})
+	for st in Profile.dynamic_road_stages():
+		if not Profile.road_focus_done.has(st.kind):
+			out.append({"text": "На «Дороге домой» новая остановка: «%s»." % st.name, "go": "res://scenes/RoadHome.tscn"})
+	var streak := Profile.current_streak()
+	if streak > 0 and Profile.streak_last_day != Time.get_date_string_from_system():
+		out.append({"text": "Серия %d дн. прервётся: решите сегодня одну задачу." % streak, "go": "res://scenes/PuzzleHub.tscn"})
+	return out
+
+func _update_bell() -> void:
+	var n := _notifications().size()
+	_bell_button.text = "🔔 %d" % n if n > 0 else "🔔"
+
+func _show_notifications() -> void:
+	if _notice_layer != null:
+		return
+	var layer := Control.new()
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.6)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 8)
+	vb.custom_minimum_size = Vector2(460, 0)
+	panel.add_child(vb)
+	var title := Label.new()
+	title.text = "Уведомления"
+	title.add_theme_font_size_override("font_size", 22)
+	vb.add_child(title)
+	var items := _notifications()
+	if items.is_empty():
+		var l := Label.new()
+		l.text = "Пока всё спокойно. Новые напоминания появятся здесь."
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
+		vb.add_child(l)
+	for it in items:
+		var b := Button.new()
+		b.text = String(it.text)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.custom_minimum_size = Vector2(0, 48)
+		b.pressed.connect(func():
+			if it.go == "continue":
+				_on_continue_pressed("game")
+			else:
+				Global.open(String(it.go), Global.MENU_SCENE))
+		vb.add_child(b)
+	var close := Button.new()
+	close.name = "CloseButton"
+	close.text = "Закрыть"
+	close.custom_minimum_size = Vector2(0, 46)
+	close.pressed.connect(func():
+		layer.queue_free()
+		_notice_layer = null)
+	vb.add_child(close)
+	add_child(layer)
+	_notice_layer = layer
 
 # Кнопка «Игроки школы» — только когда облако настроено.
 func _add_players_button() -> void:
@@ -131,7 +379,7 @@ func _on_profile_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/Achievements.tscn")
 
 func _on_journal_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Diary.tscn")
+	_open("res://scenes/Diary.tscn")
 
 func _on_switch_user_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/Login.tscn")
@@ -164,40 +412,48 @@ func _on_team_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/Board.tscn")
 
 func _on_settings_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Settings.tscn")
+	_open("res://scenes/Settings.tscn")
 
 func _on_map_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Map.tscn")
+	_open("res://scenes/Map.tscn")
 
 func _on_tournaments_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Tournaments.tscn")
+	_open("res://scenes/Tournaments.tscn")
 
 func _on_tournament_prep_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/TournamentPrep.tscn")
+	_open("res://scenes/TournamentPrep.tscn")
 
 func _on_bots_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/BotsHub.tscn")
+	_open("res://scenes/BotsHub.tscn")
 
 func _on_historic_games_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/HistoricGames.tscn")
+	_open("res://scenes/HistoricGames.tscn")
 
 func _on_school_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/School.tscn")
+	_open("res://scenes/School.tscn")
 
 func _on_trophy_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/TrophyRoom.tscn")
+	_open("res://scenes/TrophyRoom.tscn")
 
 func _on_progress_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Diary.tscn")
+	_open("res://scenes/Diary.tscn")
 
 func _on_road_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/RoadHome.tscn")
+	_open("res://scenes/RoadHome.tscn")
 
 func _on_puzzles_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/PuzzleHub.tscn")
+	_open("res://scenes/PuzzleHub.tscn")
 
 func _on_attention_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/AttentionHub.tscn")
+	_open("res://scenes/AttentionHub.tscn")
+
+# Открыть раздел и запомнить, из какого подменю пришли, — «Назад» вернёт туда же.
+func _open(scene: String) -> void:
+	var panel := ""
+	if play_panel.visible: panel = "play"
+	elif train_panel.visible: panel = "train"
+	elif tourney_panel.visible: panel = "tourney"
+	Global.open(scene, Global.MENU_SCENE, panel)
 
 func _on_quit_pressed() -> void:
 	if OS.has_feature("web"):

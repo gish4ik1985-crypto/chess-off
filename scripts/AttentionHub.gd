@@ -57,4 +57,4 @@ func _start_level(n: int) -> void:
 	get_tree().change_scene_to_file("res://scenes/Board.tscn")
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()

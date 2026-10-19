@@ -60,6 +60,15 @@ const DAILY_FORMATS := [
 var selected_def: Dictionary = {}
 
 func _ready() -> void:
+	# подготовка к турниру — часть турниров: разминка перед настоящей игрой
+	var prep := Button.new()
+	prep.text = "Подготовка к турнирам"
+	prep.tooltip_text = "Три уровня разминки против слабых соперников — перед настоящим турниром."
+	prep.custom_minimum_size = Vector2(190, 0)
+	prep.pressed.connect(func(): Global.open("res://scenes/TournamentPrep.tscn", "res://scenes/Tournaments.tscn"))
+	var bar: HBoxContainer = $TopBar/HBox
+	bar.add_child(prep)
+	bar.move_child(prep, $TopBar/HBox/MenuButton.get_index())
 	Profile.prune_daily_tournaments(_daily_id())
 	_update_rating_label()
 	_build_list()
@@ -230,4 +239,4 @@ func _on_close_pressed() -> void:
 	detail_panel.visible = false
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()

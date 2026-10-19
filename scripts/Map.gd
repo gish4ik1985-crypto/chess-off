@@ -167,11 +167,11 @@ func _on_play_pressed() -> void:
 	var c = MapData.by_id(selected_id)
 	if c.get("node", "") == "task":
 		Global.puzzle_theme = c.get("theme", "")
-		get_tree().change_scene_to_file("res://scenes/Puzzle.tscn")
+		Global.open("res://scenes/Puzzle.tscn", "res://scenes/Map.tscn")
 		return
 	if c.get("node", "") == "mix":
 		Global.puzzle_theme = "mix"
-		get_tree().change_scene_to_file("res://scenes/Puzzle.tscn")
+		Global.open("res://scenes/Puzzle.tscn", "res://scenes/Map.tscn")
 		return
 	Global.difficulty = c.ai_level
 	Global.map_character_id = c.id
@@ -192,7 +192,7 @@ func _on_play_assist_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/Board.tscn")
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()
 
 func _draw_soft_backdrop(center: Vector2, palette: Dictionary) -> void:
 	if not Themes.is_dark():

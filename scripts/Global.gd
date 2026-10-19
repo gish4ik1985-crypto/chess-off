@@ -108,6 +108,33 @@ func _find_visible_button(node: Node, want: String) -> Button:
 			return r
 	return null
 
+# --- навигация: «Назад» ведёт туда, откуда пришли ---------------------------------------------
+# Экран, который открывает раздел, запоминает себя (и подменю главного экрана) через open().
+# Раздел по кнопке «Назад»/«В меню» вызывает go_back(): возврат в запомненное место, а если
+# его нет — на главный экран. Так из «Турниров» не выбрасывает в начало меню.
+var back_stack: Array = [] # стопка {scene, panel}: последний элемент — куда вернёт «Назад»
+var menu_panel := "" # какое подменю показать при открытии главного экрана: "", "play", "train", "tourney"
+const MENU_SCENE := "res://scenes/Menu.tscn"
+
+# Открыть раздел; back_scene/back_panel — место, куда он вернёт. Без back_scene стопка не меняется.
+func open(scene: String, back_scene: String = "", back_panel: String = "") -> void:
+	if back_scene != "":
+		back_stack.append({"scene": back_scene, "panel": back_panel})
+	get_tree().change_scene_to_file(scene)
+
+func go_back(fallback: String = MENU_SCENE) -> void:
+	var scene := fallback
+	if not back_stack.is_empty():
+		var t: Dictionary = back_stack.pop_back()
+		scene = String(t.scene)
+		if scene == MENU_SCENE:
+			menu_panel = String(t.panel)
+	get_tree().change_scene_to_file(scene)
+
+# Откуда пришли ("" — из главного экрана или неизвестно).
+func came_from() -> String:
+	return String(back_stack.back().scene) if not back_stack.is_empty() else ""
+
 func _ready() -> void:
 	load_settings()
 	apply_display_settings()
@@ -148,6 +175,15 @@ func _setup_small_screen_scaling() -> void:
 func _on_node_added(node: Node) -> void:
 	if node.get_parent() == get_tree().root and node != self and node.scene_file_path != "":
 		_apply_small_screen_scaling.call_deferred()
+		_relabel_back_buttons.call_deferred(node)
+
+# Кнопка «В меню» в разделе, открытом из подменю, на деле возвращает в это подменю — называем честно.
+func _relabel_back_buttons(scene_root: Node) -> void:
+	if not is_instance_valid(scene_root) or scene_root.name == "Menu":
+		return
+	var btn := _find_visible_button(scene_root, "MenuButton")
+	if btn != null and btn.text.strip_edges() == "В меню" and not back_stack.is_empty():
+		btn.text = "← Назад"
 
 func _current_scene_is_fixed() -> bool:
 	var sc := get_tree().current_scene

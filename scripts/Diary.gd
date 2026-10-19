@@ -86,7 +86,27 @@ const BAD_COL := Color(1.0, 0.45, 0.45)
 const PIECE_RU := {"P": "пешку", "N": "коня", "B": "слона", "R": "ладью", "Q": "ферзя", "K": "короля"}
 const SCALE_HINT := "Перевес считается в пешках: 1.0 — лишняя пешка · 3.0 — конь или слон · 5.0 — ладья · 9.0 — ферзь. Плюс — впереди вы, минус — соперник."
 
+# «Мой профиль»: этот экран объединяет бывшие «Профиль», «Дневник» и «Награды».
+func _setup_profile_bar() -> void:
+	var bar: HBoxContainer = $TopBar/HBox
+	($TopBar/HBox/TitleLabel as Label).text = "МОЙ ПРОФИЛЬ"
+	var trophies := Button.new()
+	trophies.text = "🏆 Награды"
+	trophies.custom_minimum_size = Vector2(130, 0)
+	trophies.pressed.connect(func(): Global.open("res://scenes/TrophyRoom.tscn", "res://scenes/Diary.tscn"))
+	bar.add_child(trophies)
+	bar.move_child(trophies, $TopBar/HBox/MenuButton.get_index())
+	var switch_b := Button.new()
+	switch_b.text = "Сменить игрока"
+	switch_b.custom_minimum_size = Vector2(150, 0)
+	switch_b.pressed.connect(func():
+		Global.back_stack.clear()
+		get_tree().change_scene_to_file("res://scenes/Login.tscn"))
+	bar.add_child(switch_b)
+	bar.move_child(switch_b, $TopBar/HBox/MenuButton.get_index())
+
 func _ready() -> void:
+	_setup_profile_bar()
 	tab_overview.pressed.connect(func(): _show_tab(0))
 	tab_skills.pressed.connect(func(): _show_tab(3))
 	tab_moves.pressed.connect(func(): _show_tab(1))
@@ -110,7 +130,7 @@ func _exit_tree() -> void:
 	_stale_threads = []
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()
 
 func _show_tab(i: int) -> void:
 	page_overview.visible = i == 0

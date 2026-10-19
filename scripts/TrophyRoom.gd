@@ -99,15 +99,17 @@ func _ready() -> void:
 	head_row.add_child(buttons)
 	var back := Button.new()
 	back.name = "BackButton"
-	back.text = "← Профиль"
+	back.text = "← Назад"
 	back.custom_minimum_size = Vector2(150, 44)
-	back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Achievements.tscn"))
+	back.pressed.connect(func(): Global.go_back("res://scenes/Diary.tscn"))
 	buttons.add_child(back)
 	var menu := Button.new()
-	menu.name = "MenuButton"
+	menu.name = "HomeButton"
 	menu.text = "В меню"
 	menu.custom_minimum_size = Vector2(150, 44)
-	menu.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Menu.tscn"))
+	menu.pressed.connect(func():
+		Global.back_stack.clear()
+		get_tree().change_scene_to_file("res://scenes/Menu.tscn"))
 	buttons.add_child(menu)
 
 	# вкладки

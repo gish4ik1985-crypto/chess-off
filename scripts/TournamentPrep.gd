@@ -191,4 +191,4 @@ func _on_close_pressed() -> void:
 	detail_panel.visible = false
 
 func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	Global.go_back()
