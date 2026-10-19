@@ -168,8 +168,30 @@ func claim_nick(wanted_nick: String) -> Dictionary:
 		_save_session()
 		return {"ok": true, "error": ""}
 	if int(r.code) == 409:
+		# имя уже занято — но, возможно, этим же аккаунтом (регистрация оборвалась раньше): тогда всё в порядке
+		var existing := await get_doc("nicks/" + nick_key(wanted_nick))
+		if existing.ok and existing.found and String(existing.data.get("uid", "")) == uid:
+			nick = wanted_nick.strip_edges()
+			_save_session()
+			return {"ok": true, "error": ""}
 		return {"ok": false, "error": "Игрок «%s» уже зарегистрирован. Если это вы — нажмите «Войти»; если тёзка — добавьте отчество." % wanted_nick.strip_edges()}
 	return {"ok": false, "error": _friendly(r)}
+
+# Имя, которое когда-то занял этот аккаунт (документ nicks/{имя}, где uid — мой). "" — не нашлось.
+func _find_my_nick() -> String:
+	if not await _ensure_token():
+		return ""
+	var url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:runQuery" % _project
+	var q := {"structuredQuery": {
+		"from": [{"collectionId": "nicks"}],
+		"where": {"fieldFilter": {"field": {"fieldPath": "uid"}, "op": "EQUAL", "value": {"stringValue": uid}}},
+		"limit": 1}}
+	var r := await _http(HTTPClient.METHOD_POST, url, q, true)
+	if r.ok and typeof(r.raw) == TYPE_ARRAY:
+		for item in r.raw:
+			if typeof(item) == TYPE_DICTIONARY and item.has("document"):
+				return String(item.document.get("name", "")).get_file().uri_decode()
+	return ""
 
 func login(mail: String, password: String) -> Dictionary:
 	if not enabled:
@@ -182,7 +204,8 @@ func login(mail: String, password: String) -> Dictionary:
 	if card.ok and card.found and String(card.data.get("nick", "")) != "":
 		nick = String(card.data.nick)
 	else:
-		nick = "" # окно входа предложит выбрать ник и завершить регистрацию
+		# карточки нет (она не успела записаться при регистрации): ищем имя, которое этот аккаунт уже занял
+		nick = await _find_my_nick()
 	_save_session()
 	return {"ok": true, "error": "", "needs_nick": nick == ""}
 
