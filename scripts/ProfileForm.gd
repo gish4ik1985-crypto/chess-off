@@ -83,7 +83,7 @@ func _ready() -> void:
 		nk.add_theme_font_size_override("font_size", 13)
 		card_col.add_child(nk)
 	var cls := Label.new()
-	cls.text = "%s%s" % [Roles.class_text(Profile.tournament_rating), ("  ·  🏅 " + Profile.award) if Profile.award != "" else ""]
+	cls.text = "%s%s" % [Roles.class_text(Profile.tournament_rating, Profile.title_for_rating(Profile.tournament_rating)), ("  ·  🏅 " + Profile.award) if Profile.award != "" else ""]
 	cls.add_theme_font_size_override("font_size", 14)
 	cls.add_theme_color_override("font_color", Color(0.96, 0.76, 0.3))
 	card_col.add_child(cls)

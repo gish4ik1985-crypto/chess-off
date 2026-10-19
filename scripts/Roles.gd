@@ -48,8 +48,8 @@ static func icon_for(role: String) -> String:
 
 # Автоматическая «характеристика игрока» по турнирному рейтингу: титул и примерный разряд.
 # Разряд — ориентир для школы, не официальное звание.
-static func class_text(rating: float) -> String:
-	return "%s · %s" % [Profile.title_for_rating(rating), approx_rank(rating)]
+static func class_text(rating: float, title: String) -> String:
+	return "%s · %s" % [title, approx_rank(rating)]
 
 static func approx_rank(rating: float) -> String:
 	if rating < 900: return "без разряда"

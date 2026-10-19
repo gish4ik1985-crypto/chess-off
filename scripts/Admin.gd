@@ -169,7 +169,7 @@ func _player_row(d: Dictionary, rd: Dictionary) -> Control:
 		cur_role = "player"
 	var head := Label.new()
 	var nm := String(d.get("name", ""))
-	head.text = "%s%s  ·  ник %s  ·  %s" % [String(d.get("avatar", "")) + " " if String(d.get("avatar", "")) != "" else "", nm if nm != "" else String(d.get("nick", "?")), String(d.get("nick", "?")), Roles.class_text(float(d.get("rating", 0)))]
+	head.text = "%s%s  ·  ник %s  ·  %s" % [String(d.get("avatar", "")) + " " if String(d.get("avatar", "")) != "" else "", nm if nm != "" else String(d.get("nick", "?")), String(d.get("nick", "?")), Roles.class_text(float(d.get("rating", 0)), String(d.get("title", "")).get_slice(" · ", 0))]
 	head.add_theme_font_size_override("font_size", 15)
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(head)

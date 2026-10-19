@@ -385,7 +385,7 @@ func public_card() -> Dictionary:
 		"nick": Profile.display_name,
 		"key": nick_key(Profile.display_name), # ключ ника в базе (строчными): правила сверяют по нему, т.к. lower() в правилах плохо дружит с кириллицей
 		"rating": int(round(Profile.tournament_rating)),
-		"title": Roles.class_text(Profile.tournament_rating),
+		"title": Roles.class_text(Profile.tournament_rating, Profile.title_for_rating(Profile.tournament_rating)),
 		"games": Profile.games_played,
 		"cups": Profile.tournaments_won,
 		"age": Profile.age_group,
