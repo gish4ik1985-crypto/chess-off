@@ -27,7 +27,7 @@ const PERMS := {
 }
 
 # Кто становится администратором сразу (до выдачи ролей в базе). Тот же список — в firebase/firestore.rules.
-const BOOTSTRAP_ADMINS := ["evgeniisolovev16@gmail.com"]
+const BOOTSTRAP_ADMINS := ["gish4ik1985@gmail.com"]
 
 static func valid(role: String) -> bool:
 	return INFO.has(role)

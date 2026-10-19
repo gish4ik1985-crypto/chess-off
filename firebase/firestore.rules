@@ -42,7 +42,7 @@ service cloud.firestore {
           ? get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role : 'player';
       }
       function isAdmin() {
-        return request.auth.token.email in ['evgeniisolovev16@gmail.com'] || myRole() == 'admin';
+        return request.auth.token.email in ['gish4ik1985@gmail.com'] || myRole() == 'admin';
       }
       function targetRole() {
         return exists(/databases/$(database)/documents/roles/$(target))
