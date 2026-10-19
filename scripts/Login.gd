@@ -169,6 +169,16 @@ func _brand_header() -> void:
 	org.add_theme_color_override("font_color", Color("#9DA3C4"))
 	org.set_meta("brand", true)
 	vbox.add_child(org)
+	var full := Label.new()
+	full.text = Global.CLUB_ORG_FULL
+	full.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	full.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	full.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	full.custom_minimum_size = Vector2(200, 0)
+	full.add_theme_font_size_override("font_size", 10)
+	full.add_theme_color_override("font_color", Color("#7F86AB"))
+	full.set_meta("brand", true)
+	vbox.add_child(full)
 	_add_backdrop()
 
 # Фон входа в духе экрана загрузки: тёмно-синий градиент, крупная печать клуба водяным знаком,
