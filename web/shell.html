@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ru">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover">
+		<meta name="theme-color" content="#161B3D">
+		<title>Шахматный клуб «Молния»</title>
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+body {
+	color: #f4efe0;
+	background-color: #161B3D;
+	overflow: hidden;
+	touch-action: none;
+}
+
+#canvas {
+	display: block;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+/* Экран загрузки клуба: печать, название и полоса прогресса вместо заставки Godot */
+#status {
+	position: absolute;
+	inset: 0;
+	background-color: #161B3D;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	gap: 14px;
+	visibility: hidden;
+	font-family: Georgia, 'Times New Roman', serif;
+	padding: 16px;
+	box-sizing: border-box;
+}
+
+#status .seal {
+	width: min(34vmin, 180px);
+	height: min(34vmin, 180px);
+	animation: pulse 2.4s ease-in-out infinite;
+}
+
+#status .name {
+	font-size: clamp(26px, 6vmin, 40px);
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	color: #F2C14E;
+	text-align: center;
+}
+
+#status .club {
+	font-size: clamp(12px, 2.6vmin, 15px);
+	letter-spacing: 0.32em;
+	color: #b9b4c9;
+	text-align: center;
+}
+
+#status-progress {
+	display: none;
+	width: min(60vw, 360px);
+	height: 8px;
+	margin-top: 10px;
+	appearance: none;
+	-webkit-appearance: none;
+	border: 0;
+	border-radius: 6px;
+	background: #2a2f5a;
+	overflow: hidden;
+}
+
+#status-progress::-webkit-progress-bar {
+	background: #2a2f5a;
+	border-radius: 6px;
+}
+
+#status-progress::-webkit-progress-value {
+	background: #FFD23F;
+	border-radius: 6px;
+}
+
+#status-progress::-moz-progress-bar {
+	background: #FFD23F;
+	border-radius: 6px;
+}
+
+#status .hint {
+	font-family: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+	font-size: 13px;
+	color: #8f8aa8;
+	text-align: center;
+	max-width: 360px;
+	line-height: 1.4;
+}
+
+#status-notice {
+	display: none;
+	background-color: #3a2030;
+	border-radius: 0.5rem;
+	border: 1px solid #8a3a4a;
+	color: #f0dcdc;
+	font-family: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+	line-height: 1.3;
+	margin: 0 2rem;
+	overflow: hidden;
+	padding: 1rem;
+	text-align: center;
+	z-index: 1;
+}
+
+@keyframes pulse {
+	0%, 100% { opacity: 0.85; transform: scale(1); }
+	50% { opacity: 1; transform: scale(1.03); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#status .seal { animation: none; }
+}
+		</style>
+		$GODOT_HEAD_INCLUDE
+	</head>
+	<body>
+		<canvas id="canvas">
+			Ваш браузер не поддерживает canvas.
+		</canvas>
+
+		<noscript>
+			Для игры нужен включённый JavaScript.
+		</noscript>
+
+		<div id="status">
+			<svg class="seal" viewBox="0 0 128 128" role="img" aria-label="Печать клуба «Молния»">
+				<circle cx="64" cy="64" r="60" fill="#161B3D"/>
+				<circle cx="64" cy="64" r="58" fill="none" stroke="#F2C14E" stroke-width="3"/>
+				<circle cx="64" cy="64" r="47" fill="none" stroke="#F2C14E" stroke-width="9" stroke-dasharray="9.2 9.2"/>
+				<circle cx="64" cy="64" r="38" fill="#161B3D"/>
+				<path d="M71 29 L47 68 H62 L56.5 99 L83 59 H67 Z" fill="#FFD23F"/>
+			</svg>
+			<div class="name">МОЛНИЯ</div>
+			<div class="club">ШАХМАТНЫЙ КЛУБ</div>
+			<progress id="status-progress"></progress>
+			<div class="hint" id="status-hint">Загружаю игру… В первый раз это дольше — потом откроется почти мгновенно.</div>
+			<div id="status-notice"></div>
+		</div>
+
+		<script src="$GODOT_URL"></script>
+		<script>
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const statusOverlay = document.getElementById('status');
+	const statusProgress = document.getElementById('status-progress');
+	const statusNotice = document.getElementById('status-notice');
+	const statusHint = document.getElementById('status-hint');
+
+	let initializing = true;
+	let statusMode = '';
+
+	function setStatusMode(mode) {
+		if (statusMode === mode || !initializing) {
+			return;
+		}
+		if (mode === 'hidden') {
+			statusOverlay.remove();
+			initializing = false;
+			return;
+		}
+		statusOverlay.style.visibility = 'visible';
+		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+		statusHint.style.display = mode === 'notice' ? 'none' : 'block';
+		statusMode = mode;
+	}
+
+	function setStatusNotice(text) {
+		while (statusNotice.lastChild) {
+			statusNotice.removeChild(statusNotice.lastChild);
+		}
+		const lines = text.split('\n');
+		lines.forEach((line) => {
+			statusNotice.appendChild(document.createTextNode(line));
+			statusNotice.appendChild(document.createElement('br'));
+		});
+	}
+
+	function displayFailureNotice(err) {
+		console.error(err);
+		if (err instanceof Error) {
+			setStatusNotice('Не удалось запустить игру.\n' + err.message);
+		} else if (typeof err === 'string') {
+			setStatusNotice(err);
+		} else {
+			setStatusNotice('Не удалось запустить игру. Попробуйте обновить страницу.');
+		}
+		setStatusMode('notice');
+		initializing = false;
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
+			let serviceWorkerRegistrationPromise;
+			try {
+				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
+			} catch (err) {
+				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
+			}
+			Promise.race([
+				serviceWorkerRegistrationPromise.then((registration) => {
+					if (registration != null) {
+						return Promise.reject(new Error('Service worker already exists.'));
+					}
+					return registration;
+				}).then(() => engine.installServiceWorker()),
+				new Promise((resolve) => {
+					setTimeout(() => resolve(), 2000);
+				}),
+			]).then(() => {
+				window.location.reload();
+			}).catch((err) => {
+				console.error('Error while registering service worker:', err);
+			});
+		} else {
+			const missingMsg = 'Этот браузер не умеет запускать игру. Не хватает:\n';
+			displayFailureNotice(missingMsg + missing.join('\n'));
+		}
+	} else {
+		setStatusMode('progress');
+		engine.startGame({
+			'onProgress': function (current, total) {
+				if (current > 0 && total > 0) {
+					statusProgress.value = current;
+					statusProgress.max = total;
+					const pct = Math.min(100, Math.round(100 * current / total));
+					statusHint.textContent = 'Загружаю игру: ' + pct + '%. В первый раз это дольше — потом откроется почти мгновенно.';
+				} else {
+					statusProgress.removeAttribute('value');
+					statusProgress.removeAttribute('max');
+				}
+			},
+		}).then(() => {
+			setStatusMode('hidden');
+		}, displayFailureNotice);
+	}
+}());
+		</script>
+	</body>
+</html>

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover">
-		<title>chessoff</title>
+		<meta name="theme-color" content="#161B3D">
+		<title>Шахматный клуб «Молния»</title>
 		<style>
 html, body, #canvas {
 	margin: 0;
@@ -12,8 +13,8 @@ html, body, #canvas {
 }
 
 body {
-	color: white;
-	background-color: black;
+	color: #f4efe0;
+	background-color: #161B3D;
 	overflow: hidden;
 	touch-action: none;
 }
@@ -26,68 +27,102 @@ body {
 	outline: none;
 }
 
-#status, #status-splash, #status-progress {
-	position: absolute;
-	left: 0;
-	right: 0;
-}
-
-#status, #status-splash {
-	top: 0;
-	bottom: 0;
-}
-
+/* Экран загрузки клуба: печать, название и полоса прогресса вместо заставки Godot */
 #status {
-	background-color: #242424;
+	position: absolute;
+	inset: 0;
+	background-color: #161B3D;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
 	align-items: center;
+	gap: 14px;
 	visibility: hidden;
+	font-family: Georgia, 'Times New Roman', serif;
+	padding: 16px;
+	box-sizing: border-box;
 }
 
-#status-splash {
-	max-height: 100%;
-	max-width: 100%;
-	margin: auto;
+#status .seal {
+	width: min(34vmin, 180px);
+	height: min(34vmin, 180px);
+	animation: pulse 2.4s ease-in-out infinite;
 }
 
-#status-splash.show-image--false {
-	display: none;
+#status .name {
+	font-size: clamp(26px, 6vmin, 40px);
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	color: #F2C14E;
+	text-align: center;
 }
 
-#status-splash.fullsize--true {
-	height: 100%;
-	width: 100%;
-	object-fit: contain;
-}
-
-#status-splash.use-filter--false {
-	image-rendering: pixelated;
-}
-
-#status-progress, #status-notice {
-	display: none;
+#status .club {
+	font-size: clamp(12px, 2.6vmin, 15px);
+	letter-spacing: 0.32em;
+	color: #b9b4c9;
+	text-align: center;
 }
 
 #status-progress {
-	bottom: 10%;
-	width: 50%;
-	margin: 0 auto;
+	display: none;
+	width: min(60vw, 360px);
+	height: 8px;
+	margin-top: 10px;
+	appearance: none;
+	-webkit-appearance: none;
+	border: 0;
+	border-radius: 6px;
+	background: #2a2f5a;
+	overflow: hidden;
+}
+
+#status-progress::-webkit-progress-bar {
+	background: #2a2f5a;
+	border-radius: 6px;
+}
+
+#status-progress::-webkit-progress-value {
+	background: #FFD23F;
+	border-radius: 6px;
+}
+
+#status-progress::-moz-progress-bar {
+	background: #FFD23F;
+	border-radius: 6px;
+}
+
+#status .hint {
+	font-family: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+	font-size: 13px;
+	color: #8f8aa8;
+	text-align: center;
+	max-width: 360px;
+	line-height: 1.4;
 }
 
 #status-notice {
-	background-color: #5b3943;
+	display: none;
+	background-color: #3a2030;
 	border-radius: 0.5rem;
-	border: 1px solid #9b3943;
-	color: #e0e0e0;
-	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	border: 1px solid #8a3a4a;
+	color: #f0dcdc;
+	font-family: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
 	line-height: 1.3;
 	margin: 0 2rem;
 	overflow: hidden;
 	padding: 1rem;
 	text-align: center;
 	z-index: 1;
+}
+
+@keyframes pulse {
+	0%, 100% { opacity: 0.85; transform: scale(1); }
+	50% { opacity: 1; transform: scale(1.03); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#status .seal { animation: none; }
 }
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
@@ -97,22 +132,31 @@ body {
 	</head>
 	<body>
 		<canvas id="canvas">
-			Your browser does not support the canvas tag.
+			Ваш браузер не поддерживает canvas.
 		</canvas>
 
 		<noscript>
-			Your browser does not support JavaScript.
+			Для игры нужен включённый JavaScript.
 		</noscript>
 
 		<div id="status">
-			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="index.png" alt="">
+			<svg class="seal" viewBox="0 0 128 128" role="img" aria-label="Печать клуба «Молния»">
+				<circle cx="64" cy="64" r="60" fill="#161B3D"/>
+				<circle cx="64" cy="64" r="58" fill="none" stroke="#F2C14E" stroke-width="3"/>
+				<circle cx="64" cy="64" r="47" fill="none" stroke="#F2C14E" stroke-width="9" stroke-dasharray="9.2 9.2"/>
+				<circle cx="64" cy="64" r="38" fill="#161B3D"/>
+				<path d="M71 29 L47 68 H62 L56.5 99 L83 59 H67 Z" fill="#FFD23F"/>
+			</svg>
+			<div class="name">МОЛНИЯ</div>
+			<div class="club">ШАХМАТНЫЙ КЛУБ</div>
 			<progress id="status-progress"></progress>
+			<div class="hint" id="status-hint">Загружаю игру… В первый раз это дольше — потом откроется почти мгновенно.</div>
 			<div id="status-notice"></div>
 		</div>
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":3621908,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":3699576,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -120,6 +164,7 @@ const engine = new Engine(GODOT_CONFIG);
 	const statusOverlay = document.getElementById('status');
 	const statusProgress = document.getElementById('status-progress');
 	const statusNotice = document.getElementById('status-notice');
+	const statusHint = document.getElementById('status-hint');
 
 	let initializing = true;
 	let statusMode = '';
@@ -136,6 +181,7 @@ const engine = new Engine(GODOT_CONFIG);
 		statusOverlay.style.visibility = 'visible';
 		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
 		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+		statusHint.style.display = mode === 'notice' ? 'none' : 'block';
 		statusMode = mode;
 	}
 
@@ -153,11 +199,11 @@ const engine = new Engine(GODOT_CONFIG);
 	function displayFailureNotice(err) {
 		console.error(err);
 		if (err instanceof Error) {
-			setStatusNotice(err.message);
+			setStatusNotice('Не удалось запустить игру.\n' + err.message);
 		} else if (typeof err === 'string') {
 			setStatusNotice(err);
 		} else {
-			setStatusNotice('An unknown error occurred.');
+			setStatusNotice('Не удалось запустить игру. Попробуйте обновить страницу.');
 		}
 		setStatusMode('notice');
 		initializing = false;
@@ -175,7 +221,6 @@ const engine = new Engine(GODOT_CONFIG);
 			} catch (err) {
 				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
 			}
-			// There's a chance that installing the service worker would fix the issue
 			Promise.race([
 				serviceWorkerRegistrationPromise.then((registration) => {
 					if (registration != null) {
@@ -183,19 +228,16 @@ const engine = new Engine(GODOT_CONFIG);
 					}
 					return registration;
 				}).then(() => engine.installServiceWorker()),
-				// For some reason, `getRegistration()` can stall
 				new Promise((resolve) => {
 					setTimeout(() => resolve(), 2000);
 				}),
 			]).then(() => {
-				// Reload if there was no error.
 				window.location.reload();
 			}).catch((err) => {
 				console.error('Error while registering service worker:', err);
 			});
 		} else {
-			// Display the message as usual
-			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
+			const missingMsg = 'Этот браузер не умеет запускать игру. Не хватает:\n';
 			displayFailureNotice(missingMsg + missing.join('\n'));
 		}
 	} else {
@@ -205,6 +247,8 @@ const engine = new Engine(GODOT_CONFIG);
 				if (current > 0 && total > 0) {
 					statusProgress.value = current;
 					statusProgress.max = total;
+					const pct = Math.min(100, Math.round(100 * current / total));
+					statusHint.textContent = 'Загружаю игру: ' + pct + '%. В первый раз это дольше — потом откроется почти мгновенно.';
 				} else {
 					statusProgress.removeAttribute('value');
 					statusProgress.removeAttribute('max');

@@ -4,6 +4,7 @@ extends Control
 @onready var empty_label: Label = $CenterPanel/VBox/EmptyLabel
 
 func _ready() -> void:
+	_brand_header()
 	_refresh_list()
 	if Cloud.enabled:
 		var online := Button.new()
@@ -143,6 +144,21 @@ func _open_new_user_window() -> void:
 	add_child(dlg)
 	dlg.popup_centered()
 	edit.grab_focus()
+
+# Печать клуба над заголовком; заголовок — название клуба.
+func _brand_header() -> void:
+	var vbox: VBoxContainer = $CenterPanel/VBox
+	($CenterPanel/VBox/TitleLabel as Label).text = "МОЛНИЯ"
+	var sub: Label = $CenterPanel/VBox/SubtitleLabel
+	sub.text = "Шахматный клуб · кто играет?"
+	var seal := TextureRect.new()
+	seal.texture = load("res://assets/brand/seal_512.png")
+	seal.custom_minimum_size = Vector2(72, 72)
+	seal.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	seal.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	seal.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(seal)
+	vbox.move_child(seal, 0)
 
 # --- онлайн-вход -------------------------------------------------------------------------------
 # Отдельное окно: почта + пароль (+ ник при регистрации). Аккаунт общий для школы и работает на любом

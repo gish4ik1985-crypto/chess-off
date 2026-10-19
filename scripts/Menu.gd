@@ -99,6 +99,16 @@ var _notice_layer: Control
 
 func _build_new_layout() -> void:
 	var main_vb: VBoxContainer = $ContentCenter/MainPanel/VBox
+	($ContentCenter/MainPanel/VBox/TitleLabel as Label).text = "МОЛНИЯ"
+	($ContentCenter/MainPanel/VBox/SubtitleLabel as Label).text = "Шахматный клуб · 25 уровней сложности"
+	var seal := TextureRect.new()
+	seal.texture = load("res://assets/brand/seal_512.png")
+	seal.custom_minimum_size = Vector2(64, 64)
+	seal.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	seal.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	seal.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main_vb.add_child(seal)
+	main_vb.move_child(seal, 0)
 	$ContentCenter/MainPanel/VBox/MapButton.visible = false
 	$ContentCenter/MainPanel/VBox/SettingsButton.visible = false
 	var play_b: Button = $ContentCenter/MainPanel/VBox/PlayMenuButton
