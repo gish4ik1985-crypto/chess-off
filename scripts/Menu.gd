@@ -396,7 +396,7 @@ func _update_profile_bar() -> void:
 		achievements_label.text += "   Решите задачу — начнётся серия дней!"
 
 func _on_profile_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/Achievements.tscn")
+	_open("res://scenes/Diary.tscn")
 
 func _on_journal_pressed() -> void:
 	_open("res://scenes/Diary.tscn")

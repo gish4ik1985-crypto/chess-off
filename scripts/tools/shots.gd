@@ -22,7 +22,7 @@ func _ready() -> void:
 	Profile.switch_user("Тест", false)
 	if args.has("demo"):
 		# немного прогресса, чтобы на снимках были видны полученные награды (только в песочнице)
-		for id in ["first_win", "wins_5", "streak_3", "puzzle_10", "tourney_win", "rating_1600"]:
+		for id in ["first_win", "wins_5", "streak_3", "puzzle_10", "tourney_win", "rating_1600", "act3_legend", "rating_2400", "puzzle_50", "beat_level_10"]:
 			Profile.unlocked_achievements[id] = true
 		Profile.tournament_titles = {"school_cup": 2, "daily": 1}
 		Profile.fork_puzzles_solved = 6

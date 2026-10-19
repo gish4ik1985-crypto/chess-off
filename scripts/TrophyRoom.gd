@@ -26,9 +26,9 @@ const TIER_OF := {
 	"backrank_10": 4, "defense_10": 4, "deflection_10": 4, "mix_10": 4,
 }
 const TIER_COLORS := {
-	1: Color(0.71, 0.49, 1.0),  # легендарные — аметист
+	1: Color(1.0, 0.74, 0.14),  # легендарные — горячее золото (с ореолом и лучами)
 	2: Color(0.62, 0.85, 1.0),  # платиновые
-	3: Color(0.96, 0.76, 0.3),  # золотые
+	3: Color(0.93, 0.82, 0.46), # золотые — светлое шампанское
 	4: Color(0.79, 0.81, 0.86), # серебряные
 	5: Color(0.82, 0.55, 0.32), # бронзовые
 }
@@ -71,7 +71,7 @@ func _ready() -> void:
 	head_row.add_theme_constant_override("separation", 18)
 	head.add_child(head_row)
 	var crown := Control.new()
-	crown.custom_minimum_size = Vector2(76, 76)
+	crown.custom_minimum_size = Vector2(92, 92)
 	var crown_item := _crown_item()
 	crown.draw.connect(func(): _draw_badge(crown, crown_item, 36.0))
 	head_row.add_child(crown)
@@ -180,15 +180,18 @@ func _card(it: Dictionary) -> Control:
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if it.unlocked:
 		var box := Themes.card_box()
-		box.set_border_width_all(2)
-		box.border_color = Color(it.color, 0.85)
+		box.set_border_width_all(3 if int(it.tier) == 1 else 2)
+		box.border_color = Color(it.color, 0.9)
+		if int(it.tier) == 1:
+			box.shadow_color = Color(it.color, 0.35)
+			box.shadow_size = 12
 		card.set_meta("themed", true) # рамка уже в цвете ранга — переводить не нужно
 		card.add_theme_stylebox_override("panel", box)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	card.add_child(row)
 	var badge := Control.new()
-	badge.custom_minimum_size = Vector2(84, 84)
+	badge.custom_minimum_size = Vector2(96, 96)
 	badge.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	badge.draw.connect(func(): _draw_badge(badge, it, 38.0))
 	row.add_child(badge)
@@ -366,21 +369,37 @@ func _shape_for(id: String) -> String:
 
 # ------------------------------------------------------------------ медальон
 
-# Круглый медальон: тёмная середина, кольцо цвета ранга, мягкое сияние у полученных; внутри —
-# фигурка награды. Неполученные — серые и полупрозрачные, с маленьким замком.
+# Круглый медальон: объёмное кольцо цвета ранга, тёмная «линза» внутри, блик, фигурка награды.
+# У легендарных — сияющий ореол, лучи и искры; у остальных полученных — мягкое свечение.
+# Неполученные — приглушённые, с маленьким замком.
 func _draw_badge(ci: Control, it: Dictionary, radius: float) -> void:
 	_ci = ci
 	var c := ci.size / 2.0
+	var legendary: bool = int(it.tier) == 1 and it.unlocked
 	# неполученная — приглушённый цвет ранга: видно, что за награда ждёт
 	var col: Color = it.color if it.unlocked else (it.color as Color).lerp(LOCKED_COLOR, 0.6)
 	if it.unlocked:
-		for i in range(4, 0, -1):
-			ci.draw_circle(c, radius + i * 3.0, Color(col, 0.05))
-	ci.draw_circle(c, radius, col.darkened(0.72))
-	ci.draw_circle(c, radius - 6.0, col.darkened(0.58))
-	ci.draw_arc(c, radius - 1.5, 0, TAU, 48, col, 3.0, true)
-	ci.draw_arc(c, radius - 7.0, 0, TAU, 48, Color(col, 0.35), 1.0, true)
-	var icon_col := col.lightened(0.15) if it.unlocked else Color(col, 0.75)
+		var glow_n := 7 if legendary else 4
+		for i in range(glow_n, 0, -1):
+			ci.draw_circle(c, radius + i * (1.5 if legendary else 2.4), Color(col, 0.07 if legendary else 0.05))
+	if legendary:
+		_draw_rays(c, radius, col)
+	# кольцо: тёмная кайма, цветной обод, светлая кромка сверху-слева
+	ci.draw_circle(c, radius + 1.0, col.darkened(0.7))
+	ci.draw_circle(c, radius - 0.5, col.darkened(0.25))
+	ci.draw_circle(c, radius - 3.5, col)
+	ci.draw_arc(c, radius - 2.5, PI * 0.95, PI * 1.55, 20, col.lightened(0.55), 2.2, true)
+	ci.draw_circle(c, radius - 7.0, col.darkened(0.55))
+	# «линза»: тёмный диск с чуть более светлой серединой
+	ci.draw_circle(c, radius - 8.0, col.darkened(0.8))
+	ci.draw_circle(c + Vector2(-1.5, -2.0), radius - 14.0, col.darkened(0.72))
+	ci.draw_arc(c, radius - 9.5, 0, TAU, 48, Color(col, 0.4), 1.0, true)
+	# бусинки по ободу — у золотых и выше
+	if int(it.tier) <= 3:
+		for i in range(16):
+			var ang := TAU * i / 16.0
+			ci.draw_circle(c + Vector2(cos(ang), sin(ang)) * (radius - 5.2), 1.0, col.lightened(0.5) if it.unlocked else Color(col, 0.7))
+	var icon_col := col.lightened(0.28) if it.unlocked else Color(col, 0.75)
 	var k := radius / 38.0
 	ci.draw_set_transform(c, 0.0, Vector2(k, k))
 	match it.kind:
@@ -391,6 +410,9 @@ func _draw_badge(ci: Control, it: Dictionary, radius: float) -> void:
 		"star": _draw_star(Vector2(0, 0), icon_col)
 		"shield": _draw_shield(Vector2(0, 0), icon_col)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if legendary:
+		for sp in [[Vector2(-0.82, -0.72), 5.5], [Vector2(0.86, -0.55), 4.0], [Vector2(0.7, 0.82), 3.2]]:
+			_draw_sparkle(c + (sp[0] as Vector2) * radius, float(sp[1]), Color(1.0, 0.97, 0.8))
 	if not it.unlocked:
 		_draw_padlock(c + Vector2(radius * 0.62, radius * 0.62))
 	if int(it.count) > 1:
@@ -402,86 +424,172 @@ func _draw_badge(ci: Control, it: Dictionary, radius: float) -> void:
 		sb.draw(ci.get_canvas_item(), chip)
 		ci.draw_string(font, chip.position + Vector2(0, 14), "×%d" % int(it.count), HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 12, col.darkened(0.75))
 
-# --- фигурки наград (рисуются на _ci в координатах медальона) ---
+# Лучи вокруг легендарного медальона: длинные и короткие вперемешку.
+func _draw_rays(c: Vector2, radius: float, col: Color) -> void:
+	var n := 24
+	for i in range(n):
+		var ang := TAU * i / n
+		var length := 9.5 if i % 2 == 0 else 5.0
+		var dir := Vector2(cos(ang), sin(ang))
+		var side := Vector2(-dir.y, dir.x)
+		var base := c + dir * (radius - 1.0)
+		_ci.draw_colored_polygon(PackedVector2Array([
+			base + side * 2.6, c + dir * (radius + length), base - side * 2.6]),
+			Color(col.lightened(0.25), 0.8 if i % 2 == 0 else 0.5))
 
-func _draw_cup(c: Vector2, s: float, col: Color, unlocked: bool = true) -> void:
-	var dark = col * Color(0.55, 0.55, 0.55)
-	var mid = col * Color(0.8, 0.8, 0.8)
+# Четырёхконечная искра.
+func _draw_sparkle(c: Vector2, r: float, col: Color) -> void:
 	_ci.draw_colored_polygon(PackedVector2Array([
-		c + Vector2(-17, -28) * s, c + Vector2(17, -28) * s,
-		c + Vector2(15, -18) * s, c + Vector2(-15, -18) * s]), col)
-	_ci.draw_colored_polygon(PackedVector2Array([
-		c + Vector2(-15, -18) * s, c + Vector2(15, -18) * s,
-		c + Vector2(12, -8) * s, c + Vector2(-12, -8) * s]), mid)
-	_ci.draw_colored_polygon(PackedVector2Array([
-		c + Vector2(-12, -8) * s, c + Vector2(12, -8) * s,
-		c + Vector2(7, -1) * s, c + Vector2(-7, -1) * s]), dark)
-	_ci.draw_line(c + Vector2(-17, -28) * s, c + Vector2(17, -28) * s, Color(1, 1, 1, 0.5), 2.0 * s)
-	_ci.draw_line(c + Vector2(-11, -25) * s, c + Vector2(-8, -10) * s, Color(1, 1, 1, 0.4), 2.2 * s)
-	var star_c = c + Vector2(3, -18) * s
-	var star_pts := PackedVector2Array()
-	for i in range(10):
-		var ang = -PI / 2.0 + TAU * i / 10.0
-		var rr = (4.6 if i % 2 == 0 else 2.0) * s
-		star_pts.append(star_c + Vector2(cos(ang), sin(ang)) * rr)
-	_ci.draw_colored_polygon(star_pts, Color(1, 1, 1, 0.55) if unlocked else Color(1, 1, 1, 0.18))
-	_ci.draw_arc(c + Vector2(-19, -19) * s, 8.5 * s, PI * 0.45, PI * 1.65, 12, col, 3.2 * s)
-	_ci.draw_arc(c + Vector2(19, -19) * s, 8.5 * s, -PI * 0.65, PI * 0.55, 12, col, 3.2 * s)
-	_ci.draw_rect(Rect2(c + Vector2(-2.5, -1) * s, Vector2(5, 9) * s), mid)
-	_ci.draw_circle(c + Vector2(0, 10) * s, 3.4 * s, col)
-	_ci.draw_rect(Rect2(c + Vector2(-11, 13) * s, Vector2(22, 5) * s), dark)
-	_ci.draw_rect(Rect2(c + Vector2(-15, 18) * s, Vector2(30, 6) * s), dark * Color(0.8, 0.8, 0.8))
+		c + Vector2(0, -r), c + Vector2(r * 0.22, -r * 0.22), c + Vector2(r, 0), c + Vector2(r * 0.22, r * 0.22),
+		c + Vector2(0, r), c + Vector2(-r * 0.22, r * 0.22), c + Vector2(-r, 0), c + Vector2(-r * 0.22, -r * 0.22)]), col)
 
-func _draw_medal(c: Vector2, col: Color, unlocked: bool = true) -> void:
-	var ribbon_a = Color(0.85, 0.25, 0.32) if unlocked else Color(col, 0.6)
-	var ribbon_b = Color(0.25, 0.4, 0.85) if unlocked else Color(col * Color(0.7, 0.7, 0.7), 0.6)
-	_ci.draw_colored_polygon(PackedVector2Array([
-		c + Vector2(-11, -26), c + Vector2(-2, -26), c + Vector2(2, -6), c + Vector2(-6, -6)]), ribbon_a)
-	_ci.draw_colored_polygon(PackedVector2Array([
-		c + Vector2(2, -26), c + Vector2(11, -26), c + Vector2(6, -6), c + Vector2(-2, -6)]), ribbon_b)
-	_ci.draw_circle(c + Vector2(0, 7), 14.0, col)
-	_ci.draw_arc(c + Vector2(0, 7), 14.0, 0, TAU, 24, col * Color(0.6, 0.6, 0.6), 2.0)
-	_ci.draw_circle(c + Vector2(0, 7), 8.5, col * Color(0.75, 0.75, 0.75))
-	_ci.draw_arc(c + Vector2(-4, 3), 5.0, PI, PI * 1.7, 8, Color(1, 1, 1, 0.5), 1.5)
+# --- фигурки наград (рисуются на _ci в координатах медальона; свет падает сверху-слева) ---
 
-func _draw_diploma(c: Vector2, col: Color, unlocked: bool = true) -> void:
-	_ci.draw_rect(Rect2(c + Vector2(-16, -21), Vector2(32, 40)), col * Color(0.97, 0.95, 0.9))
-	_ci.draw_rect(Rect2(c + Vector2(-16, -21), Vector2(32, 40)), col * Color(0.5, 0.5, 0.5), false, 2.0)
-	for i in range(3):
-		_ci.draw_line(c + Vector2(-10, -11 + i * 8), c + Vector2(10, -11 + i * 8), col * Color(0.45, 0.45, 0.45), 2.0)
-	_ci.draw_circle(c + Vector2(8, 13), 5.0, Color(0.85, 0.25, 0.32) if unlocked else col * Color(0.6, 0.6, 0.6))
-
-func _draw_star(c: Vector2, col: Color) -> void:
+func _star_points(c: Vector2, outer: float, inner: float, turn: float = 0.0) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in range(10):
-		var ang = -PI / 2.0 + TAU * i / 10.0
-		var r = 23.0 if i % 2 == 0 else 10.0
-		pts.append(c + Vector2(cos(ang), sin(ang)) * r)
-	_ci.draw_colored_polygon(pts, col)
-	_ci.draw_polyline(pts + PackedVector2Array([pts[0]]), col * Color(0.6, 0.6, 0.6), 1.5)
-	_ci.draw_circle(c, 5.0, col * Color(0.6, 0.6, 0.6))
+		var ang := -PI / 2.0 + turn + TAU * i / 10.0
+		var rr := outer if i % 2 == 0 else inner
+		pts.append(c + Vector2(cos(ang), sin(ang)) * rr)
+	return pts
+
+# Граненая пятиконечная звезда: каждый луч — светлая и тёмная половинки.
+func _draw_facet_star(c: Vector2, outer: float, inner: float, col: Color) -> void:
+	var pts := _star_points(c, outer, inner)
+	for i in range(0, 10, 2):
+		var tip := pts[i]
+		var prev := pts[(i + 9) % 10]
+		var nxt := pts[(i + 1) % 10]
+		_ci.draw_colored_polygon(PackedVector2Array([c, prev, tip]), col.lightened(0.28))
+		_ci.draw_colored_polygon(PackedVector2Array([c, tip, nxt]), col.darkened(0.22))
+	_ci.draw_polyline(pts + PackedVector2Array([pts[0]]), col.darkened(0.5), 1.2, true)
+
+func _draw_cup(c: Vector2, s: float, col: Color, unlocked: bool = true) -> void:
+	var lt := col.lightened(0.38)
+	var dk := col.darkened(0.3)
+	var dd := col.darkened(0.55)
+	# ручки
+	_ci.draw_arc(c + Vector2(-17, -17) * s, 8.0 * s, PI * 0.5, PI * 1.5, 14, dk, 3.4 * s, true)
+	_ci.draw_arc(c + Vector2(17, -17) * s, 8.0 * s, -PI * 0.5, PI * 0.5, 14, dk, 3.4 * s, true)
+	_ci.draw_arc(c + Vector2(-17, -17) * s, 8.0 * s, PI * 0.6, PI * 1.2, 8, lt, 1.4 * s, true)
+	# чаша: левая половина светлее, правая темнее — получается объём
+	var left := PackedVector2Array([c + Vector2(0, -28) * s])
+	var right := PackedVector2Array([c + Vector2(0, -28) * s])
+	for i in range(9):
+		var t := i / 8.0
+		var w := 17.0 * (1.0 - 0.6 * pow(t, 1.5))
+		var y := -28.0 + t * 27.0
+		left.append(c + Vector2(-w, y) * s)
+		right.append(c + Vector2(w, y) * s)
+	left.append(c + Vector2(0, -1) * s)
+	right.append(c + Vector2(0, -1) * s)
+	_ci.draw_colored_polygon(left, col.lightened(0.12))
+	_ci.draw_colored_polygon(right, dk)
+	# ободок и тёмное «горлышко»
+	_ci.draw_colored_polygon(_ellipse(c + Vector2(0, -28) * s, 17.0 * s, 3.4 * s), lt)
+	_ci.draw_colored_polygon(_ellipse(c + Vector2(0, -27.6) * s, 14.6 * s, 2.3 * s), dd)
+	# блик на левом боку и знак-звезда на чаше
+	_ci.draw_line(c + Vector2(-12, -23) * s, c + Vector2(-9, -9) * s, Color(1, 1, 1, 0.55), 2.2 * s, true)
+	_ci.draw_colored_polygon(_star_points(c + Vector2(2, -14) * s, 5.0 * s, 2.2 * s), Color(1, 1, 1, 0.7) if unlocked else Color(1, 1, 1, 0.2))
+	# ножка, узел, подставка
+	_ci.draw_rect(Rect2(c + Vector2(-2.6, -1) * s, Vector2(2.6, 10) * s), col)
+	_ci.draw_rect(Rect2(c + Vector2(0, -1) * s, Vector2(2.6, 10) * s), dk)
+	_ci.draw_circle(c + Vector2(0, 10) * s, 3.6 * s, col)
+	_ci.draw_circle(c + Vector2(-1, 9) * s, 1.4 * s, lt)
+	_ci.draw_colored_polygon(PackedVector2Array([
+		c + Vector2(-10, 13) * s, c + Vector2(10, 13) * s, c + Vector2(13, 19) * s, c + Vector2(-13, 19) * s]), col)
+	_ci.draw_colored_polygon(PackedVector2Array([
+		c + Vector2(0, 13) * s, c + Vector2(10, 13) * s, c + Vector2(13, 19) * s, c + Vector2(0, 19) * s]), dk)
+	_ci.draw_rect(Rect2(c + Vector2(-16, 19) * s, Vector2(32, 5) * s), dd)
+	_ci.draw_rect(Rect2(c + Vector2(-16, 19) * s, Vector2(32, 1.6) * s), lt)
+
+func _ellipse(c: Vector2, rx: float, ry: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in range(24):
+		var a := TAU * i / 24.0
+		pts.append(c + Vector2(cos(a) * rx, sin(a) * ry))
+	return pts
+
+func _draw_medal(c: Vector2, col: Color, unlocked: bool = true) -> void:
+	var ribbon_a := Color(0.86, 0.22, 0.3) if unlocked else Color(col, 0.6)
+	var ribbon_b := Color(0.22, 0.38, 0.86) if unlocked else Color(col * Color(0.7, 0.7, 0.7), 0.6)
+	# лента: два полотна «галочкой» и складка
+	_ci.draw_colored_polygon(PackedVector2Array([
+		c + Vector2(-12, -27), c + Vector2(-1, -27), c + Vector2(4, -4), c + Vector2(-8, -4)]), ribbon_a)
+	_ci.draw_colored_polygon(PackedVector2Array([
+		c + Vector2(1, -27), c + Vector2(12, -27), c + Vector2(8, -4), c + Vector2(-4, -4)]), ribbon_b)
+	_ci.draw_line(c + Vector2(-1, -27), c + Vector2(4, -4), Color(0, 0, 0, 0.25), 1.2)
+	# диск медали: обод, фаска, звезда посередине
+	var m := c + Vector2(0, 8)
+	_ci.draw_circle(m, 16.0, col.darkened(0.45))
+	_ci.draw_circle(m, 14.8, col)
+	_ci.draw_arc(m, 13.0, PI * 0.9, PI * 1.6, 12, col.lightened(0.6), 2.0, true)
+	_ci.draw_circle(m, 10.5, col.darkened(0.22))
+	_draw_facet_star(m, 8.6, 3.6, col.lightened(0.15))
+
+func _draw_diploma(c: Vector2, col: Color, unlocked: bool = true) -> void:
+	var paper := col.lerp(Color(1, 0.98, 0.9), 0.72)
+	var edge := col.darkened(0.35)
+	# развёрнутый свиток: бумага и два валика
+	_ci.draw_rect(Rect2(c + Vector2(-14, -19), Vector2(28, 38)), paper)
+	_ci.draw_rect(Rect2(c + Vector2(-14, -19), Vector2(6, 38)), Color(0, 0, 0, 0.07))
+	_ci.draw_rect(Rect2(c + Vector2(-14, -19), Vector2(28, 38)), edge, false, 1.4)
+	for r in [-22.0, 16.0]:
+		_ci.draw_rect(Rect2(c + Vector2(-18, r), Vector2(36, 6)), col)
+		_ci.draw_rect(Rect2(c + Vector2(-18, r), Vector2(36, 2)), col.lightened(0.45))
+		_ci.draw_circle(c + Vector2(-18, r + 3), 3.4, edge)
+		_ci.draw_circle(c + Vector2(18, r + 3), 3.4, edge)
+	# строки текста и звёздочка-заглавие
+	_ci.draw_colored_polygon(_star_points(c + Vector2(0, -11), 4.2, 1.8), edge)
+	for i in range(3):
+		_ci.draw_line(c + Vector2(-8, -3 + i * 5.5), c + Vector2(8 - (i % 2) * 4, -3 + i * 5.5), edge, 1.6)
+	# сургучная печать с ленточками
+	var seal := Color(0.86, 0.22, 0.3) if unlocked else col.darkened(0.2)
+	_ci.draw_colored_polygon(PackedVector2Array([c + Vector2(5, 14), c + Vector2(9, 14), c + Vector2(5, 24), c + Vector2(2, 20)]), seal.darkened(0.2))
+	_ci.draw_colored_polygon(PackedVector2Array([c + Vector2(8, 14), c + Vector2(12, 14), c + Vector2(13, 22), c + Vector2(9, 24)]), seal.darkened(0.35))
+	_ci.draw_circle(c + Vector2(8, 11), 5.4, seal)
+	_ci.draw_circle(c + Vector2(6.8, 9.8), 1.8, Color(1, 1, 1, 0.45))
+
+func _draw_star(c: Vector2, col: Color) -> void:
+	_draw_facet_star(c, 25.0, 10.5, col)
+	_ci.draw_circle(c, 3.6, col.lightened(0.45))
 
 func _draw_shield(c: Vector2, col: Color) -> void:
-	var pts = PackedVector2Array([
-		c + Vector2(-17, -21), c + Vector2(17, -21), c + Vector2(17, 4),
-		c + Vector2(0, 23), c + Vector2(-17, 4)])
-	_ci.draw_colored_polygon(pts, col)
-	_ci.draw_polyline(pts + PackedVector2Array([pts[0]]), col * Color(0.5, 0.5, 0.5), 2.0)
-	_ci.draw_line(c + Vector2(0, -21), c + Vector2(0, 23), Color(0, 0, 0, 0.2), 2.0)
+	var pts := PackedVector2Array([
+		c + Vector2(-17, -21), c + Vector2(17, -21), c + Vector2(17, 1), c + Vector2(14, 12),
+		c + Vector2(7, 19), c + Vector2(0, 24), c + Vector2(-7, 19), c + Vector2(-14, 12), c + Vector2(-17, 1)])
+	_ci.draw_colored_polygon(pts, col.darkened(0.4))
+	# левая половина светлая, правая тёмная
+	var lh := PackedVector2Array([c + Vector2(0, -18), c + Vector2(-14, -18), c + Vector2(-14, 0), c + Vector2(-11.5, 10), c + Vector2(-5.5, 16), c + Vector2(0, 20)])
+	var rh := PackedVector2Array([c + Vector2(0, -18), c + Vector2(14, -18), c + Vector2(14, 0), c + Vector2(11.5, 10), c + Vector2(5.5, 16), c + Vector2(0, 20)])
+	_ci.draw_colored_polygon(lh, col.lightened(0.15))
+	_ci.draw_colored_polygon(rh, col.darkened(0.12))
+	_ci.draw_polyline(pts + PackedVector2Array([pts[0]]), col.lightened(0.35), 1.6, true)
+	# эмблема: звезда на щите
+	_ci.draw_colored_polygon(_star_points(c + Vector2(0, -1), 8.5, 3.6), Color(1, 1, 1, 0.82))
 
 func _draw_crown(c: Vector2, col: Color, unlocked: bool) -> void:
-	var base = c + Vector2(0, 14)
-	_ci.draw_colored_polygon(PackedVector2Array([
+	var base := c + Vector2(0, 14)
+	var pts := PackedVector2Array([
 		base + Vector2(-26, 0), base + Vector2(26, 0),
 		base + Vector2(26, -12), base + Vector2(17, -2), base + Vector2(13, -26),
 		base + Vector2(6, -6), base + Vector2(0, -32),
 		base + Vector2(-6, -6), base + Vector2(-13, -26),
-		base + Vector2(-17, -2), base + Vector2(-26, -12)]), col)
-	_ci.draw_rect(Rect2(base + Vector2(-26, 0), Vector2(52, 8)), col * Color(0.7, 0.7, 0.7))
-	var gem_col = Color(0.3, 0.85, 1.0) if unlocked else Color(1, 1, 1, 0.25)
+		base + Vector2(-17, -2), base + Vector2(-26, -12)])
+	_ci.draw_colored_polygon(pts, col)
+	# правая половина темнее — объём
+	_ci.draw_colored_polygon(PackedVector2Array([
+		base + Vector2(0, 0), base + Vector2(26, 0), base + Vector2(26, -12), base + Vector2(17, -2),
+		base + Vector2(13, -26), base + Vector2(6, -6), base + Vector2(0, -32)]), col.darkened(0.2))
+	_ci.draw_polyline(pts + PackedVector2Array([pts[0]]), col.lightened(0.4), 1.2, true)
+	_ci.draw_rect(Rect2(base + Vector2(-26, 0), Vector2(52, 8)), col.darkened(0.3))
+	_ci.draw_rect(Rect2(base + Vector2(-26, 0), Vector2(52, 1.8)), col.lightened(0.5))
+	var gem_col := Color(0.3, 0.85, 1.0) if unlocked else Color(1, 1, 1, 0.25)
 	for g in [Vector2(-13, -22), Vector2(0, -27), Vector2(13, -22)]:
-		_ci.draw_circle(base + g, 3.0, gem_col)
-	_ci.draw_circle(base + Vector2(0, 4), 3.5, Color(0.85, 0.25, 0.32) if unlocked else Color(1, 1, 1, 0.25))
+		_ci.draw_circle(base + g, 3.2, gem_col)
+		_ci.draw_circle(base + g + Vector2(-0.8, -0.8), 1.1, Color(1, 1, 1, 0.8 if unlocked else 0.2))
+	for g in [Vector2(-18, 4), Vector2(-6, 4), Vector2(6, 4), Vector2(18, 4)]:
+		_ci.draw_circle(base + g, 2.0, Color(0.86, 0.22, 0.3) if unlocked else Color(1, 1, 1, 0.25))
 
 func _draw_padlock(c: Vector2) -> void:
 	_ci.draw_circle(c, 11.0, Color(0.12, 0.12, 0.14, 0.95))
