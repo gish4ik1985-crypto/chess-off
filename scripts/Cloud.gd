@@ -10,18 +10,20 @@ extends Node
 # Что остаётся только у владельца: полный профиль (статистика ходов, сильные и слабые стороны) —
 # лежит в private/{uid}, и правила базы (firestore.rules) разрешают читать его только хозяину.
 #
-# Вход: ник + пароль. Firebase требует e-mail, поэтому из ника делается служебный адрес
-# (хэш ника @ players.chess-off.app) — реальной почты у детей не нужно.
+# Вход: почта + пароль (почта обязательна — по ней приходит письмо для сброса пароля и можно
+# открыть свой прогресс на другом устройстве). Ник — имя игрока в таблице школы; он уникален:
+# перед регистрацией ник «занимается» документом nicks/{ник} (создать можно только один раз).
+# Одна почта на нескольких детей: у Gmail подойдёт форма имя+саша@gmail.com — письма придут в один ящик.
 
 const CONFIG_PATH := "res://firebase_config.json"
 const SESSION_PATH := "user://cloud.cfg"
-const MAIL_DOMAIN := "players.chess-off.app"
 const PUSH_DELAY := 20.0 # секунд между отправками профиля в облако
 const MAX_PRIVATE_BYTES := 700000 # лимит документа Firestore ~1 МБ, а base64 раздувает на треть
 
 var enabled := false
 var signed_in := false
 var nick := ""
+var email := ""
 var uid := ""
 var _api_key := ""
 var _project := ""
@@ -47,13 +49,20 @@ func _load_config() -> void:
 	_project = String(data.get("projectId", "")).strip_edges()
 	enabled = _api_key != "" and _project != ""
 
-# --- служебный адрес из ника -----------------------------------------------------------------
+# --- почта и ник ------------------------------------------------------------------------------------
 
 static func nick_key(n: String) -> String:
 	return n.strip_edges().to_lower()
 
-static func email_for(n: String) -> String:
-	return "p" + nick_key(n).sha256_text().substr(0, 40) + "@" + MAIL_DOMAIN
+# Простая проверка вида «что-то@что-то.домен»; настоящую проверку делает Firebase.
+static func valid_email(e: String) -> bool:
+	var t := e.strip_edges()
+	var at := t.find("@")
+	return at > 0 and t.find(" ") < 0 and t.rfind(".") > at + 1 and t.rfind(".") < t.length() - 1 and t.count("@") == 1
+
+static func valid_nick(n: String) -> bool:
+	var t := n.strip_edges()
+	return t.length() >= 2 and t.length() <= 24 and not t.contains("/") and not t.contains("\\")
 
 # --- HTTP ----------------------------------------------------------------------------------------
 
@@ -91,9 +100,11 @@ func _friendly(r: Dictionary) -> String:
 		return "Нет связи с облаком. Проверьте интернет."
 	var msg := String(r.data.get("error", {}).get("message", ""))
 	if msg.begins_with("EMAIL_EXISTS"):
-		return "Такой ник уже занят. Выберите другой или войдите."
+		return "Эта почта уже зарегистрирована. Нажмите «Войти» или «Забыли пароль?»."
+	if msg.begins_with("INVALID_EMAIL"):
+		return "Проверьте почту: она записана неверно."
 	if msg.begins_with("INVALID_LOGIN_CREDENTIALS") or msg.begins_with("INVALID_PASSWORD") or msg.begins_with("EMAIL_NOT_FOUND"):
-		return "Неверный ник или пароль."
+		return "Неверная почта или пароль."
 	if msg.begins_with("WEAK_PASSWORD"):
 		return "Пароль слишком простой — минимум 6 символов."
 	if msg.begins_with("TOO_MANY_ATTEMPTS"):
@@ -104,27 +115,74 @@ func _friendly(r: Dictionary) -> String:
 
 # --- аккаунт --------------------------------------------------------------------------------------
 
-func _auth(endpoint: String, n: String, password: String) -> Dictionary:
+func _auth(endpoint: String, mail: String, password: String) -> Dictionary:
 	var url := "https://identitytoolkit.googleapis.com/v1/accounts:%s?key=%s" % [endpoint, _api_key]
 	var r := await _http(HTTPClient.METHOD_POST, url,
-		{"email": email_for(n), "password": password, "returnSecureToken": true})
+		{"email": mail.strip_edges(), "password": password, "returnSecureToken": true})
 	if not r.ok:
 		return {"ok": false, "error": _friendly(r)}
 	_take_tokens(r.data)
-	nick = n.strip_edges()
+	email = mail.strip_edges()
 	signed_in = true
+	return {"ok": true, "error": ""}
+
+# Регистрация: аккаунт по почте → ник занимается (создать можно один раз) → карточка игрока.
+# Если ник уже занят, только что созданный аккаунт удаляется, чтобы почту можно было использовать снова.
+func register(mail: String, password: String, wanted_nick: String) -> Dictionary:
+	if not enabled:
+		return {"ok": false, "error": "Облако не настроено."}
+	var res := await _auth("signUp", mail, password)
+	if not res.ok:
+		return res
+	var claim := await _http(HTTPClient.METHOD_PATCH,
+		_doc_url("nicks/" + nick_key(wanted_nick).uri_encode()) + "?currentDocument.exists=false",
+		{"fields": {"uid": _to_fs(uid)}}, true)
+	if not claim.ok:
+		await _delete_current_account()
+		if int(claim.code) == 409 or int(claim.code) == 412:
+			return {"ok": false, "error": "Ник «%s» уже занят. Выберите другой." % wanted_nick.strip_edges()}
+		return {"ok": false, "error": _friendly(claim)}
+	nick = wanted_nick.strip_edges()
 	_save_session()
 	return {"ok": true, "error": ""}
 
-func register(n: String, password: String) -> Dictionary:
+func login(mail: String, password: String) -> Dictionary:
 	if not enabled:
 		return {"ok": false, "error": "Облако не настроено."}
-	return await _auth("signUp", n, password)
+	var res := await _auth("signInWithPassword", mail, password)
+	if not res.ok:
+		return res
+	# ник берём из карточки игрока; если её нет (регистрация оборвалась), подставляем часть почты
+	var card := await get_doc("players/" + uid)
+	if card.ok and card.found and String(card.data.get("nick", "")) != "":
+		nick = String(card.data.nick)
+	else:
+		nick = email.get_slice("@", 0).substr(0, 24)
+	_save_session()
+	return {"ok": true, "error": ""}
 
-func login(n: String, password: String) -> Dictionary:
+# Письмо со ссылкой для нового пароля. Firebase отвечает «успешно» и для незарегистрированной почты
+# (чтобы нельзя было выведать, кто играет), поэтому формулировка осторожная.
+func send_password_reset(mail: String) -> Dictionary:
 	if not enabled:
 		return {"ok": false, "error": "Облако не настроено."}
-	return await _auth("signInWithPassword", n, password)
+	var url := "https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=" + _api_key
+	var r := await _http(HTTPClient.METHOD_POST, url, {"requestType": "PASSWORD_RESET", "email": mail.strip_edges()})
+	if r.ok:
+		return {"ok": true, "error": ""}
+	var msg := String(r.data.get("error", {}).get("message", ""))
+	if msg.begins_with("EMAIL_NOT_FOUND"):
+		return {"ok": true, "error": ""}
+	return {"ok": false, "error": _friendly(r)}
+
+func _delete_current_account() -> void:
+	var url := "https://identitytoolkit.googleapis.com/v1/accounts:delete?key=" + _api_key
+	await _http(HTTPClient.METHOD_POST, url, {"idToken": _id_token})
+	signed_in = false
+	_id_token = ""
+	_refresh_token = ""
+	uid = ""
+	email = ""
 
 func logout() -> void:
 	signed_in = false
@@ -132,6 +190,7 @@ func logout() -> void:
 	_refresh_token = ""
 	uid = ""
 	nick = ""
+	email = ""
 	DirAccess.remove_absolute(SESSION_PATH)
 
 func _take_tokens(d: Dictionary) -> void:
@@ -143,6 +202,7 @@ func _take_tokens(d: Dictionary) -> void:
 func _save_session() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("cloud", "nick", nick)
+	cfg.set_value("cloud", "email", email)
 	cfg.set_value("cloud", "uid", uid)
 	cfg.set_value("cloud", "refresh", _refresh_token)
 	cfg.save(SESSION_PATH)
@@ -153,6 +213,7 @@ func _restore_session() -> void:
 		return
 	_refresh_token = String(cfg.get_value("cloud", "refresh", ""))
 	nick = String(cfg.get_value("cloud", "nick", ""))
+	email = String(cfg.get_value("cloud", "email", ""))
 	uid = String(cfg.get_value("cloud", "uid", ""))
 	if _refresh_token == "" or nick == "":
 		return

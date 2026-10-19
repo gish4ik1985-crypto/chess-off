@@ -145,8 +145,9 @@ func _open_new_user_window() -> void:
 	edit.grab_focus()
 
 # --- онлайн-вход -------------------------------------------------------------------------------
-# Отдельное окно: ник + пароль. Аккаунт общий для школы и работает на любом компьютере; профиль
-# (с историей и обучением) подтягивается из облака. Нового игрока можно создать с любого устройства.
+# Отдельное окно: почта + пароль (+ ник при регистрации). Аккаунт общий для школы и работает на любом
+# устройстве; профиль (с историей и обучением) подтягивается из облака. Почта обязательна: на неё
+# приходит письмо для сброса пароля.
 var _online_overlay: Control
 
 func _open_online_window() -> void:
@@ -165,38 +166,55 @@ func _open_online_window() -> void:
 	center.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
-	box.custom_minimum_size = Vector2(420, 0)
+	box.custom_minimum_size = Vector2(440, 0)
 	panel.add_child(box)
 	var title := Label.new()
 	title.text = "Онлайн-вход в школу"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 22)
 	box.add_child(title)
-	var nick_edit := LineEdit.new()
-	nick_edit.placeholder_text = "Ник (2–24 символа)"
-	nick_edit.max_length = 24
-	nick_edit.custom_minimum_size = Vector2(0, 44)
-	box.add_child(nick_edit)
+
+	var mail_edit := LineEdit.new()
+	mail_edit.placeholder_text = "Почта (на неё придёт письмо для сброса пароля)"
+	mail_edit.custom_minimum_size = Vector2(0, 44)
+	mail_edit.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+	mail_edit.text = Cloud.email
+	box.add_child(mail_edit)
 	var pass_edit := LineEdit.new()
 	pass_edit.placeholder_text = "Пароль (от 6 символов)"
 	pass_edit.secret = true
 	pass_edit.custom_minimum_size = Vector2(0, 44)
 	box.add_child(pass_edit)
-	var age_label := Label.new()
-	age_label.text = "Для нового аккаунта — кто играет:"
-	age_label.add_theme_font_size_override("font_size", 12)
-	box.add_child(age_label)
+
+	# только для нового аккаунта
+	var reg_box := VBoxContainer.new()
+	reg_box.add_theme_constant_override("separation", 8)
+	reg_box.visible = false
+	box.add_child(reg_box)
+	var nick_edit := LineEdit.new()
+	nick_edit.placeholder_text = "Ник в школе (2–24 символа, будет виден всем)"
+	nick_edit.max_length = 24
+	nick_edit.custom_minimum_size = Vector2(0, 44)
+	reg_box.add_child(nick_edit)
 	var ages := OptionButton.new()
 	ages.custom_minimum_size = Vector2(0, 44)
 	for g in AGE_GROUPS:
 		ages.add_item(g[1])
 	ages.select(2)
-	box.add_child(ages)
+	reg_box.add_child(ages)
+	var tip := Label.new()
+	tip.text = "Одна почта на нескольких детей: в Gmail подойдёт запись имя+саша@gmail.com — письма придут в тот же ящик."
+	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tip.add_theme_font_size_override("font_size", 12)
+	tip.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
+	reg_box.add_child(tip)
+
 	var status := Label.new()
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status.add_theme_font_size_override("font_size", 13)
-	status.text = "Забыли пароль? Попросите тренера создать вам новый аккаунт."
+	status.text = "Забыли пароль? Введите почту и нажмите «Забыли пароль?» — придёт письмо со ссылкой."
 	box.add_child(status)
+
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	box.add_child(row)
@@ -204,44 +222,91 @@ func _open_online_window() -> void:
 	btn_login.text = "Войти"
 	var btn_reg := Button.new()
 	btn_reg.text = "Создать аккаунт"
+	btn_reg.theme_type_variation = "Button" # акцентной остаётся одна кнопка — «Войти»
 	var btn_cancel := Button.new()
 	btn_cancel.text = "Отмена"
 	for b in [btn_login, btn_reg, btn_cancel]:
 		b.custom_minimum_size = Vector2(0, 48)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(b)
-	var buttons := [btn_login, btn_reg]
-	var go := func(register: bool):
-		var nm := nick_edit.text.strip_edges()
-		if nm.length() < 2:
-			status.text = "Ник — минимум 2 символа."
+	var btn_forgot := Button.new()
+	btn_forgot.text = "Забыли пароль?"
+	btn_forgot.flat = true
+	btn_forgot.custom_minimum_size = Vector2(0, 40)
+	box.add_child(btn_forgot)
+	var buttons := [btn_login, btn_reg, btn_forgot]
+
+	var busy := func(on: bool):
+		for b in buttons:
+			b.disabled = on
+
+	var do_login := func():
+		var mail := mail_edit.text.strip_edges()
+		if not Cloud.valid_email(mail):
+			status.text = "Введите почту полностью, например имя@gmail.com."
 			return
 		if pass_edit.text.length() < 6:
 			status.text = "Пароль — минимум 6 символов."
 			return
-		for b in buttons:
-			b.disabled = true
+		busy.call(true)
 		status.text = "Подключаюсь к облаку…"
-		var res: Dictionary
-		if register:
-			res = await Cloud.register(nm, pass_edit.text)
-		else:
-			res = await Cloud.login(nm, pass_edit.text)
+		var res: Dictionary = await Cloud.login(mail, pass_edit.text)
 		if not res.ok:
 			status.text = String(res.error)
-			for b in buttons:
-				b.disabled = false
+			busy.call(false)
 			return
-		await _finish_online_login(nm, register, AGE_GROUPS[ages.selected][0], status)
-	btn_login.pressed.connect(func(): go.call(false))
-	btn_reg.pressed.connect(func(): go.call(true))
-	pass_edit.text_submitted.connect(func(_t): go.call(false))
+		await _finish_online_login(Cloud.nick, false, "", status)
+
+	var do_register := func():
+		if not reg_box.visible:
+			# первое нажатие открывает поля ника; второе — создаёт аккаунт
+			reg_box.visible = true
+			btn_login.visible = false
+			status.text = "Придумайте ник и нажмите «Создать аккаунт» ещё раз."
+			nick_edit.grab_focus()
+			return
+		var mail := mail_edit.text.strip_edges()
+		if not Cloud.valid_email(mail):
+			status.text = "Введите почту полностью, например имя@gmail.com."
+			return
+		if pass_edit.text.length() < 6:
+			status.text = "Пароль — минимум 6 символов."
+			return
+		if not Cloud.valid_nick(nick_edit.text):
+			status.text = "Ник — от 2 до 24 символов."
+			return
+		busy.call(true)
+		status.text = "Создаю аккаунт…"
+		var res: Dictionary = await Cloud.register(mail, pass_edit.text, nick_edit.text)
+		if not res.ok:
+			status.text = String(res.error)
+			busy.call(false)
+			return
+		await _finish_online_login(Cloud.nick, true, AGE_GROUPS[ages.selected][0], status)
+
+	btn_login.pressed.connect(func(): do_login.call())
+	btn_reg.pressed.connect(func(): do_register.call())
+	pass_edit.text_submitted.connect(func(_t):
+		if reg_box.visible:
+			do_register.call()
+		else:
+			do_login.call())
+	btn_forgot.pressed.connect(func():
+		var mail := mail_edit.text.strip_edges()
+		if not Cloud.valid_email(mail):
+			status.text = "Сначала введите свою почту в первой строке."
+			return
+		busy.call(true)
+		status.text = "Отправляю письмо…"
+		var res: Dictionary = await Cloud.send_password_reset(mail)
+		busy.call(false)
+		status.text = ("Если эта почта зарегистрирована, на неё отправлено письмо со ссылкой. Проверьте и папку «Спам»." if res.ok else String(res.error)))
 	btn_cancel.pressed.connect(func():
 		overlay.queue_free()
 		_online_overlay = null)
 	add_child(overlay)
 	_online_overlay = overlay
-	nick_edit.grab_focus()
+	mail_edit.grab_focus()
 
 # После успешного входа: решаем, чей профиль новее — локальный или облачный — и переходим в меню.
 func _finish_online_login(nm: String, registered: bool, age: String, status: Label) -> void:

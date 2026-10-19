@@ -1,8 +1,7 @@
 extends Node
 
-# Проверка облачного слоя без сети: кодирование значений Firestore туда-обратно и служебный адрес
-# из ника (один и тот же ник в любом регистре и с пробелами — один аккаунт, адрес валиден для
-# Firebase). Запуск: scenes/tools/TestCloud.tscn
+# Проверка облачного слоя без сети: кодирование значений Firestore туда-обратно, проверка почты и ника.
+# Запуск: scenes/tools/TestCloud.tscn
 
 var fails := 0
 
@@ -19,10 +18,14 @@ func _ready() -> void:
 	var back: Dictionary = Cloud._fields_to_dict(fields)
 	check("значения Firestore кодируются туда-обратно", back == data, str(back))
 	check("целые кодируются строкой (формат Firestore)", Cloud._to_fs(5).integerValue == "5")
-	var e1: String = Cloud.email_for("Саша")
-	check("ник без учёта регистра и пробелов даёт один адрес", e1 == Cloud.email_for("  саша "))
-	check("разные ники — разные адреса", e1 != Cloud.email_for("Маша"))
-	check("служебный адрес валиден и короткий", e1.ends_with("@" + Cloud.MAIL_DOMAIN) and e1.length() < 64 and not e1.contains(" "), e1)
+	check("почта: обычный адрес подходит", Cloud.valid_email("masha@gmail.com"))
+	check("почта: адрес с плюсом подходит (одна почта на нескольких детей)", Cloud.valid_email("mama+sasha@gmail.com"))
+	check("почта: без @ не подходит", not Cloud.valid_email("masha.gmail.com"))
+	check("почта: без домена не подходит", not Cloud.valid_email("masha@gmail"))
+	check("почта: с пробелом не подходит", not Cloud.valid_email("ma sha@gmail.com"))
+	check("ник: нормальный подходит, слишком короткий — нет", Cloud.valid_nick("Саша") and not Cloud.valid_nick("А"))
+	check("ник: со слэшем нельзя (это путь документа)", not Cloud.valid_nick("а/б"))
+	check("ник: без учёта регистра и пробелов один и тот же", Cloud.nick_key("  Саша ") == Cloud.nick_key("саша"))
 	check("без ключей облако выключено (игра работает локально)", not Cloud.enabled or Cloud._api_key != "")
 	print("=== ИТОГО ошибок: %d ===" % fails)
 	get_tree().quit(1 if fails > 0 else 0)

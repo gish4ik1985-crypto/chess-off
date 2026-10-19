@@ -36,6 +36,8 @@ func _ready() -> void:
 			if only.size() > 0 and not (s in only):
 				continue
 			await _shot("res://scenes/%s.tscn" % s, "%s/%s_%s.png" % [out, t, s])
+			if s == "Login" and Cloud.enabled:
+				await _shot("res://scenes/Login.tscn", "%s/%s_LoginOnline.png" % [out, t], "_open_online_window")
 			if s == "Menu":
 				for extra in [["MenuPlay", "_on_play_menu_pressed"], ["MenuTrain", "_on_train_menu_pressed"],
 						["MenuTourney", "_on_tourney_menu_pressed"], ["MenuBell", "_show_notifications"]]:
