@@ -382,7 +382,7 @@ func _on_back_pressed() -> void:
 	_show_panel(main_panel)
 
 func _update_profile_bar() -> void:
-	user_label.text = Profile.display_name
+	user_label.text = (Profile.avatar + " " if Profile.avatar != "" else "") + (Profile.call_name if Profile.call_name != "" else Profile.display_name)
 	rating_label.text = "Турнирный рейтинг: %d (%s) · Ступень %d" % [round(Profile.tournament_rating), Profile.rating_title(), Profile.clean_step()]
 	rating_label.tooltip_text = "Турнирный рейтинг растёт от турниров. Ступень — сильнейший уровень компьютера, побеждённый без помощи."
 	rating_label.mouse_filter = Control.MOUSE_FILTER_STOP

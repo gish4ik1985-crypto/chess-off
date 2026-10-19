@@ -81,6 +81,8 @@ func _load() -> void:
 	_clear()
 	var place := 0
 	for d in r.docs:
+		if bool(d.get("hidden", false)) and String(d.get("nick", "")) != Cloud.nick:
+			continue # игрок скрыл себя в настройках приватности
 		place += 1
 		_list.add_child(_row(place, d))
 
@@ -98,12 +100,18 @@ func _row(place: int, d: Dictionary) -> Control:
 	name_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(name_box)
 	var nm := Label.new()
-	nm.text = ("⭐ " if mine else "") + String(d.get("nick", "?"))
+	nm.text = ("⭐ " if mine else "") + String(d.get("avatar", "")) + (" " if String(d.get("avatar", "")) != "" else "") + String(d.get("nick", "?"))
 	nm.add_theme_font_size_override("font_size", 17)
 	nm.add_theme_color_override("font_color", Color(1, 0.65, 0.95) if mine else Color(0.1, 0.95, 1))
 	name_box.add_child(nm)
 	var sub := Label.new()
 	sub.text = "%s · партий: %d · кубков: %d" % [d.get("title", ""), int(d.get("games", 0)), int(d.get("cups", 0))]
+	var extra := String(d.get("city", ""))
+	if String(d.get("about", "")) != "":
+		extra += (" · " if extra != "" else "") + String(d.get("about", ""))
+	if extra != "":
+		sub.text += "
+" + extra
 	sub.add_theme_font_size_override("font_size", 12)
 	sub.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
 	name_box.add_child(sub)

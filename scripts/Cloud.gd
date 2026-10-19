@@ -348,6 +348,11 @@ func public_card() -> Dictionary:
 		"games": Profile.games_played,
 		"cups": Profile.tournaments_won,
 		"age": Profile.age_group,
+		"avatar": Profile.avatar,
+		"hidden": not Profile.public_visible,
+		"city": Profile.city if Profile.public_details else "",
+		"about": Profile.about if Profile.public_details else "",
+		"rank": Profile.rank_level,
 		"seen": int(Time.get_unix_time_from_system()),
 	}
 
@@ -360,6 +365,12 @@ func push_profile() -> Dictionary:
 		return {"ok": false, "error": "Уже отправляется."}
 	_pushing = true
 	var res := await set_doc("players/" + uid, public_card())
+	if not res.ok:
+		# правила базы ещё старые (без новых полей анкеты) — отправляем короткую карточку
+		var basic := public_card()
+		for k in ["avatar", "hidden", "city", "about", "rank"]:
+			basic.erase(k)
+		res = await set_doc("players/" + uid, basic)
 	if res.ok:
 		var bytes := Profile.export_profile_bytes()
 		if bytes.size() > 0 and bytes.size() <= MAX_PRIVATE_BYTES:

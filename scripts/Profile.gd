@@ -56,6 +56,17 @@ const MAX_GAMES_PER_BOT := 12
 var current_user: String = "" # sanitized file key; "" means no user logged in yet
 var display_name: String = ""
 var age_group: String = "" # "kid" / "teen" / "adult" / "" — для подбора подсказок и тона обучения
+# Личная информация (вкладка «Обо мне» в профиле)
+var avatar: String = ""
+var call_name: String = ""
+var city: String = ""
+var club_group: String = ""
+var about: String = ""
+var experience: int = 0 # индекс в ProfileForm.EXPERIENCE
+var rank_level: int = 0 # индекс в ProfileForm.RANKS
+var goal: int = 0 # индекс в ProfileForm.GOALS
+var public_visible: bool = true # показывать в таблице «Игроки школы»
+var public_details: bool = true # показывать город и «о себе»
 
 var rating: float = Glicko2.DEFAULT_RATING
 var rd: float = Glicko2.DEFAULT_RD
@@ -271,6 +282,16 @@ func switch_user(name: String, save_current: bool = true) -> void:
 
 func _reset_defaults() -> void:
 	age_group = ""
+	avatar = ""
+	call_name = ""
+	city = ""
+	club_group = ""
+	about = ""
+	experience = 0
+	rank_level = 0
+	goal = 0
+	public_visible = true
+	public_details = true
 	rating = Glicko2.DEFAULT_RATING
 	rd = Glicko2.DEFAULT_RD
 	volatility = Glicko2.DEFAULT_VOLATILITY
@@ -1527,6 +1548,16 @@ func save_profile() -> void:
 	var cfg = ConfigFile.new()
 	cfg.set_value("meta", "display_name", display_name)
 	cfg.set_value("meta", "age_group", age_group)
+	cfg.set_value("about", "avatar", avatar)
+	cfg.set_value("about", "call_name", call_name)
+	cfg.set_value("about", "city", city)
+	cfg.set_value("about", "club_group", club_group)
+	cfg.set_value("about", "about", about)
+	cfg.set_value("about", "experience", experience)
+	cfg.set_value("about", "rank_level", rank_level)
+	cfg.set_value("about", "goal", goal)
+	cfg.set_value("about", "public_visible", public_visible)
+	cfg.set_value("about", "public_details", public_details)
 	cfg.set_value("rating", "value", rating)
 	cfg.set_value("rating", "rd", rd)
 	cfg.set_value("rating", "volatility", volatility)
@@ -1642,6 +1673,16 @@ func load_profile() -> void:
 		push_warning("Профиль повреждён, восстановлен из .bak: " + path)
 	display_name = cfg.get_value("meta", "display_name", display_name)
 	age_group = cfg.get_value("meta", "age_group", "")
+	avatar = String(cfg.get_value("about", "avatar", ""))
+	call_name = String(cfg.get_value("about", "call_name", ""))
+	city = String(cfg.get_value("about", "city", ""))
+	club_group = String(cfg.get_value("about", "club_group", ""))
+	about = String(cfg.get_value("about", "about", ""))
+	experience = int(cfg.get_value("about", "experience", 0))
+	rank_level = int(cfg.get_value("about", "rank_level", 0))
+	goal = int(cfg.get_value("about", "goal", 0))
+	public_visible = bool(cfg.get_value("about", "public_visible", true))
+	public_details = bool(cfg.get_value("about", "public_details", true))
 	rating = cfg.get_value("rating", "value", Glicko2.DEFAULT_RATING)
 	rd = cfg.get_value("rating", "rd", Glicko2.DEFAULT_RD)
 	volatility = cfg.get_value("rating", "volatility", Glicko2.DEFAULT_VOLATILITY)

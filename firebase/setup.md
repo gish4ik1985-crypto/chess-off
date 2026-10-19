@@ -12,6 +12,7 @@
 3. **Build → Firestore Database → Create database** → режим **Production** → регион на выбор
    (например `europe-west`) → Enable.
 4. Вкладка **Rules** в Firestore → вставьте содержимое файла `firebase/firestore.rules` → **Publish**.
+   (Правила обновлялись при добавлении анкеты игрока — вставьте актуальную версию и нажмите Publish ещё раз.)
 5. **Project settings (шестерёнка) → General → Your apps → Web (`</>`)** → зарегистрируйте приложение
    (Hosting не нужен) → скопируйте значения `apiKey` и `projectId`.
 6. Впишите их в `firebase_config.json` в корне проекта:

@@ -20,6 +20,8 @@ var page_skills: Control
 var skills_draw: Node2D
 var page_moves: Control
 var page_games: Control
+var page_about: Control
+var tab_about: Button
 var overview_draw: Node2D
 
 const SkillProfileScript = preload("res://scripts/SkillProfile.gd")
@@ -90,15 +92,23 @@ const SCALE_HINT := "Перевес считается в пешках: 1.0 — 
 func _setup_profile_bar() -> void:
 	var bar: HBoxContainer = $TopBar/HBox
 	($TopBar/HBox/TitleLabel as Label).text = "МОЙ ПРОФИЛЬ"
+	for t in [$TopBar/HBox/TabOverview, $TopBar/HBox/TabSkills, $TopBar/HBox/TabMoves, $TopBar/HBox/TabGames]:
+		(t as Button).custom_minimum_size.x = 92
+	($TopBar/HBox/MenuButton as Button).custom_minimum_size.x = 92
+	tab_about = Button.new()
+	tab_about.text = "Обо мне"
+	tab_about.custom_minimum_size = Vector2(92, 0)
+	bar.add_child(tab_about)
+	bar.move_child(tab_about, $TopBar/HBox/TabGames.get_index() + 1)
 	var trophies := Button.new()
 	trophies.text = "🏆 Награды"
-	trophies.custom_minimum_size = Vector2(130, 0)
+	trophies.custom_minimum_size = Vector2(110, 0)
 	trophies.pressed.connect(func(): Global.open("res://scenes/TrophyRoom.tscn", "res://scenes/Diary.tscn"))
 	bar.add_child(trophies)
 	bar.move_child(trophies, $TopBar/HBox/MenuButton.get_index())
 	var switch_b := Button.new()
 	switch_b.text = "Сменить игрока"
-	switch_b.custom_minimum_size = Vector2(150, 0)
+	switch_b.custom_minimum_size = Vector2(130, 0)
 	switch_b.pressed.connect(func():
 		Global.back_stack.clear()
 		get_tree().change_scene_to_file("res://scenes/Login.tscn"))
@@ -111,10 +121,13 @@ func _ready() -> void:
 	tab_skills.pressed.connect(func(): _show_tab(3))
 	tab_moves.pressed.connect(func(): _show_tab(1))
 	tab_games.pressed.connect(func(): _show_tab(2))
+	tab_about.pressed.connect(func(): _show_tab(4))
 	_build_overview_page()
 	_build_skills_page()
 	_build_moves_page()
 	_build_games_page()
+	page_about = preload("res://scripts/ProfileForm.gd").new()
+	add_child(page_about)
 	_show_tab(0)
 
 func _exit_tree() -> void:
@@ -132,11 +145,17 @@ func _exit_tree() -> void:
 func _on_menu_pressed() -> void:
 	Global.go_back()
 
+func _open_about_tab() -> void: # для снимков экрана
+	_show_tab(4)
+
+
 func _show_tab(i: int) -> void:
 	page_overview.visible = i == 0
 	page_moves.visible = i == 1
 	page_games.visible = i == 2
 	page_skills.visible = i == 3
+	page_about.visible = i == 4
+	tab_about.disabled = i == 4
 	tab_skills.disabled = i == 3
 	tab_overview.disabled = i == 0
 	tab_moves.disabled = i == 1
