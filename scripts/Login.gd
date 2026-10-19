@@ -4,7 +4,6 @@ extends Control
 @onready var empty_label: Label = $CenterPanel/VBox/EmptyLabel
 
 func _ready() -> void:
-	_brand_header()
 	_refresh_list()
 	if Cloud.enabled:
 		var online := Button.new()
@@ -12,6 +11,7 @@ func _ready() -> void:
 		online.custom_minimum_size = Vector2(0, 48)
 		online.pressed.connect(_open_online_window)
 		$CenterPanel/VBox.add_child(online)
+	_brand_header() # последним: подпись организации оказывается под всеми кнопками
 
 func _refresh_list() -> void:
 	for c in user_list.get_children():
@@ -148,7 +148,7 @@ func _open_new_user_window() -> void:
 # Печать клуба над заголовком; заголовок — название клуба.
 func _brand_header() -> void:
 	var vbox: VBoxContainer = $CenterPanel/VBox
-	($CenterPanel/VBox/TitleLabel as Label).text = "МОЛНИЯ"
+	($CenterPanel/VBox/TitleLabel as Label).text = "ИРБИС"
 	var sub: Label = $CenterPanel/VBox/SubtitleLabel
 	sub.text = "Шахматный клуб · кто играет?"
 	var seal := TextureRect.new()
@@ -159,6 +159,12 @@ func _brand_header() -> void:
 	seal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(seal)
 	vbox.move_child(seal, 0)
+	var org := Label.new()
+	org.text = Global.CLUB_ORG
+	org.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	org.add_theme_font_size_override("font_size", 12)
+	org.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))
+	vbox.add_child(org)
 
 # --- онлайн-вход -------------------------------------------------------------------------------
 # Отдельное окно: почта + пароль (+ ник при регистрации). Аккаунт общий для школы и работает на любом

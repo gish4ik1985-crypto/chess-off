@@ -5,8 +5,8 @@ import json, os
 here = os.path.dirname(os.path.abspath(__file__))
 path = os.path.join(here, "..", "docs", "index.manifest.json")
 m = json.load(open(path, encoding="utf-8"))
-m["name"] = "Шахматный клуб «Молния»"
-m["short_name"] = "Молния"
+m["name"] = "Шахматный клуб «ИРБИС»"
+m["short_name"] = "ИРБИС"
 m["background_color"] = "#161B3D"
 m["theme_color"] = "#161B3D"
 m["lang"] = "ru"

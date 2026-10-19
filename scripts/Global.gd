@@ -135,7 +135,8 @@ func go_back(fallback: String = MENU_SCENE) -> void:
 func came_from() -> String:
 	return String(back_stack.back().scene) if not back_stack.is_empty() else ""
 
-const CLUB_NAME := "Шахматный клуб «Молния»"
+const CLUB_NAME := "Шахматный клуб «ИРБИС»"
+const CLUB_ORG := "МОО «Клуб «ИРБИС»" # полное название организации — подписи на экранах входа и меню
 
 func _ready() -> void:
 	get_window().title = CLUB_NAME # заголовок окна и вкладки; имя проекта (chessoff) не меняем: от него зависит папка профилей

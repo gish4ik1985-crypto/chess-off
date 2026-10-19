@@ -99,7 +99,7 @@ var _notice_layer: Control
 
 func _build_new_layout() -> void:
 	var main_vb: VBoxContainer = $ContentCenter/MainPanel/VBox
-	($ContentCenter/MainPanel/VBox/TitleLabel as Label).text = "МОЛНИЯ"
+	($ContentCenter/MainPanel/VBox/TitleLabel as Label).text = "ИРБИС"
 	($ContentCenter/MainPanel/VBox/SubtitleLabel as Label).text = "Шахматный клуб · 25 уровней сложности"
 	var seal := TextureRect.new()
 	seal.texture = load("res://assets/brand/seal_512.png")
