@@ -502,6 +502,9 @@ func _finish_online_login(nm: String, registered: bool, age: String, status: Lab
 	if full_name != "":
 		Profile.full_name = full_name
 		Profile.save_profile()
+	Homework.assignments = []
+	Homework.my_done = {}
+	Homework.loaded = false
 	await Cloud.refresh_role()
 	status.text = "Сохраняю в облако…"
 	await Cloud.push_profile()

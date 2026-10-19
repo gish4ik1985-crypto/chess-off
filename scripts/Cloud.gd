@@ -319,6 +319,15 @@ func set_doc(path: String, data: Dictionary) -> Dictionary:
 	var r := await _http(HTTPClient.METHOD_POST, url, {"writes": [{"update": {"name": root + path, "fields": fields}}]}, true)
 	return {"ok": r.ok, "error": "" if r.ok else _friendly(r)}
 
+# Удаляет документ path.
+func del_doc(path: String) -> Dictionary:
+	if not await _ensure_token():
+		return {"ok": false, "error": "Нет входа в облако."}
+	var root := "projects/%s/databases/(default)/documents/" % _project
+	var url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:commit" % _project
+	var r := await _http(HTTPClient.METHOD_POST, url, {"writes": [{"delete": root + path}]}, true)
+	return {"ok": r.ok, "error": "" if r.ok else _friendly(r)}
+
 # Читает документ. Возвращает {ok, found, data, error}.
 func get_doc(path: String) -> Dictionary:
 	if not await _ensure_token():
@@ -405,6 +414,7 @@ func public_card() -> Dictionary:
 		"city": Profile.city if Profile.public_details else "",
 		"about": Profile.about if Profile.public_details else "",
 		"rank": Profile.rank_level,
+		"group": Profile.club_group,
 		"seen": int(Time.get_unix_time_from_system()),
 	}
 
@@ -420,7 +430,7 @@ func push_profile() -> Dictionary:
 	if not res.ok:
 		# правила базы ещё старые (без новых полей анкеты) — отправляем короткую карточку
 		var basic := public_card()
-		for k in ["avatar", "hidden", "city", "about", "rank", "key", "name"]:
+		for k in ["avatar", "hidden", "city", "about", "rank", "key", "name", "group"]:
 			basic.erase(k)
 		res = await set_doc("players/" + uid, basic)
 	if res.ok:

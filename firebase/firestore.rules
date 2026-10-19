@@ -2,6 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function myRole() {
+      return exists(/databases/$(database)/documents/roles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role : 'player';
+    }
+    function isAdmin() {
+      return request.auth.token.email in ['gish4ik1985@gmail.com'] || myRole() == 'admin';
+    }
+
+    function isTeacher() {
+      return isAdmin() || myRole() == 'coach' || myRole() == 'moderator';
+    }
+
     // Ник занимается один раз при регистрации: документ nicks/{ник} создаётся только если его ещё нет,
     // менять и удалять его нельзя. Так два игрока не получат один ник.
     match /nicks/{nick} {
@@ -19,7 +31,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['nick', 'rating', 'title', 'games', 'cups', 'age', 'seen', 'avatar', 'hidden', 'city', 'about', 'rank', 'key', 'name'])
+        && request.resource.data.keys().hasOnly(['nick', 'rating', 'title', 'games', 'cups', 'age', 'seen', 'avatar', 'hidden', 'city', 'about', 'rank', 'key', 'name', 'group'])
         && (!('name' in request.resource.data) || request.resource.data.name.size() <= 60)
         && (!('about' in request.resource.data) || request.resource.data.about.size() <= 80)
         && (!('city' in request.resource.data) || request.resource.data.city.size() <= 30)
@@ -37,17 +49,11 @@ service cloud.firestore {
     // списка ниже — они администраторы с самого начала) назначает любые роли; тренер и модератор могут
     // менять только именной титул, не трогая роль.
     match /roles/{target} {
-      function myRole() {
-        return exists(/databases/$(database)/documents/roles/$(request.auth.uid))
-          ? get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role : 'player';
-      }
-      function isAdmin() {
-        return request.auth.token.email in ['gish4ik1985@gmail.com'] || myRole() == 'admin';
-      }
       function targetRole() {
         return exists(/databases/$(database)/documents/roles/$(target))
           ? get(/databases/$(database)/documents/roles/$(target)).data.role : 'player';
       }
+
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
         && request.resource.data.keys().hasOnly(['role', 'award', 'nick', 'by', 'at'])
@@ -55,6 +61,37 @@ service cloud.firestore {
         && request.resource.data.award is string && request.resource.data.award.size() <= 40
         && (isAdmin()
           || ((myRole() == 'coach' || myRole() == 'moderator') && request.resource.data.role == targetRole()));
+      allow delete: if false;
+    }
+
+    // Домашние задания: создают и меняют только учителя (тренер, модератор, администратор); читают все вошедшие.
+    match /assignments/{aid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && isTeacher()
+        && request.resource.data.keys().hasOnly(['title', 'text', 'kind', 'metric', 'target', 'fen', 'solution',
+                                                 'deadline', 'group', 'active', 'by', 'by_name', 'created'])
+        && request.resource.data.title is string && request.resource.data.title.size() <= 60
+        && request.resource.data.text is string && request.resource.data.text.size() <= 2000;
+      allow delete: if request.auth != null && isTeacher();
+    }
+
+    // Сданная работа: ученик пишет только свою (документ «задание_uid»), читают все вошедшие.
+    match /submissions/{sid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && sid == request.resource.data.aid + '_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(['aid', 'uid', 'name', 'group', 'score', 'detail', 'comment', 'at'])
+        && request.resource.data.comment.size() <= 300;
+      allow delete: if false;
+    }
+
+    // Оценка и комментарий учителя к сданной работе.
+    match /reviews/{rid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && isTeacher()
+        && request.resource.data.keys().hasOnly(['aid', 'uid', 'grade', 'note', 'by', 'at'])
+        && request.resource.data.note.size() <= 200;
       allow delete: if false;
     }
 

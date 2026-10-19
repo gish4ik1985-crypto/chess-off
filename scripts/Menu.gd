@@ -76,6 +76,7 @@ func _ready() -> void:
 		"tourney": _show_panel(tourney_panel)
 	_equalize_panels.call_deferred()
 	_refresh_role.call_deferred()
+	_update_hw_button.call_deferred()
 	_ask_full_name_if_needed.call_deferred()
 
 # Все четыре панели (главная и три раздела) одного размера — при переходах рамка не «прыгает»,
@@ -92,16 +93,26 @@ func _equalize_panels() -> void:
 		(p as Control).custom_minimum_size = need
 
 # После онлайн-входа без ФИО (старые аккаунты) один раз за сеанс просим его вписать.
-static var _role_checked := false
+static var _role_checked_uid := ""
 
 # Роль (ученик / тренер / администратор) подтягивается из облака один раз за сеанс.
 func _refresh_role() -> void:
-	if _role_checked or not (Cloud.enabled and Cloud.signed_in):
+	if _role_checked_uid == Cloud.uid or not (Cloud.enabled and Cloud.signed_in):
 		return
-	_role_checked = true
+	_role_checked_uid = Cloud.uid
 	await Cloud.refresh_role()
+	await Homework.load_all()
+	await Homework.auto_submit_done()
 	if is_inside_tree():
 		_update_profile_bar()
+		_update_bell()
+		_update_hw_button()
+
+func _update_hw_button() -> void:
+	if _hw_button == null:
+		return
+	var n := Homework.pending().size() if Homework.loaded else 0
+	_hw_button.text = "📚 Домашние задания" + ("  · новых: %d" % n if n > 0 else "")
 
 static var _fio_asked := false
 
@@ -152,6 +163,7 @@ func _apply_compact_layout() -> void:
 # настройки — в верхней полосе. Остальные пункты разложены по смыслу: карта — в «Учиться»,
 # подготовка к турниру — внутри «Турниров», дневник и награды — в «Моём профиле».
 var _bell_button: Button
+var _hw_button: Button
 var _notice_layer: Control
 
 func _build_new_layout() -> void:
@@ -203,6 +215,12 @@ func _build_new_layout() -> void:
 	map_b.pressed.connect(func(): _open("res://scenes/Map.tscn"))
 	tv.add_child(map_b)
 	tv.move_child(map_b, 2)
+	_hw_button = Button.new()
+	_hw_button.text = "📚 Домашние задания"
+	_hw_button.tooltip_text = "Задания от учителя: выполняйте дома, результат уходит учителю сам."
+	_hw_button.pressed.connect(func(): _open("res://scenes/Homework.tscn"))
+	tv.add_child(_hw_button)
+	tv.move_child(_hw_button, 3)
 	tv.get_node("RoadHint").visible = false # смысл «Дороги» теперь в подсказке кнопки и на главном экране
 	var road_b: Button = tv.get_node("RoadButton")
 	road_b.tooltip_text = "Дорога растёт из твоих партий: новые остановки для твоих слабых мест."
@@ -346,6 +364,8 @@ func _notifications() -> Array:
 	for st in Profile.dynamic_road_stages():
 		if not Profile.road_focus_done.has(st.kind):
 			out.append({"text": "На «Дороге домой» новая остановка: «%s»." % st.name, "go": "res://scenes/RoadHome.tscn"})
+	if Homework.loaded and Homework.pending().size() > 0:
+		out.append({"text": "Новых домашних заданий: %d." % Homework.pending().size(), "go": "res://scenes/Homework.tscn"})
 	var streak := Profile.current_streak()
 	if streak > 0 and Profile.streak_last_day != Time.get_date_string_from_system():
 		out.append({"text": "Серия %d дн. прервётся: решите сегодня одну задачу." % streak, "go": "res://scenes/PuzzleHub.tscn"})

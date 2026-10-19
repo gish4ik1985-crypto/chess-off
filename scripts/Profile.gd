@@ -57,6 +57,7 @@ var current_user: String = "" # sanitized file key; "" means no user logged in y
 var display_name: String = ""
 var age_group: String = "" # "kid" / "teen" / "adult" / "" — для подбора подсказок и тона обучения
 # Личная информация (вкладка «Обо мне» в профиле)
+var homework_base: Dictionary = {} # id задания -> значение счётчика на момент «Начать»
 var role: String = "player" # роль из облака (запоминается, чтобы показывать без сети)
 var award: String = "" # именной титул от тренера
 var full_name: String = "" # ФИО — показывается в меню и профиле вместо ника
@@ -293,6 +294,7 @@ func switch_user(name: String, save_current: bool = true) -> void:
 
 func _reset_defaults() -> void:
 	age_group = ""
+	homework_base = {}
 	role = "player"
 	award = ""
 	full_name = ""
@@ -1564,6 +1566,7 @@ func save_profile() -> void:
 	cfg.set_value("meta", "age_group", age_group)
 	cfg.set_value("about", "full_name", full_name)
 	cfg.set_value("about", "role", role)
+	cfg.set_value("homework", "base", homework_base)
 	cfg.set_value("about", "award", award)
 	cfg.set_value("about", "avatar", avatar)
 	cfg.set_value("about", "call_name", call_name)
@@ -1691,6 +1694,7 @@ func load_profile() -> void:
 	display_name = cfg.get_value("meta", "display_name", display_name)
 	age_group = cfg.get_value("meta", "age_group", "")
 	full_name = String(cfg.get_value("about", "full_name", ""))
+	homework_base = cfg.get_value("homework", "base", {})
 	role = String(cfg.get_value("about", "role", "player"))
 	if not Roles.valid(role):
 		role = "player"
