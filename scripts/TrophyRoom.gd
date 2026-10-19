@@ -375,15 +375,16 @@ func _shape_for(id: String) -> String:
 func _draw_badge(ci: Control, it: Dictionary, radius: float) -> void:
 	_ci = ci
 	var c := ci.size / 2.0
-	var legendary: bool = int(it.tier) == 1 and it.unlocked
+	var legendary: bool = int(it.tier) == 1
+	var dim := 1.0 if it.unlocked else 0.55 # неполученная легендарная светится вполсилы: видно, что награда особенная
 	# неполученная — приглушённый цвет ранга: видно, что за награда ждёт
-	var col: Color = it.color if it.unlocked else (it.color as Color).lerp(LOCKED_COLOR, 0.6)
-	if it.unlocked:
+	var col: Color = it.color if it.unlocked else (it.color as Color).lerp(LOCKED_COLOR, 0.3 if legendary else 0.6)
+	if it.unlocked or legendary:
 		var glow_n := 7 if legendary else 4
 		for i in range(glow_n, 0, -1):
-			ci.draw_circle(c, radius + i * (1.5 if legendary else 2.4), Color(col, 0.07 if legendary else 0.05))
+			ci.draw_circle(c, radius + i * (1.5 if legendary else 2.4), Color(col, (0.07 if legendary else 0.05) * dim))
 	if legendary:
-		_draw_rays(c, radius, col)
+		_draw_rays(c, radius, col, dim)
 	# кольцо: тёмная кайма, цветной обод, светлая кромка сверху-слева
 	ci.draw_circle(c, radius + 1.0, col.darkened(0.7))
 	ci.draw_circle(c, radius - 0.5, col.darkened(0.25))
@@ -399,7 +400,7 @@ func _draw_badge(ci: Control, it: Dictionary, radius: float) -> void:
 		for i in range(16):
 			var ang := TAU * i / 16.0
 			ci.draw_circle(c + Vector2(cos(ang), sin(ang)) * (radius - 5.2), 1.0, col.lightened(0.5) if it.unlocked else Color(col, 0.7))
-	var icon_col := col.lightened(0.28) if it.unlocked else Color(col, 0.75)
+	var icon_col := col.lightened(0.28) if (it.unlocked or legendary) else Color(col, 0.75)
 	var k := radius / 38.0
 	ci.draw_set_transform(c, 0.0, Vector2(k, k))
 	match it.kind:
@@ -412,7 +413,7 @@ func _draw_badge(ci: Control, it: Dictionary, radius: float) -> void:
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if legendary:
 		for sp in [[Vector2(-0.82, -0.72), 5.5], [Vector2(0.86, -0.55), 4.0], [Vector2(0.7, 0.82), 3.2]]:
-			_draw_sparkle(c + (sp[0] as Vector2) * radius, float(sp[1]), Color(1.0, 0.97, 0.8))
+			_draw_sparkle(c + (sp[0] as Vector2) * radius, float(sp[1]), Color(1.0, 0.97, 0.8, dim))
 	if not it.unlocked:
 		_draw_padlock(c + Vector2(radius * 0.62, radius * 0.62))
 	if int(it.count) > 1:
@@ -425,7 +426,7 @@ func _draw_badge(ci: Control, it: Dictionary, radius: float) -> void:
 		ci.draw_string(font, chip.position + Vector2(0, 14), "×%d" % int(it.count), HORIZONTAL_ALIGNMENT_CENTER, chip.size.x, 12, col.darkened(0.75))
 
 # Лучи вокруг легендарного медальона: длинные и короткие вперемешку.
-func _draw_rays(c: Vector2, radius: float, col: Color) -> void:
+func _draw_rays(c: Vector2, radius: float, col: Color, dim: float = 1.0) -> void:
 	var n := 24
 	for i in range(n):
 		var ang := TAU * i / n
@@ -435,7 +436,7 @@ func _draw_rays(c: Vector2, radius: float, col: Color) -> void:
 		var base := c + dir * (radius - 1.0)
 		_ci.draw_colored_polygon(PackedVector2Array([
 			base + side * 2.6, c + dir * (radius + length), base - side * 2.6]),
-			Color(col.lightened(0.25), 0.8 if i % 2 == 0 else 0.5))
+			Color(col.lightened(0.25), (0.8 if i % 2 == 0 else 0.5) * dim))
 
 # Четырёхконечная искра.
 func _draw_sparkle(c: Vector2, r: float, col: Color) -> void:
