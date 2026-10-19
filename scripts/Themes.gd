@@ -14,8 +14,8 @@ extends Node
 # Тема «Неон» — исходный вид без изменений.
 
 const NEON_THEME_PATH := "res://theme/NeonTheme.tres"
-const DEFAULT_ID := "classic"
-const SETTINGS_KEY := "ui_theme" # прежний ключ theme_id относился к старым темам — их больше нет
+const DEFAULT_ID := "irbis"
+const SETTINGS_KEY := "ui_theme2" # новая фирменная тема по умолчанию для всех; прежний ключ theme_id относился к старым темам — их больше нет
 
 # Палитры. Цвета — строки #rrggbb[aa], разбираются при выборе темы.
 #   bg/bg2 — фон экрана (верх/низ градиента), surface — карточки, raised — кнопки и вложенные панели,
@@ -26,6 +26,13 @@ const SETTINGS_KEY := "ui_theme" # прежний ключ theme_id относи
 #   radius — скругление, edge — толщина «объёмного» края кнопок, border_w — рамки карточек,
 #   shadow — плотность тени.
 const PALETTES := [
+	{"id": "irbis", "name": "ИРБИС", "desc": "Фирменная: ночное небо, золото, объёмные кнопки",
+		"dark": true, "bg": "#1a2150", "bg2": "#0b0e26", "surface": "#1f2a5c", "raised": "#2d3b7c",
+		"border": "#3f4f9c", "text": "#eef1ff", "dim": "#a9b2df", "heading": "#ffe3a1",
+		"accent": "#f2b632", "on_accent": "#2b1700", "ink": "#ffcf5c", "accent2": "#62d0ff",
+		"good": "#6ee08a", "bad": "#ff6b7d", "gold": "#ffcf5c",
+		"light": "#f0d9b5", "darksq": "#b58863", "frame": "#2d3b7c", "last": "#ffcf5c66", "select": "#62d0ff66",
+		"texture": "wood", "radius": 14, "edge": 5, "border_w": 1, "shadow": 0.55},
 	{"id": "classic", "name": "Классика", "desc": "Спокойная тёмная, коричневая доска",
 		"dark": true, "bg": "#22201d", "bg2": "#171614", "surface": "#2c2a27", "raised": "#3b3835",
 		"border": "#46423d", "text": "#e9e6e1", "dim": "#a39e97", "heading": "#ffffff",
@@ -205,10 +212,12 @@ func draw_card(ci: CanvasItem, rect: Rect2) -> void:
 		_card_cache = _theme.get_stylebox("panel", "PanelContainer")
 	_card_cache.draw(ci.get_canvas_item(), rect)
 
-# Копия стиля карточки текущей темы — чтобы подкрасить рамку (например, у полученной награды).
+# Копия плоского стиля карточки текущей темы — чтобы подкрасить рамку (например, у полученной награды).
+var _flat_card: StyleBoxFlat = null
 func card_box() -> StyleBoxFlat:
-	var sb := _theme.get_stylebox("panel", "PanelContainer")
-	return (sb.duplicate() as StyleBoxFlat) if sb is StyleBoxFlat else _box(Color(0.1, 0.1, 0.12), 10)
+	if _flat_card != null:
+		return _flat_card.duplicate() as StyleBoxFlat
+	return _box(Color(0.1, 0.1, 0.12), 10)
 
 # --- доска -----------------------------------------------------------------------------------
 
@@ -317,27 +326,24 @@ func _button_set(t: Theme, type: String, bg: Color, fg: Color, font: Font) -> vo
 	var edge := int(_pal.edge)
 	var bw := int(_pal.border_w)
 	var contrast := current_id == "contrast"
-	var normal := _box(bg, r)
-	var hover := _box(_shade(bg, 0.08), r)
-	var pressed := _box(bg.darkened(0.12), r)
-	for sb in [normal, hover]:
-		sb.border_width_bottom = edge
-		sb.border_color = bg.darkened(0.32)
-	pressed.border_width_bottom = mini(edge, 1)
-	pressed.border_color = bg.darkened(0.32)
-	pressed.content_margin_top += maxf(edge - 1, 0)
-	if type != "PrimaryButton":
-		# «нажато» — это и состояние выбранной кнопки-переключателя (белые/чёрные, 5/10/15 с):
-		# его должно быть видно, поэтому подкрашиваем акцентом
-		pressed.bg_color = bg.lerp(_c.accent, 0.32)
-		pressed.set_border_width_all(2)
-		pressed.border_color = _c.accent
+	var normal: StyleBox = _box(bg, r)
+	var hover: StyleBox = _box(_shade(bg, 0.08), r)
+	var pressed: StyleBox = _box(bg.darkened(0.12), r)
 	if contrast:
 		for sb in [normal, hover, pressed]:
-			sb.set_border_width_all(bw)
-			sb.border_color = _c.border
-		hover.border_color = _c.accent
-	var disabled := _box(Color(bg, bg.a * 0.45), r)
+			(sb as StyleBoxFlat).set_border_width_all(bw)
+			(sb as StyleBoxFlat).border_color = _c.border
+		(hover as StyleBoxFlat).border_color = _c.accent
+		(pressed as StyleBoxFlat).bg_color = bg.lerp(_c.accent, 0.32)
+	var disabled: StyleBox = _box(Color(bg, bg.a * 0.45), r)
+	if not contrast:
+		# игровая кнопка: градиент, блик, тёмная нижняя кромка; при нажатии «проседает»
+		var e := maxi(edge, 4)
+		var sel_col: Color = bg if type == "PrimaryButton" else bg.lerp(_c.accent2, 0.5)
+		normal = GameSkin.button_box(bg, r, e, "normal", is_dark())
+		hover = GameSkin.button_box(bg, r, e, "hover", is_dark())
+		pressed = GameSkin.button_box(sel_col, r, e, "pressed", is_dark())
+		disabled = GameSkin.button_box(bg, r, e, "disabled", is_dark())
 	var focus := _box(Color(0, 0, 0, 0), r)
 	focus.draw_center = false
 	focus.set_border_width_all(2)
@@ -407,8 +413,13 @@ func _build_theme() -> Theme:
 		card.shadow_color = Color(0, 0, 0, float(_pal.shadow))
 		card.shadow_size = 14
 		card.shadow_offset = Vector2(0, 5)
-	t.set_stylebox("panel", "PanelContainer", card)
-	t.set_stylebox("panel", "Panel", card)
+	_flat_card = card
+	var game_card: StyleBox = card
+	if current_id != "contrast":
+		var edge_col: Color = _c.border.lerp(_c.gold, 0.28) if is_dark() else _c.border
+		game_card = GameSkin.card_box(_c.surface, edge_col, r + 4, maxf(bw, 1.0) + (0.5 if is_dark() else 0.0), float(_pal.shadow) + 0.1, is_dark())
+	t.set_stylebox("panel", "PanelContainer", game_card)
+	t.set_stylebox("panel", "Panel", game_card)
 	t.set_type_variation("InnerPanel", "PanelContainer")
 	var inner := _box(_c.raised if is_dark() else _c.bg, r, Vector4(14, 10, 14, 10))
 	if current_id == "contrast":
@@ -622,6 +633,8 @@ func _restyle(sb: StyleBoxFlat) -> void:
 # Каждый новый элемент переводится один раз, в конце кадра — после того как сцена или код
 # выставили свои цвета и тексты.
 func _on_node_added(node: Node) -> void:
+	if node.get_parent() == get_tree().root and (node is Control or node is Node2D) and DisplayServer.get_name() != "headless":
+		_fade_in.call_deferred()
 	if is_neon() or not (node is Control):
 		return
 	if node.has_meta("themed"):
@@ -687,7 +700,40 @@ func _style_label(l: Label) -> void:
 	elif size >= 17:
 		l.add_theme_font_override("font", _font_semi)
 
+# Новый экран проявляется из темноты за четверть секунды — переходы не «мигают».
+func _fade_in() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 120
+	var cr := ColorRect.new()
+	cr.color = _c.get("bg2", Color.BLACK) if not is_neon() else Color.BLACK
+	cr.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cr.set_meta("themed", true)
+	layer.add_child(cr)
+	get_tree().root.add_child(layer)
+	var tw := cr.create_tween()
+	tw.tween_property(cr, "color:a", 0.0, 0.25).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(layer.queue_free)
+
+# Кнопка чуть подрастает под курсором и «вдавливается» при нажатии — как в играх.
+func _add_hover(b: Button) -> void:
+	if b.has_meta("hover_fx"):
+		return
+	b.set_meta("hover_fx", true)
+	b.mouse_entered.connect(func(): _pop(b, 1.04))
+	b.mouse_exited.connect(func(): _pop(b, 1.0))
+	b.button_down.connect(func(): _pop(b, 0.96))
+	b.button_up.connect(func(): _pop(b, 1.04 if b.is_hovered() else 1.0))
+
+func _pop(b: Button, s: float) -> void:
+	if not is_instance_valid(b) or (b.disabled and s > 1.0):
+		return
+	b.pivot_offset = b.size / 2.0
+	var tw := b.create_tween()
+	tw.tween_property(b, "scale", Vector2(s, s), 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
 func _style_button(b: Button) -> void:
+	_add_hover(b)
 	# кнопки-строки в прокручиваемых списках (турниры, игроки) читаются лучше с текстом слева
 	var parent := b.get_parent()
 	if parent is VBoxContainer and parent.get_parent() is ScrollContainer and b.alignment == HORIZONTAL_ALIGNMENT_CENTER \
@@ -721,8 +767,14 @@ func _frame_box() -> StyleBoxFlat:
 	sb.shadow_offset = Vector2(0, 6)
 	return sb
 
-# Фон экрана: мягкий вертикальный градиент вместо плоской заливки.
+# Фон экрана: живой фон (небо, сияние, шахматный пол, искры). Старый градиент — запасной вариант.
 func _add_gradient(cr: ColorRect) -> void:
+	if current_id != "contrast":
+		cr.add_child(GameBackdrop.new())
+		return
+	_add_flat_gradient(cr)
+
+func _add_flat_gradient(cr: ColorRect) -> void:
 	var g := Gradient.new()
 	g.set_color(0, _c.bg.lightened(0.04) if is_dark() else _c.bg)
 	g.set_color(1, _c.bg2)

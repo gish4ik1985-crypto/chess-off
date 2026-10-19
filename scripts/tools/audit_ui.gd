@@ -75,8 +75,8 @@ func _scan_buttons(root: Node, n: Node, dead: Array) -> void:
 
 # Владелец просил, чтобы меню помещались на один экран без прокрутки.
 func _scan_spill(root: Node, n: Node, out: Array) -> void:
-	if n is ScrollContainer:
-		return
+	if n is ScrollContainer or n is GameBackdrop:
+		return # живой фон повторяет размер своей подложки, которая может выходить за экран
 	# декоративные фоны намеренно выходят за края экрана — их не считаем
 	if n is Control and n.visible and not (n is Label) \
 			and not (n is ColorRect) and not (n is TextureRect):

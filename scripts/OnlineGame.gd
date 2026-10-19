@@ -26,6 +26,7 @@ var _claim_at := 0
 func _ready() -> void:
 	gid = Global.online_game_id
 	var bg := ColorRect.new()
+	bg.name = "Background"
 	bg.color = Color(0.02, 0.02, 0.05)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)

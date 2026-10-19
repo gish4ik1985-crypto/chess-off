@@ -123,9 +123,9 @@ func _update_school_badges() -> void:
 		_ann_button.text = "📢 Объявления" + ("  · новых: %d" % n if n > 0 else "")
 	if _chat_button != null:
 		_chat_button.text = "💬 Чат школы" + ("  · новые сообщения" if ChatScreen.has_unread() else "")
-	if _school_btn != null:
+	if _lobby != null:
 		var total := (SchoolData.unread_announcements().size() if SchoolData.loaded else 0) + (Homework.pending().size() if Homework.loaded else 0)
-		_school_btn.text = "Школа  →" + ("   · %d нов." % total if total > 0 else "")
+		_lobby.set_school_badge(total)
 
 # Новое объявление показываем всплывающим окном сразу после входа (один раз, пока не прочитано).
 static var _ann_popup_shown_for := 0
@@ -164,7 +164,7 @@ func _show_announcement_popup() -> void:
 # а «Назад» в подменю всегда на одном и том же месте.
 func _equalize_panels() -> void:
 	await get_tree().process_frame
-	var panels := [main_panel, play_panel, train_panel, tourney_panel, school_panel]
+	var panels := [play_panel, train_panel, tourney_panel, school_panel] # лобби — своего размера
 	var need := Vector2.ZERO
 	for p in panels:
 		var m: Vector2 = (p as Control).get_combined_minimum_size()
@@ -254,6 +254,18 @@ var _chat_button: Button
 var _school_btn: Button
 var _ann_button: Button
 var school_panel: PanelContainer
+var _lobby: Node
+
+# Главная панель — игровое лобби: старые пункты прячутся, вместо них плитки и большая кнопка «Играть».
+func _build_lobby() -> void:
+	var main_vb: VBoxContainer = $ContentCenter/MainPanel/VBox
+	for ch in main_vb.get_children():
+		(ch as CanvasItem).visible = false
+	main_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	main_panel.set_meta("themed", true)
+	_lobby = preload("res://scripts/Lobby.gd").new()
+	main_vb.add_child(_lobby)
+	_lobby.build(self)
 var _notice_layer: Control
 
 func _build_new_layout() -> void:
@@ -293,6 +305,7 @@ func _build_new_layout() -> void:
 	main_vb.add_child(_school_btn)
 	main_vb.move_child(_school_btn, main_vb.get_child_count() - 2)
 	_build_school_panel()
+	_build_lobby()
 
 	# «Назад» — первой строкой подменю, а не в самом низу
 	for panel in [play_panel, train_panel, tourney_panel]:
@@ -358,6 +371,11 @@ func _build_new_layout() -> void:
 	gear.pressed.connect(func(): _open("res://scenes/Settings.tscn"))
 	hb.add_child(gear)
 	hb.move_child(gear, prof.get_index() + 2)
+	# карточка игрока и «ресурсы» вместо строки с текстом; «Мой профиль» — нажатием на карточку
+	user_label.visible = false
+	rating_label.visible = false
+	prof.visible = false
+	preload("res://scripts/Lobby.gd").build_hud(self, hb)
 	_update_bell()
 
 func _running_tournaments() -> int:
@@ -667,7 +685,9 @@ func _on_quit_pressed() -> void:
 	get_tree().quit()
 
 func _on_bg_draw() -> void:
-	# decorative faded chessboard pattern behind the menu
+	# прежний узор-шахматка — только для темы «Неон»; в остальных темах фон живой (GameBackdrop)
+	if not Themes.is_neon():
+		return
 	var sq = 64.0
 	# на весь экран 1280×800 (раньше рисовалось только в левом верхнем углу)
 	for r in range(13):
