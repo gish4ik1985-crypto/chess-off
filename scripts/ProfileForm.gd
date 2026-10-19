@@ -79,7 +79,7 @@ func _ready() -> void:
 	card_col.add_child(nick)
 	if Profile.shown_name() != Profile.display_name:
 		var nk := Label.new()
-		nk.text = "Ник: %s" % Profile.display_name
+		nk.text = "Вход в школу: %s" % Profile.display_name
 		nk.add_theme_font_size_override("font_size", 13)
 		card_col.add_child(nk)
 	var cls := Label.new()
@@ -97,7 +97,7 @@ func _ready() -> void:
 	acc.text = _account_text()
 	card_col.add_child(acc)
 	var nick_hint := Label.new()
-	nick_hint.text = "Ник не меняется: на нём держатся вход, рейтинг и перенос профиля."
+	nick_hint.text = "Имя для входа в школу не меняется: на нём держатся рейтинг и перенос профиля. Если нужно исправить — обратитесь к администратору."
 	nick_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nick_hint.add_theme_font_size_override("font_size", 11)
 	nick_hint.add_theme_color_override("font_color", Color(0.55, 0.6, 0.7))

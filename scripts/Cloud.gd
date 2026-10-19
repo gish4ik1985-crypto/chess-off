@@ -64,7 +64,17 @@ static func valid_email(e: String) -> bool:
 
 static func valid_nick(n: String) -> bool:
 	var t := n.strip_edges()
-	return t.length() >= 2 and t.length() <= 24 and not t.contains("/") and not t.contains("\\")
+	return t.length() >= 2 and t.length() <= 60 and not t.contains("/") and not t.contains("\\")
+
+# ФИО вместо ника: лишние пробелы убираем, в базе имя хранится как «Фамилия Имя Отчество».
+static func normalize_name(n: String) -> String:
+	var parts := n.strip_edges().split(" ", false)
+	return " ".join(parts)
+
+# Нужны минимум фамилия и имя (два слова).
+static func valid_full_name(n: String) -> bool:
+	var t := normalize_name(n)
+	return t.split(" ", false).size() >= 2 and valid_nick(t)
 
 # --- HTTP ----------------------------------------------------------------------------------------
 
@@ -158,7 +168,7 @@ func claim_nick(wanted_nick: String) -> Dictionary:
 		_save_session()
 		return {"ok": true, "error": ""}
 	if int(r.code) == 409:
-		return {"ok": false, "error": "Ник «%s» уже занят. Выберите другой." % wanted_nick.strip_edges()}
+		return {"ok": false, "error": "Игрок «%s» уже зарегистрирован. Если это вы — нажмите «Войти»; если тёзка — добавьте отчество." % wanted_nick.strip_edges()}
 	return {"ok": false, "error": _friendly(r)}
 
 func login(mail: String, password: String) -> Dictionary:

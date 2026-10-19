@@ -10,7 +10,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid'])
         && request.resource.data.uid == request.auth.uid
         && nick == nick.lower()
-        && nick.size() >= 2 && nick.size() <= 24;
+        && nick.size() >= 2 && nick.size() <= 60;
       allow update, delete: if false;
     }
 
@@ -24,7 +24,7 @@ service cloud.firestore {
         && (!('about' in request.resource.data) || request.resource.data.about.size() <= 80)
         && (!('city' in request.resource.data) || request.resource.data.city.size() <= 30)
         && request.resource.data.nick is string
-        && request.resource.data.nick.size() >= 2 && request.resource.data.nick.size() <= 24
+        && request.resource.data.nick.size() >= 2 && request.resource.data.nick.size() <= 60
         && request.resource.data.key is string
         && request.resource.data.key.size() == request.resource.data.nick.size()
         && get(/databases/$(database)/documents/nicks/$(request.resource.data.key)).data.uid == uid

@@ -111,7 +111,7 @@ func _ask_full_name_if_needed() -> void:
 	_fio_asked = true
 	var dlg := ConfirmationDialog.new()
 	dlg.title = "Как вас зовут?"
-	dlg.dialog_text = "Впишите ФИО — оно будет показано в игре вместо ника."
+	dlg.dialog_text = "Впишите ФИО — оно будет показано в игре."
 	dlg.ok_button_text = "Сохранить"
 	dlg.cancel_button_text = "Позже"
 	var edit := LineEdit.new()
