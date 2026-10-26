@@ -203,13 +203,16 @@ const PORTRAIT_PLAY_WIDTH := 784 # ширина раскладки доски в
 var _rotate_layer: CanvasLayer
 var _rotate_label: Label
 
+# Размер экрана в CSS-пикселях. Берём размер самого холста игры (он всегда актуален), а не
+# window.innerWidth/innerHeight: при повороте планшета браузер обновляет их с опозданием, и игра
+# раскладывалась по старой ориентации, пока размер не менялся ещё раз (например, от нижних кнопок).
 func _css_screen_size() -> Vector2:
+	var px := Vector2(DisplayServer.window_get_size())
 	if OS.has_feature("web"):
-		var w = JavaScriptBridge.eval("window.innerWidth", true)
-		var h = JavaScriptBridge.eval("window.innerHeight", true)
-		if w != null and h != null and float(w) > 0.0 and float(h) > 0.0:
-			return Vector2(float(w), float(h))
-	return Vector2(DisplayServer.window_get_size())
+		var dpr = JavaScriptBridge.eval("window.devicePixelRatio || 1", true)
+		if dpr != null and float(dpr) > 0.0:
+			return px / float(dpr)
+	return px
 
 # Сцены с жёсткой раскладкой 1280×800 (доска, задачи, карта): их поле не растягивается, а
 # целиком вписывается в экран, как раньше. Остальные экраны построены на контейнерах и
@@ -359,6 +362,10 @@ func _apply_small_screen_scaling(force := true) -> void:
 	var css := _css_screen_size()
 	if not force and css.is_equal_approx(_last_css):
 		return
+	if not force:
+		# экран поменялся (поворот): браузер досылает окончательный размер не сразу — перепроверяем
+		get_tree().create_timer(0.4).timeout.connect(func(): _apply_small_screen_scaling(true))
+		get_tree().create_timer(1.2).timeout.connect(func(): _apply_small_screen_scaling(true))
 	_last_css = css
 	small_screen = css.y < 700.0
 	var win := get_window()
