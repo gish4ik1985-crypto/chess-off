@@ -366,17 +366,27 @@ func _apply_small_screen_scaling(force := true) -> void:
 	# на сенсорных экранах (планшет, телефон) интерфейс крупнее: пальцем попадать сложнее, чем мышью
 	var ui_scale := TOUCH_UI_SCALE if DisplayServer.is_touchscreen_available() else TARGET_UI_SCALE
 	var sc := _current_play_scene()
+	var cur := _current_scene_node()
+	# экраны со своей вертикальной раскладкой (карта): apply_portrait(on, размер холста)
+	var own_portrait := cur != null and cur.has_method("apply_portrait")
 	if portrait and sc != null:
 		# доска и задачи в вертикали: доска сверху, панель с кнопками под ней (раньше ужималось 1280×800)
 		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 		var view_h := roundi(PORTRAIT_PLAY_WIDTH * css.y / css.x)
 		win.content_scale_size = Vector2i(PORTRAIT_PLAY_WIDTH, view_h)
 		_layout_play_scene(sc, true, view_h)
+	elif portrait and own_portrait:
+		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+		var view := Vector2(PORTRAIT_MIN_LAYOUT_WIDTH, roundi(PORTRAIT_MIN_LAYOUT_WIDTH * css.y / css.x))
+		win.content_scale_size = Vector2i(view)
+		cur.apply_portrait(true, view)
 	elif _current_scene_is_fixed():
 		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 		win.content_scale_size = Vector2i(1280, 800)
 		if sc != null:
 			_layout_play_scene(sc, false, 800)
+		if own_portrait:
+			cur.apply_portrait(false, Vector2(1280, 800))
 	else:
 		# высота опорного холста: чем ниже экран, тем меньше, но не ниже MIN_LAYOUT_HEIGHT
 		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
@@ -388,17 +398,22 @@ func _apply_small_screen_scaling(force := true) -> void:
 			var layout_h := clampi(roundi(css.y / ui_scale), MIN_LAYOUT_HEIGHT, FULL_LAYOUT_HEIGHT)
 			win.content_scale_size = Vector2i(roundi(layout_h * 1.6), layout_h)
 		_fit_to_content()
-	if sc != null or _current_scene_is_fixed():
+	if sc != null or own_portrait or _current_scene_is_fixed():
 		_fit_token += 1 # у доски и карты своя раскладка — подгонка от прошлого экрана не нужна
 		_fit_running = false
 	_update_rotate_hint(css)
 
 # Экраны партии и задач, у которых есть вертикальная раскладка (доска + боковая панель).
-func _current_play_scene() -> Node:
-	var root := get_tree().root
+func _current_scene_node() -> Node:
 	var sc := get_tree().current_scene
 	if sc == null:
+		# сцена ещё не стала текущей — смотрим на последнего ребёнка корня
+		var root := get_tree().root
 		sc = root.get_child(root.get_child_count() - 1)
+	return sc
+
+func _current_play_scene() -> Node:
+	var sc := _current_scene_node()
 	if sc != null and sc.name in ["Board", "Puzzle"] and sc.get_node_or_null("UI/SidePanel") != null:
 		return sc
 	return null

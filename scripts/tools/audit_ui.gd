@@ -40,18 +40,20 @@ func _host() -> Node:
 # Как в игре: доска/задачи в вертикали — своя раскладка; доска, карта и т.п. в остальных случаях — 1280x800;
 # прочие экраны — холст W x H, увеличенный подгонкой под содержимое (Global.content_fit_factor).
 func _add(node: Node) -> void:
-	var portrait_play := H > W and node.name in ["Board", "Puzzle"]
+	var portrait_play := H > W and (node.name in ["Board", "Puzzle"] or node.has_method("apply_portrait"))
 	if _vp == null or (node.name in Global.FIXED_LAYOUT_SCENES and not portrait_play):
 		add_child(node)
 		return
 	_vp.size = Vector2i(int(W), int(H))
 	_vp.add_child(node)
-	if portrait_play:
+	if portrait_play and node.has_method("apply_portrait"):
+		node.apply_portrait(true, Vector2(W, H))
+	elif portrait_play:
 		Global._layout_play_scene(node, true, int(H))
 
 # Подгонка холста под содержимое — то же, что делает Global._fit_to_content в игре.
 func _fit(node: Node) -> void:
-	if _vp == null or node.get_parent() != _vp or node.name in ["Board", "Puzzle"]:
+	if _vp == null or node.get_parent() != _vp or node.name in ["Board", "Puzzle"] or node.has_method("apply_portrait"):
 		return
 	for i in 6:
 		await get_tree().process_frame

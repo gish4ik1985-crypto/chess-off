@@ -93,7 +93,7 @@ func _ready() -> void:
 			"accent": d.accent,
 			"theme": d.get("theme", ""),
 		})
-	map_draw.position.x = (get_viewport_rect().size.x - 1020.0) / 2.0
+	map_draw.position.x = (1280.0 - 1020.0) / 2.0 # экран всегда 1280 шириной; размер окна в _ready ещё от прошлого экрана
 	map_draw.draw.connect(_on_draw)
 	detail_panel.visible = false
 	_update_status()

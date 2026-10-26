@@ -22,9 +22,10 @@ var selected_id: String = ""
 var current_act := 1 # which of the three 18-node acts is shown
 
 func _ready() -> void:
-	# Node positions in MapData were laid out for a 1100px-wide design;
-	# center the drawing when the viewport is wider.
-	map_draw.position.x = (get_viewport_rect().size.x - 1100.0) / 2.0
+	# Позиции узлов в MapData рассчитаны на полосу шириной 1100 внутри холста 1280×800 (карта — экран
+	# с постоянной раскладкой). Ширину берём константой: в момент _ready масштаб окна ещё от прошлого
+	# экрана, и по нему карта съезжала влево. Вертикаль включает Global через apply_portrait().
+	apply_portrait(false, Vector2(1280, 800))
 	map_draw.draw.connect(_on_map_draw)
 	detail_panel.visible = false
 	current_act = _frontier_character().get("act", 1)
@@ -33,6 +34,31 @@ func _ready() -> void:
 	_update_act_label()
 	_update_progress_label()
 	_play_frontier_theme()
+
+var portrait := false
+
+# Вертикальный экран: путь разворачивается сверху вниз (столбцы карты становятся строками),
+# верхняя полоса ужимается. Горизонталь — исходная раскладка.
+func apply_portrait(on: bool, view: Vector2) -> void:
+	portrait = on
+	map_draw.position = Vector2.ZERO if on else Vector2((1280.0 - 1100.0) / 2.0, 0.0)
+	var bg := get_node_or_null("Background") as ColorRect
+	if bg != null:
+		bg.size = view
+	$UI/TopBar/HBox/TitleLabel.visible = not on
+	for l in [$UI/TopBar/HBox/ProgressLabel, $UI/TopBar/HBox/NextThemeLabel, $UI/TopBar/HBox/ActLabel]:
+		(l as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if on else TextServer.AUTOWRAP_OFF
+		(l as Label).custom_minimum_size.x = 130.0 if on else (230.0 if l.name == "ActLabel" else 0.0)
+	$UI/TopBar.offset_left = 16.0 if on else 24.0
+	$UI/TopBar.offset_right = -16.0 if on else -24.0
+	map_draw.queue_redraw()
+
+# Где рисовать узел: в вертикали координаты меняются местами (x — строка, y — столбец).
+func _p(c: Dictionary) -> Vector2:
+	var pos: Vector2 = c["pos"]
+	if not portrait:
+		return pos
+	return Vector2(pos.y + 5.0, (pos.x - 150.0) * 0.95 + 210.0)
 
 func _act_nodes() -> Array:
 	var out := []
@@ -91,7 +117,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var local = map_draw.get_global_transform().affine_inverse() * event.position
 		for c in _act_nodes():
-			if local.distance_to(c.pos) <= NODE_RADIUS:
+			if local.distance_to(_p(c)) <= NODE_RADIUS:
 				_on_node_clicked(c)
 				return
 		_close_detail()
@@ -209,13 +235,13 @@ func _on_map_draw() -> void:
 	var nodes = _act_nodes()
 	# region backdrops first (behind everything)
 	for c in nodes:
-		_draw_soft_backdrop(c.pos, c.palette)
+		_draw_soft_backdrop(_p(c), c.palette)
 
 	# connecting path — a soft glow trail underneath a solid line, with small
 	# waypoint dots so the route reads as a path rather than a ruler line
 	for i in range(nodes.size() - 1):
-		var a = nodes[i].pos
-		var b = nodes[i + 1].pos
+		var a = _p(nodes[i])
+		var b = _p(nodes[i + 1])
 		var unlocked = Profile.is_character_unlocked(nodes[i + 1].id)
 		var col = Themes.ink(Color(0.15, 0.9, 1.0, 0.8)) if unlocked else Themes.ink(Color(0.4, 0.4, 0.45, 0.35))
 		_draw_path_segment(a, b, col, unlocked)
@@ -229,26 +255,26 @@ func _on_map_draw() -> void:
 		var fill_col = Themes.ink(Color(0.05, 0.05, 0.08, 0.95))
 
 		# soft drop shadow for depth
-		map_draw.draw_circle(c.pos + Vector2(0, 5), NODE_RADIUS * 1.02, Themes.ink(Color(0, 0, 0, 0.25)))
+		map_draw.draw_circle(_p(c) + Vector2(0, 5), NODE_RADIUS * 1.02, Themes.ink(Color(0, 0, 0, 0.25)))
 
 		if unlocked:
 			for i in range(3, 0, -1):
 				var t = float(i) / 3.0
 				var glow = accent
 				glow.a = 0.10 * (1.0 - t) + 0.03
-				map_draw.draw_circle(c.pos, NODE_RADIUS * (1.0 + 0.5 * t), glow)
+				map_draw.draw_circle(_p(c), NODE_RADIUS * (1.0 + 0.5 * t), glow)
 		else:
-			map_draw.draw_circle(c.pos, NODE_RADIUS * 1.15, Themes.ink(Color(0.2, 0.2, 0.24, 0.12)))
+			map_draw.draw_circle(_p(c), NODE_RADIUS * 1.15, Themes.ink(Color(0.2, 0.2, 0.24, 0.12)))
 
-		map_draw.draw_circle(c.pos, NODE_RADIUS, fill_col)
-		map_draw.draw_arc(c.pos, NODE_RADIUS, 0, TAU, 40, ring_col, 3.5, true)
-		map_draw.draw_arc(c.pos, NODE_RADIUS - 5.0, 0, TAU, 40, Themes.ink(Color(ring_col.r, ring_col.g, ring_col.b, 0.3)), 1.0, true)
+		map_draw.draw_circle(_p(c), NODE_RADIUS, fill_col)
+		map_draw.draw_arc(_p(c), NODE_RADIUS, 0, TAU, 40, ring_col, 3.5, true)
+		map_draw.draw_arc(_p(c), NODE_RADIUS - 5.0, 0, TAU, 40, Themes.ink(Color(ring_col.r, ring_col.g, ring_col.b, 0.3)), 1.0, true)
 
 		if unlocked:
 			var piece_color = "w"
-			PieceTextures.draw(map_draw, c.piece, piece_color, c.pos, NODE_RADIUS * 1.3)
+			PieceTextures.draw(map_draw, c.piece, piece_color, _p(c), NODE_RADIUS * 1.3)
 		else:
-			_draw_lock(c.pos, Themes.ink(Color(0.55, 0.55, 0.6)))
+			_draw_lock(_p(c), Themes.ink(Color(0.55, 0.55, 0.6)))
 
 		# a task node's puzzle quota can fill up before the player actually
 		# reaches it on the path (theme practice happens elsewhere too) —
@@ -256,14 +282,14 @@ func _on_map_draw() -> void:
 		# node would show a checkmark under its own padlock
 		if defeated and unlocked:
 			var check_col = Themes.ink(Color(0.4, 0.95, 0.5))
-			var p1 = c.pos + Vector2(-NODE_RADIUS * 0.55, NODE_RADIUS * 0.75)
-			var p2 = c.pos + Vector2(-NODE_RADIUS * 0.15, NODE_RADIUS * 1.05)
-			var p3 = c.pos + Vector2(NODE_RADIUS * 0.6, NODE_RADIUS * 0.35)
-			map_draw.draw_circle(c.pos + Vector2(0, NODE_RADIUS * 0.75), 14.0, Themes.ink(Color(0.02, 0.1, 0.04, 0.9)))
+			var p1 = _p(c) + Vector2(-NODE_RADIUS * 0.55, NODE_RADIUS * 0.75)
+			var p2 = _p(c) + Vector2(-NODE_RADIUS * 0.15, NODE_RADIUS * 1.05)
+			var p3 = _p(c) + Vector2(NODE_RADIUS * 0.6, NODE_RADIUS * 0.35)
+			map_draw.draw_circle(_p(c) + Vector2(0, NODE_RADIUS * 0.75), 14.0, Themes.ink(Color(0.02, 0.1, 0.04, 0.9)))
 			map_draw.draw_polyline(PackedVector2Array([p1, p2, p3]), check_col, 3.0, true)
 
 		var font = ThemeDB.fallback_font
-		var name_pos = c.pos + Vector2(-70, NODE_RADIUS + 20)
+		var name_pos = _p(c) + Vector2(-70, NODE_RADIUS + 20)
 		var label_col = Themes.ink(Color(0.9, 0.95, 1.0)) if unlocked else Themes.ink(Color(0.5, 0.5, 0.55))
 		var label_text = c.name
 
@@ -279,7 +305,7 @@ func _on_map_draw() -> void:
 		map_draw.draw_multiline_string(font, name_pos, label_text, HORIZONTAL_ALIGNMENT_CENTER, 140, 11, 3, label_col)
 
 		if c.get("is_boss", false) and unlocked and not defeated:
-			var crown_pos = c.pos + Vector2(0, -NODE_RADIUS - 16)
+			var crown_pos = _p(c) + Vector2(0, -NODE_RADIUS - 16)
 			map_draw.draw_string(font, crown_pos, "★ БОСС ★", HORIZONTAL_ALIGNMENT_CENTER, 0, 12, Themes.ink(Color(1, 0.8, 0.2)))
 
 func _draw_path_segment(a: Vector2, b: Vector2, col: Color, unlocked: bool) -> void:
