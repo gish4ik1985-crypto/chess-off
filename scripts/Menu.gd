@@ -237,9 +237,11 @@ func _apply_compact_layout() -> void:
 		return
 	achievements_label.visible = false
 	var bar: Control = $ProfileBar
+	# высота полосы — по её содержимому (карточка игрока выше прежней строки текста)
+	var h := bar.get_combined_minimum_size().y
 	bar.offset_top = 8
-	bar.offset_bottom = 60
-	$ContentCenter.offset_top = 68
+	bar.offset_bottom = 8 + h
+	$ContentCenter.offset_top = 16 + h
 	for panel in [main_panel, play_panel, train_panel, tourney_panel, school_panel]:
 		var vb := panel.get_child(0) as VBoxContainer
 		if vb != null:

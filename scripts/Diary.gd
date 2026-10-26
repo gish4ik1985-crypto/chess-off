@@ -165,6 +165,9 @@ func _make_page() -> Control:
 	var p = Control.new()
 	p.set_anchors_preset(Control.PRESET_FULL_RECT)
 	p.offset_top = 96.0
+	# «Обзор» и «Навыки» рисуются вручную шириной 1200 (+ поля): сообщаем это раскладке,
+	# чтобы на узком экране масштаб подстроился и правый край не обрезался
+	p.custom_minimum_size.x = 1248.0
 	add_child(p)
 	return p
 

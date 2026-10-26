@@ -14,8 +14,8 @@ var _school_badge: Label
 func build(menu: Node) -> void:
 	_menu = menu
 	add_theme_constant_override("separation", 18)
-	var vw: float = menu.get_viewport_rect().size.x
-	custom_minimum_size = Vector2(minf(W, vw - 40.0), 0)
+	_fit_width()
+	menu.get_viewport().size_changed.connect(_fit_width) # поворот экрана при открытом меню
 	_header()
 	var row1 := HFlowContainer.new()
 	row1.alignment = FlowContainer.ALIGNMENT_CENTER
@@ -42,6 +42,13 @@ func build(menu: Node) -> void:
 		quit.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		quit.pressed.connect(func(): _menu._on_quit_pressed())
 		add_child(quit)
+
+# В горизонтали плитки всегда в один ряд (иначе лобби вдвое выше экрана); в вертикали — по ширине.
+func _fit_width() -> void:
+	if not is_inside_tree():
+		return
+	var vr: Vector2 = get_viewport_rect().size
+	custom_minimum_size = Vector2(W if vr.x >= vr.y else minf(W, vr.x - 40.0), 0)
 
 func set_school_badge(n: int) -> void:
 	if _school_badge == null:

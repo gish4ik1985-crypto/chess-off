@@ -169,6 +169,8 @@ func add_version_label(parent: Control) -> void:
 	if app_version == "":
 		return
 	var l := Label.new()
+	l.name = "VersionLabel"
+	l.set_meta("fit_ignore", true)
 	l.text = "Версия " + app_version
 	l.add_theme_font_size_override("font_size", 13)
 	l.add_theme_color_override("font_color", Color(0.75, 0.78, 0.9, 0.55))
@@ -212,20 +214,128 @@ func _css_screen_size() -> Vector2:
 # Сцены с жёсткой раскладкой 1280×800 (доска, задачи, карта): их поле не растягивается, а
 # целиком вписывается в экран, как раньше. Остальные экраны построены на контейнерах и
 # перестраиваются под низкий экран.
-const FIXED_LAYOUT_SCENES := ["Board", "Puzzle", "Map", "BotMatch", "RoadHome"]
+const FIXED_LAYOUT_SCENES := ["Board", "Puzzle", "Map", "BotMatch", "RoadHome", "HistoricGames"]
 var small_screen := false # низкий экран (телефон в альбомной ориентации): стоит укрупнить шрифты
+
+var _last_css := Vector2.ZERO
+var _fit_token := 0
 
 func _setup_small_screen_scaling() -> void:
 	var win := get_window()
-	win.size_changed.connect(_apply_small_screen_scaling)
+	# size_changed приходит и от смены content_scale_size (в том числе нашей же подгонки) —
+	# пересчитываем только если поменялся сам экран (поворот, окно браузера)
+	win.size_changed.connect(func(): _apply_small_screen_scaling(false))
 	get_tree().node_added.connect(_on_node_added)
-	_apply_small_screen_scaling()
+	_apply_small_screen_scaling(true)
+	if DisplayServer.get_name() != "headless":
+		var t := Timer.new()
+		t.wait_time = 0.5
+		t.autostart = true
+		t.timeout.connect(_fit_watch)
+		add_child(t)
 
 # Новая сцена — узел прямо под корнем: выбираем для неё режим масштабирования.
 func _on_node_added(node: Node) -> void:
 	if node.get_parent() == get_tree().root and node != self and node.scene_file_path != "":
-		_apply_small_screen_scaling.call_deferred()
+		_apply_small_screen_scaling.call_deferred(true)
 		_relabel_back_buttons.call_deferred(node)
+
+# --- подгонка под содержимое ---------------------------------------------------
+# Экраны построены под 1280×800. На узком (вертикаль) или низком экране часть из них шире/выше,
+# чем помещается: полосы с кнопками вылезают за край, меню заезжает под верхнюю полосу. Поэтому
+# после раскладки меряем, насколько содержимое выходит за экран, и пропорционально увеличиваем
+# опорный холст (= чуть уменьшаем масштаб) именно этого экрана, пока всё не поместится.
+
+# Во сколько раз увеличить холст, чтобы видимое содержимое sc поместилось (1.0 — всё помещается).
+# Две причины тесноты: (1) что-то вылезает за край экрана; (2) узел, привязанный якорями к родителю,
+# не умещается в отведённую ему область и вырастает поверх соседей (меню под верхней полосой).
+static func content_fit_factor(sc: Node, view: Vector2) -> float:
+	var b := [INF, INF, -INF, -INF, 1.0] # minx, miny, maxx, maxy, k по якорям
+	_fit_bounds(sc, b)
+	var k: float = b[4]
+	if b[0] != INF:
+		k = maxf(k, (view.x + maxf(0.0, b[2] - view.x) + maxf(0.0, -b[0])) / view.x)
+		k = maxf(k, (view.y + maxf(0.0, b[3] - view.y) + maxf(0.0, -b[1])) / view.y)
+	return k
+
+# k, при котором привязанный якорями узел c получает не меньше своего минимального размера.
+static func _anchor_need(c: Control, b: Array) -> void:
+	var p := c.get_parent()
+	# только узлы верхнего уровня (дети корня сцены или CanvasLayer): их область растёт вместе с холстом;
+	# у вложенных (подпись внутри кнопки-плитки) область от холста не зависит
+	if not (p is CanvasLayer or (p is Control and p.get_parent() is Viewport)):
+		return
+	var psize: Vector2 = (p as Control).size if p is Control else c.get_viewport().get_visible_rect().size
+	var minv := c.get_combined_minimum_size()
+	var span := Vector2(c.anchor_right - c.anchor_left, c.anchor_bottom - c.anchor_top)
+	var offs := Vector2(c.offset_right - c.offset_left, c.offset_bottom - c.offset_top)
+	for ax in 2:
+		if span[ax] > 0.01 and psize[ax] > 1.0 and minv[ax] > span[ax] * psize[ax] + offs[ax] + 1.0:
+			b[4] = maxf(b[4], (minv[ax] - offs[ax]) / (span[ax] * psize[ax]))
+
+static func _fit_bounds(n: Node, b: Array) -> void:
+	if n is GameBackdrop or n.has_meta("fit_ignore"):
+		return
+	if n is CanvasItem and not (n as CanvasItem).visible:
+		return
+	if n is Control:
+		_anchor_need(n as Control, b)
+	if n is Control and not (n is Label or n is ColorRect or n is TextureRect):
+		var c := n as Control
+		if c.size.x > 4.0 and c.size.y > 4.0:
+			var r := Rect2(c.global_position, c.size)
+			b[0] = minf(b[0], r.position.x)
+			b[1] = minf(b[1], r.position.y)
+			b[2] = maxf(b[2], r.end.x)
+			b[3] = maxf(b[3], r.end.y)
+		if c is ScrollContainer:
+			# вниз прокрутка — по замыслу; а вот вбок содержимое должно помещаться (иначе обрезано справа)
+			for ch in c.get_children():
+				if ch is Control and (ch as Control).visible and not (ch is ScrollBar):
+					var extra := (ch as Control).get_combined_minimum_size().x - c.size.x
+					if extra > 1.0 and c.size.x > 4.0:
+						b[2] = maxf(b[2], c.global_position.x + c.size.x + extra)
+			return
+	for ch in n.get_children():
+		_fit_bounds(ch, b)
+
+# Внутри экрана содержимое тоже меняется (открыли другую панель меню, вкладку, список) —
+# раз в полсекунды проверяем, не вылезло ли что-то, и при необходимости уменьшаем масштаб.
+func _fit_watch() -> void:
+	if _fit_running or _current_scene_is_fixed() or _current_play_scene() != null:
+		return
+	var sc := get_tree().current_scene
+	if sc == null:
+		return
+	var win := get_window()
+	if win.content_scale_aspect != Window.CONTENT_SCALE_ASPECT_EXPAND:
+		return
+	var view := win.get_visible_rect().size
+	var k := content_fit_factor(sc, view)
+	if k > 1.004:
+		win.content_scale_size = Vector2i(ceili(win.content_scale_size.x * k), ceili(win.content_scale_size.y * k))
+
+var _fit_running := false
+
+func _fit_to_content() -> void:
+	_fit_running = true
+	_fit_token += 1
+	var token := _fit_token
+	var win := get_window()
+	for i in 6:
+		await get_tree().process_frame
+		await get_tree().process_frame
+		if token != _fit_token:
+			return # пока ждали, экран сменился — подгонкой займётся новый вызов (флаг сбросит он)
+		var sc := get_tree().current_scene
+		if sc == null:
+			break
+		var view := win.get_visible_rect().size
+		var k := content_fit_factor(sc, view)
+		if k <= 1.004:
+			break
+		win.content_scale_size = Vector2i(ceili(win.content_scale_size.x * k), ceili(win.content_scale_size.y * k))
+	_fit_running = false
 
 # Кнопка «В меню» в разделе, открытом из подменю, на деле возвращает в это подменю — называем честно.
 func _relabel_back_buttons(scene_root: Node) -> void:
@@ -243,10 +353,13 @@ func _current_scene_is_fixed() -> bool:
 		sc = root.get_child(root.get_child_count() - 1)
 	return sc != null and sc.name in FIXED_LAYOUT_SCENES
 
-func _apply_small_screen_scaling() -> void:
+func _apply_small_screen_scaling(force := true) -> void:
 	if DisplayServer.get_name() == "headless":
 		return # проверки без окна меряют вёрстку на штатных 1280×800
 	var css := _css_screen_size()
+	if not force and css.is_equal_approx(_last_css):
+		return
+	_last_css = css
 	small_screen = css.y < 700.0
 	var win := get_window()
 	var portrait := css.y > css.x
@@ -274,6 +387,10 @@ func _apply_small_screen_scaling() -> void:
 		else:
 			var layout_h := clampi(roundi(css.y / ui_scale), MIN_LAYOUT_HEIGHT, FULL_LAYOUT_HEIGHT)
 			win.content_scale_size = Vector2i(roundi(layout_h * 1.6), layout_h)
+		_fit_to_content()
+	if sc != null or _current_scene_is_fixed():
+		_fit_token += 1 # у доски и карты своя раскладка — подгонка от прошлого экрана не нужна
+		_fit_running = false
 	_update_rotate_hint(css)
 
 # Экраны партии и задач, у которых есть вертикальная раскладка (доска + боковая панель).

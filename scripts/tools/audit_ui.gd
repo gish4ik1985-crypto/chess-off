@@ -21,10 +21,46 @@ const SCENES := [
 	"res://scenes/HistoricGames.tscn", "res://scenes/Login.tscn", "res://scenes/Map.tscn",
 	"res://scenes/Puzzle.tscn", "res://scenes/PuzzleHub.tscn", "res://scenes/School.tscn",
 	"res://scenes/Settings.tscn", "res://scenes/TournamentPrep.tscn", "res://scenes/Tournaments.tscn",
-	"res://scenes/TrophyRoom.tscn", "res://scenes/BotsHub.tscn", "res://scenes/Admin.tscn", "res://scenes/Homework.tscn", "res://scenes/Notebook.tscn", "res://scenes/ClubTourneys.tscn", "res://scenes/Chat.tscn", "res://scenes/Schedule.tscn", "res://scenes/Announcements.tscn", "res://scenes/Planner.tscn", "res://scenes/OnlineGame.tscn",
+	"res://scenes/TrophyRoom.tscn", "res://scenes/BotsHub.tscn", "res://scenes/Admin.tscn", "res://scenes/Homework.tscn", "res://scenes/Notebook.tscn", "res://scenes/ClubTourneys.tscn", "res://scenes/Chat.tscn", "res://scenes/Schedule.tscn", "res://scenes/Announcements.tscn", "res://scenes/Planner.tscn", "res://scenes/OnlineGame.tscn", "res://scenes/Players.tscn", "res://scenes/Appearance.tscn",
 ]
 
 var problems := 0
+
+# Размер экрана проверки (единицы раскладки). По умолчанию 1280x800; другие размеры — те, что выбирает
+# Global под телефоны и планшеты:  ... AuditUI.tscn -- size=800x1067
+# Сцены добавляются в SubViewport этого размера, экраны «Партия» и «Задачи» в вертикали получают
+# вертикальную раскладку (Global._layout_play_scene).
+var W := 1280.0
+var H := 800.0
+var _vp: SubViewport
+
+func _host() -> Node:
+	return _vp if _vp != null else self
+
+# Как в игре: доска/задачи в вертикали — своя раскладка; доска, карта и т.п. в остальных случаях — 1280x800;
+# прочие экраны — холст W x H, увеличенный подгонкой под содержимое (Global.content_fit_factor).
+func _add(node: Node) -> void:
+	var portrait_play := H > W and node.name in ["Board", "Puzzle"]
+	if _vp == null or (node.name in Global.FIXED_LAYOUT_SCENES and not portrait_play):
+		add_child(node)
+		return
+	_vp.size = Vector2i(int(W), int(H))
+	_vp.add_child(node)
+	if portrait_play:
+		Global._layout_play_scene(node, true, int(H))
+
+# Подгонка холста под содержимое — то же, что делает Global._fit_to_content в игре.
+func _fit(node: Node) -> void:
+	if _vp == null or node.get_parent() != _vp or node.name in ["Board", "Puzzle"]:
+		return
+	for i in 6:
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var view := Vector2(_vp.size)
+		var k := Global.content_fit_factor(node, view)
+		if k <= 1.004:
+			return
+		_vp.size = Vector2i(ceili(view.x * k), ceili(view.y * k))
 
 # Модальные окна ПО ЗАМЫСЛУ лежат поверх содержимого — их перекрытие с доской
 # и панелями не является ошибкой вёрстки. Всё остальное перекрытие — ошибка.
@@ -33,6 +69,7 @@ const MODAL_OVERLAYS := [
 	"UI/SpeechPanel", "UI/DetailPanel",
 	"BackButton", # плавающая «← Назад» в углу экрана (Настройки, Школа) — по замыслу поверх содержимого
 	"Backdrop", # фирменный фон экрана входа лежит под карточкой
+	"VersionLabel", # полупрозрачный номер версии в углу — по замыслу поверх всего
 ]
 
 func _is_modal(path: String) -> bool:
@@ -42,6 +79,17 @@ func _is_modal(path: String) -> bool:
 	return false
 
 func _ready() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("size="):
+			var wh := a.substr(5).split("x")
+			W = float(wh[0])
+			H = float(wh[1])
+	if W != 1280.0 or H != 800.0:
+		_vp = SubViewport.new()
+		_vp.size = Vector2i(int(W), int(H))
+		_vp.disable_3d = true
+		add_child(_vp)
+	print("=== экран проверки: %dx%d ===" % [int(W), int(H)])
 	for p in SCENES:
 		await _audit_scene(p)
 	await _audit_historic_states()
@@ -81,7 +129,8 @@ func _scan_spill(root: Node, n: Node, out: Array) -> void:
 	if n is Control and n.visible and not (n is Label) \
 			and not (n is ColorRect) and not (n is TextureRect):
 		var r := Rect2(n.global_position, n.size)
-		if (r.position.x + r.size.x - 1280.0 > 2.0 or r.position.y + r.size.y - 800.0 > 2.0 \
+		var vs: Vector2 = n.get_viewport().get_visible_rect().size
+		if (r.position.x + r.size.x - vs.x > 2.0 or r.position.y + r.size.y - vs.y > 2.0 \
 				or r.position.x < -2.0 or r.position.y < -2.0) and r.size.x > 4 and r.size.y > 4:
 			out.append([str(root.get_path_to(n)), "rect=%s" % str(r)])
 			return # достаточно самого верхнего виновника
@@ -187,6 +236,8 @@ func _scan_glyphs(root: Node, n: Node, out: Array) -> void:
 		_scan_glyphs(root, ch, out)
 
 func _report(label: String, node: Node) -> void:
+	if _vp != null and node.get_parent() == _vp:
+		label += "  [холст %dx%d]" % [_vp.size.x, _vp.size.y]
 	var over := []
 	_scan_container_overflow(node, node, over)
 	var dead := []
@@ -221,9 +272,10 @@ func _audit_scene(path: String) -> void:
 		problems += 1
 		return
 	var node = ps.instantiate()
-	add_child(node)
+	_add(node)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	await _fit(node)
 	_report(path, node)
 	node.queue_free()
 	await get_tree().process_frame
@@ -232,12 +284,13 @@ func _audit_scene(path: String) -> void:
 # (названия партий разной длины) -> загруженная партия, со списком и без.
 func _audit_historic_states() -> void:
 	var node = load("res://scenes/HistoricGames.tscn").instantiate()
-	add_child(node)
+	_add(node)
 	await get_tree().process_frame
 	for p in node.players:
 		node._show_games(p)
 		await get_tree().process_frame
 		await get_tree().process_frame
+		await _fit(node)
 		_report("HistoricGames · список партий: %s" % p.name, node)
 	var first = node.players[0]
 	node._show_games(first)
@@ -245,11 +298,13 @@ func _audit_historic_states() -> void:
 	node._load_game(first.games[0])
 	await get_tree().process_frame
 	await get_tree().process_frame
+	await _fit(node)
 	_report("HistoricGames · партия открыта, список развёрнут", node)
 	_check_board_vs_panels(node)
 	node._on_list_toggle_pressed()
 	await get_tree().process_frame
 	await get_tree().process_frame
+	await _fit(node)
 	_report("HistoricGames · партия открыта, список свёрнут", node)
 	_check_board_vs_panels(node)
 	node.queue_free()
@@ -295,9 +350,10 @@ func _audit_bot_match() -> void:
 	Profile.record_bot_game("bot_001", "bot_002", "Соня", "Гоша", coords, 1.0, "Проверка")
 	Global.bot_match = {"mode": "replay", "bot": "bot_001", "index": 0}
 	var node = load("res://scenes/BotMatch.tscn").instantiate()
-	add_child(node)
+	_add(node)
 	await get_tree().process_frame
 	await get_tree().process_frame
+	await _fit(node)
 	_report("BotMatch · разбор партии", node)
 	node.queue_free()
 	await get_tree().process_frame
@@ -309,7 +365,7 @@ func _audit_bot_match() -> void:
 # только главная. Открываем каждую и меряем по-настоящему.
 func _audit_menu_panels() -> void:
 	var node = load("res://scenes/Menu.tscn").instantiate()
-	add_child(node)
+	_add(node)
 	await get_tree().process_frame
 	for pair in [["MainPanel", "главная"], ["PlayPanel", "Играть"],
 			["TourneyPanel", "Турниры и соперники"], ["TrainPanel", "Обучение"]]:
@@ -321,6 +377,7 @@ func _audit_menu_panels() -> void:
 		node._show_panel(panel)
 		await get_tree().process_frame
 		await get_tree().process_frame
+		await _fit(node)
 		_report("Menu · панель «%s»" % pair[1], node)
 	node.queue_free()
 	await get_tree().process_frame
@@ -328,11 +385,12 @@ func _audit_menu_panels() -> void:
 # «Дневник игрока»: вкладки строятся кодом, проверяем каждую.
 func _audit_diary_tabs() -> void:
 	var node = load("res://scenes/Diary.tscn").instantiate()
-	add_child(node)
+	_add(node)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var tabs = node.find_children("*", "TabContainer", true, false)
 	if tabs.is_empty():
+		await _fit(node)
 		_report("Diary · вкладок TabContainer нет, проверено как есть", node)
 	else:
 		var tc: TabContainer = tabs[0]
@@ -340,6 +398,7 @@ func _audit_diary_tabs() -> void:
 			tc.current_tab = i
 			await get_tree().process_frame
 			await get_tree().process_frame
+			await _fit(node)
 			_report("Diary · вкладка «%s»" % tc.get_tab_title(i), node)
 	node.queue_free()
 	await get_tree().process_frame

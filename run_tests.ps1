@@ -55,6 +55,8 @@ $tests = @(
 	@{ Name = "Лучшие ходы в дневнике (TestBestMoves)";  Scene = "TestBestMoves";    Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "База игроков и лиги (TestBots)";          Scene = "TestBots";         Pass = "ИТОГО ошибок: 0"; Slow = $true },
 	@{ Name = "Интерфейс: наложения, кнопки (AuditUI)";  Scene = "AuditUI";          Pass = "ИТОГО проблем: 0"; Slow = $true },
+	@{ Name = "Интерфейс: планшет вертикально (AuditUI)"; Scene = "AuditUI"; Args = @("size=800x1067"); Pass = "ИТОГО проблем: 0"; Slow = $true },
+	@{ Name = "Интерфейс: низкий экран (AuditUI)";        Scene = "AuditUI"; Args = @("size=960x600");  Pass = "ИТОГО проблем: 0"; Slow = $true },
 	@{ Name = "«Дорога домой» (test_dynamic_road)";      Script = "res://scripts/tools/test_dynamic_road.gd"; Pass = "ALL DYNAMIC ROAD TESTS PASSED" },
 	@{ Name = "Сохранение профиля (test_profile_safety)"; Script = "res://scripts/tools/test_profile_safety.gd"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Турниры (test_tournaments)";              Script = "res://scripts/tools/test_tournaments.gd";  Pass = "ALL TOURNAMENT TESTS PASSED" }
@@ -88,7 +90,7 @@ try {
 		if ($Quick -and $t.Slow) { continue }
 		$out = Join-Path $env:TEMP ("chessoff_test_out_" + [guid]::NewGuid().ToString("N") + ".txt")
 		$err = $out + ".err"
-		if ($t.Scene) { $args = @("--headless", "--path", $project, "res://scenes/tools/$($t.Scene).tscn") }
+		if ($t.Scene) { $args = @("--headless", "--path", $project, "res://scenes/tools/$($t.Scene).tscn"); if ($t.Args) { $args += @("--") + $t.Args } }
 		else { $args = @("--headless", "--path", $project, "-s", $t.Script) }
 		$sw = [Diagnostics.Stopwatch]::StartNew()
 		$proc = Start-Process -FilePath $godot -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
