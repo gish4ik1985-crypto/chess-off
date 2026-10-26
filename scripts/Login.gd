@@ -492,6 +492,7 @@ func _open_online_window() -> void:
 func _finish_online_login(nm: String, registered: bool, age: String, status: Label, full_name: String = "") -> void:
 	var key := Profile.sanitize_key(nm)
 	var existed_local := Profile.user_exists(nm)
+	Cloud.push_blocked = false
 	if not registered:
 		status.text = "Загружаю профиль из облака…"
 		var pulled: Dictionary = await Cloud.pull_profile()
@@ -500,6 +501,9 @@ func _finish_online_login(nm: String, registered: bool, age: String, status: Lab
 			existed_local = true
 		elif not pulled.ok:
 			status.text = "Профиль из облака не загрузился (%s). Продолжаю с локальным." % pulled.error
+			if not existed_local:
+				# на этом устройстве профиля нет, а облачный не скачался: пустой не отправляем поверх него
+				Cloud.push_blocked = true
 	Profile.switch_user(nm)
 	if not existed_local:
 		Profile.age_group = age

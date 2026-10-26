@@ -34,6 +34,7 @@ var _refresh_token := ""
 var _expires_at := 0.0
 var _push_pending := false
 var _pushing := false
+var push_blocked := false # вход без загруженной облачной копии: пустой локальный профиль не должен её затереть
 var last_error := ""
 
 func _ready() -> void:
@@ -488,6 +489,8 @@ func public_card() -> Dictionary:
 func push_profile() -> Dictionary:
 	if not enabled or not signed_in or Profile.current_user == "" or Profile.current_user != Profile.sanitize_key(nick):
 		return {"ok": false, "error": "Вход в облако выполнен под другим именем."}
+	if push_blocked:
+		return {"ok": false, "error": "Облачная копия не загрузилась при входе — отправка остановлена, чтобы не затереть её."}
 	if _pushing:
 		return {"ok": false, "error": "Уже отправляется."}
 	_pushing = true

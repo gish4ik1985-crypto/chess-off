@@ -196,6 +196,8 @@ const MIN_LAYOUT_HEIGHT := 600
 const FULL_LAYOUT_HEIGHT := 800
 const TARGET_UI_SCALE := 0.75
 const PORTRAIT_MIN_LAYOUT_WIDTH := 800
+const TOUCH_UI_SCALE := 1.2 # на сенсорных экранах: сколько CSS-пикселей в одной единице раскладки
+const PORTRAIT_PLAY_WIDTH := 784 # ширина раскладки доски в вертикали: доска 704 + поля
 var _rotate_layer: CanvasLayer
 var _rotate_label: Label
 
@@ -247,20 +249,68 @@ func _apply_small_screen_scaling() -> void:
 	var css := _css_screen_size()
 	small_screen = css.y < 700.0
 	var win := get_window()
-	if _current_scene_is_fixed():
+	var portrait := css.y > css.x
+	# на сенсорных экранах (планшет, телефон) интерфейс крупнее: пальцем попадать сложнее, чем мышью
+	var ui_scale := TOUCH_UI_SCALE if DisplayServer.is_touchscreen_available() else TARGET_UI_SCALE
+	var sc := _current_play_scene()
+	if portrait and sc != null:
+		# доска и задачи в вертикали: доска сверху, панель с кнопками под ней (раньше ужималось 1280×800)
+		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+		var view_h := roundi(PORTRAIT_PLAY_WIDTH * css.y / css.x)
+		win.content_scale_size = Vector2i(PORTRAIT_PLAY_WIDTH, view_h)
+		_layout_play_scene(sc, true, view_h)
+	elif _current_scene_is_fixed():
 		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 		win.content_scale_size = Vector2i(1280, 800)
+		if sc != null:
+			_layout_play_scene(sc, false, 800)
 	else:
 		# высота опорного холста: чем ниже экран, тем меньше, но не ниже MIN_LAYOUT_HEIGHT
 		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
-		if css.y > css.x:
+		if portrait:
 			# портрет: масштаб задаёт ширина экрана, иначе холст 1.6:1 сжимает всё до крошечного
-			var layout_w := clampi(roundi(css.x / TARGET_UI_SCALE), PORTRAIT_MIN_LAYOUT_WIDTH, FULL_LAYOUT_HEIGHT * 2)
+			var layout_w := clampi(roundi(css.x / ui_scale), PORTRAIT_MIN_LAYOUT_WIDTH, FULL_LAYOUT_HEIGHT * 2)
 			win.content_scale_size = Vector2i(layout_w, roundi(layout_w * css.y / css.x))
 		else:
-			var layout_h := clampi(roundi(css.y / TARGET_UI_SCALE), MIN_LAYOUT_HEIGHT, FULL_LAYOUT_HEIGHT)
+			var layout_h := clampi(roundi(css.y / ui_scale), MIN_LAYOUT_HEIGHT, FULL_LAYOUT_HEIGHT)
 			win.content_scale_size = Vector2i(roundi(layout_h * 1.6), layout_h)
 	_update_rotate_hint(css)
+
+# Экраны партии и задач, у которых есть вертикальная раскладка (доска + боковая панель).
+func _current_play_scene() -> Node:
+	var root := get_tree().root
+	var sc := get_tree().current_scene
+	if sc == null:
+		sc = root.get_child(root.get_child_count() - 1)
+	if sc != null and sc.name in ["Board", "Puzzle"] and sc.get_node_or_null("UI/SidePanel") != null:
+		return sc
+	return null
+
+# Горизонталь: панель справа от доски. Вертикаль: панель под доской на всю ширину, фон — на весь экран.
+func _layout_play_scene(sc: Node, portrait: bool, view_h: int) -> void:
+	var panel := sc.get_node_or_null("UI/SidePanel") as Control
+	var content := sc.get_node_or_null("UI/SidePanel/Content") as Control
+	var bg := sc.get_node_or_null("Background") as Control
+	if bg != null:
+		bg.offset_bottom = maxf(840.0, view_h + 40.0)
+	if panel == null:
+		return
+	if portrait:
+		panel.offset_left = 24.0
+		panel.offset_top = 784.0
+		panel.offset_right = PORTRAIT_PLAY_WIDTH - 24.0
+		panel.offset_bottom = view_h - 12.0
+		if content != null:
+			content.size_flags_horizontal = Control.SIZE_EXPAND_FILL # в ScrollContainer без EXPAND ширина не растягивается
+			content.custom_minimum_size.x = 0.0
+	else:
+		panel.offset_left = 784.0
+		panel.offset_top = 40.0
+		panel.offset_right = 1256.0
+		panel.offset_bottom = 760.0
+		if content != null:
+			content.size_flags_horizontal = 0
+			content.custom_minimum_size.x = 452.0
 
 # Укрупняет шрифты и кнопки внутри node (боковые панели на телефоне). Размер читаем с учётом темы.
 func boost_fonts(node: Node, factor: float) -> void:

@@ -1644,7 +1644,10 @@ func save_profile() -> void:
 	cfg.set_value("puzzles", "streak_last_day", streak_last_day)
 	cfg.set_value("session", "game_state", game_state)
 	cfg.set_value("session", "puzzle_state", puzzle_state)
-	cfg.set_value("meta", "last_played_unix", Time.get_unix_time_from_system())
+	# время последнего сохранения запоминаем и в памяти: именно оно уходит в облако как «saved»,
+	# по нему при входе решается, чей профиль новее (раньше уходило время загрузки — устаревшее)
+	last_played_unix = int(Time.get_unix_time_from_system())
+	cfg.set_value("meta", "last_played_unix", last_played_unix)
 	cfg.set_value("meta", "save_version", SAVE_VERSION)
 	var path := USERS_DIR + current_user + ".cfg"
 	var tmp := path + ".tmp"
@@ -1676,6 +1679,9 @@ func local_saved_unix(key: String) -> int:
 # Подменяет файл профиля игрока key содержимым из облака; вызывающий затем делает switch_user.
 func write_profile_bytes(key: String, bytes: PackedByteArray) -> bool:
 	DirAccess.make_dir_recursive_absolute(USERS_DIR)
+	# прежний локальный профиль не стираем бесследно — кладём рядом копию (.replaced)
+	if FileAccess.file_exists(USERS_DIR + key + ".cfg"):
+		DirAccess.copy_absolute(USERS_DIR + key + ".cfg", USERS_DIR + key + ".replaced")
 	var f := FileAccess.open(USERS_DIR + key + ".cfg", FileAccess.WRITE)
 	if f == null:
 		return false
