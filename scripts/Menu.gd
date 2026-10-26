@@ -377,6 +377,7 @@ func _build_new_layout() -> void:
 	prof.visible = false
 	preload("res://scripts/Lobby.gd").build_hud(self, hb)
 	_update_bell()
+	Global.update_ready.connect(_update_bell)
 
 func _running_tournaments() -> int:
 	Profile.expire_daily()
@@ -466,6 +467,8 @@ func _on_continue_pressed(kind: String) -> void:
 func _notifications() -> Array:
 	Profile.expire_daily() # меню могло простоять открытым через полночь
 	var out := []
+	if Global.update_available:
+		out.append({"text": "Вышла новая версия игры. Нажмите, чтобы обновиться (прогресс сохранится).", "go": "update"})
 	if not Profile.game_state.is_empty():
 		out.append({"text": "Партия не закончена — можно продолжить.", "go": "continue"})
 	for id in Profile.active_tournaments:
@@ -537,6 +540,10 @@ func _show_notifications() -> void:
 		b.pressed.connect(func():
 			if it.go == "continue":
 				_on_continue_pressed("game")
+			elif it.go == "update":
+				b.text = "Обновляю… сохраняю прогресс"
+				b.disabled = true
+				Global.app_update.apply()
 			else:
 				Global.open(String(it.go), Global.MENU_SCENE))
 		vb.add_child(b)

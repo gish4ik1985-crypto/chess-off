@@ -159,7 +159,13 @@ var pending_pgn := "" # запись партии, которую «Записн
 const CLUB_ORG := "МОО «Клуб «ИРБИС»" # полное название организации — подписи на экранах входа и меню
 const CLUB_ORG_FULL := "МЕСТНАЯ ОБЩЕСТВЕННАЯ ОРГАНИЗАЦИЯ «СПОРТИВНЫЙ КЛУБ СОДЕЙСТВИЯ РАЗВИТИЮ ФИТНЕС-АЭРОБИКИ, СПОРТИВНОЙ АЭРОБИКИ И ПОДДЕРЖКИ ШАХМАТНОГО СПОРТА «ИРБИС» Г. ЯРОСЛАВЛЯ»" # официальное название — внизу окна входа
 
+signal update_ready # на сайте вышла новая сборка (см. AppUpdate)
+var update_available := false
+var app_update: AppUpdate
+
 func _ready() -> void:
+	app_update = AppUpdate.new()
+	add_child(app_update)
 	get_window().title = CLUB_NAME # заголовок окна и вкладки; имя проекта (chessoff) не меняем: от него зависит папка профилей
 	load_settings()
 	apply_display_settings()
@@ -173,6 +179,7 @@ func _ready() -> void:
 const MIN_LAYOUT_HEIGHT := 600
 const FULL_LAYOUT_HEIGHT := 800
 const TARGET_UI_SCALE := 0.75
+const PORTRAIT_MIN_LAYOUT_WIDTH := 800
 var _rotate_layer: CanvasLayer
 var _rotate_label: Label
 
@@ -229,9 +236,14 @@ func _apply_small_screen_scaling() -> void:
 		win.content_scale_size = Vector2i(1280, 800)
 	else:
 		# высота опорного холста: чем ниже экран, тем меньше, но не ниже MIN_LAYOUT_HEIGHT
-		var layout_h := clampi(roundi(css.y / TARGET_UI_SCALE), MIN_LAYOUT_HEIGHT, FULL_LAYOUT_HEIGHT)
 		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
-		win.content_scale_size = Vector2i(roundi(layout_h * 1.6), layout_h)
+		if css.y > css.x:
+			# портрет: масштаб задаёт ширина экрана, иначе холст 1.6:1 сжимает всё до крошечного
+			var layout_w := clampi(roundi(css.x / TARGET_UI_SCALE), PORTRAIT_MIN_LAYOUT_WIDTH, FULL_LAYOUT_HEIGHT * 2)
+			win.content_scale_size = Vector2i(layout_w, roundi(layout_w * css.y / css.x))
+		else:
+			var layout_h := clampi(roundi(css.y / TARGET_UI_SCALE), MIN_LAYOUT_HEIGHT, FULL_LAYOUT_HEIGHT)
+			win.content_scale_size = Vector2i(roundi(layout_h * 1.6), layout_h)
 	_update_rotate_hint(css)
 
 # Укрупняет шрифты и кнопки внутри node (боковые панели на телефоне). Размер читаем с учётом темы.

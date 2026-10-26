@@ -11,7 +11,12 @@ class_name MusicPlayer
 # make it feel spacious instead of beepy. Per-character params (root, scale,
 # note_dur, drone_vol) keep every region's mood distinct.
 
-const MIX_RATE := 44100.0
+# В браузере (планшет, телефон) синтез по отсчётам в одном потоке не успевает на 44.1 кГц — звук хрипит.
+# Музыка мягкая (синусы), на 22 кГц звучит так же, а нагрузка вдвое меньше.
+var MIX_RATE := 22050.0 if OS.has_feature("web") else 44100.0
+# За один кадр дописываем не больше этого числа отсчётов: после «подвисания» не пытаемся
+# разом нагнать всё и не создаём ещё большее подвисание.
+const MAX_FRAMES_PER_CALL := 4096
 const BUFFER_LEN := 0.5
 const ECHO_SECONDS := 0.45
 const ECHO_FEEDBACK := 0.35
@@ -104,9 +109,11 @@ func _process(_delta: float) -> void:
 func _fill_buffer() -> void:
 	if playback == null:
 		return
-	var to_fill = playback.get_frames_available()
+	var to_fill = mini(playback.get_frames_available(), MAX_FRAMES_PER_CALL)
 	var dt = 1.0 / MIX_RATE
 	var echo_len = _echo_buf.size()
+	var chunk := PackedVector2Array()
+	chunk.resize(to_fill)
 	for i in range(to_fill):
 		# --- melody note clock: rests just let the previous tail ring ---
 		_time_in_note += dt
@@ -175,4 +182,6 @@ func _fill_buffer() -> void:
 		# gentle stereo spread: pad leans left, melody leans right
 		var l = clampf(wet - mel_sample * 0.25 + pad_sample * 0.20, -1.0, 1.0)
 		var r = clampf(wet + mel_sample * 0.25 - pad_sample * 0.20, -1.0, 1.0)
-		playback.push_frame(Vector2(l, r))
+		chunk[i] = Vector2(l, r)
+	if to_fill > 0:
+		playback.push_buffer(chunk)

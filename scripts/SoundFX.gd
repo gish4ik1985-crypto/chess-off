@@ -7,7 +7,10 @@ class_name SoundFX
 # with slight random pitch variation so no two moves sound identical.
 # Check/result stay as soft tonal chimes. Volume follows Global.sfx_volume.
 
-const MIX_RATE := 44100.0
+# В вебе (планшет, телефон) 44.1 кГц синтезом по отсчётам не вытянуть — звук хрипит; см. MusicPlayer.
+var MIX_RATE := 22050.0 if OS.has_feature("web") else 44100.0
+const MAX_FRAMES_PER_CALL := 4096
+const IDLE_SECONDS := 0.3 # сколько тишины дописать после последнего звука, затем перестать кормить буфер
 
 # Selectable flavours of the piece-move knock (Global.move_sound_style).
 # freq: base pitch range; decay: how fast the thump dies (higher = drier);
@@ -25,6 +28,7 @@ var _tones: Array = [] # queue of {kind, freq, dur, wave_mix}
 var _phase := 0.0
 var _time_in_tone := 0.0
 var _rng := RandomNumberGenerator.new()
+var _idle_time := 0.0
 
 func _ready() -> void:
 	bus = "Master"
@@ -71,6 +75,7 @@ func _queue(tones: Array) -> void:
 	volume_db = linear_to_db(clampf(Global.sfx_volume, 0.01, 1.0)) - 4.0
 	_tones = tones
 	_time_in_tone = 0.0
+	_idle_time = 0.0
 	if not is_playing():
 		play()
 	playback = get_stream_playback()
@@ -84,18 +89,25 @@ func _process(_delta: float) -> void:
 func _fill_buffer() -> void:
 	if playback == null:
 		return
-	var to_fill = playback.get_frames_available()
+	var to_fill = mini(playback.get_frames_available(), MAX_FRAMES_PER_CALL)
 	var dt = 1.0 / MIX_RATE
+	if _tones.is_empty():
+		# раньше тишина гналась в буфер без конца, отсчёт за отсчётом, — это и грузило процессор
+		_idle_time += to_fill * dt
+		if _idle_time >= IDLE_SECONDS:
+			stop()
+			playback = null
+			return
+	var chunk := PackedVector2Array()
+	chunk.resize(to_fill)
 	for i in range(to_fill):
 		if _tones.is_empty():
-			playback.push_frame(Vector2.ZERO)
 			continue
 		var tone = _tones[0]
 		_time_in_tone += dt
 		if _time_in_tone >= tone.dur:
 			_time_in_tone = 0.0
 			_tones.pop_front()
-			playback.push_frame(Vector2.ZERO)
 			continue
 		var t: float = _time_in_tone
 		var s := 0.0
@@ -122,4 +134,6 @@ func _fill_buffer() -> void:
 			var tri_v = 1.0 - 4.0 * abs(fmod(_phase + 0.75, 1.0) - 0.5)
 			s = lerp(sine_v, tri_v, tone.get("wave_mix", 0.0)) * env * 0.5
 		s = clampf(s, -1.0, 1.0)
-		playback.push_frame(Vector2(s, s))
+		chunk[i] = Vector2(s, s)
+	if to_fill > 0:
+		playback.push_buffer(chunk)
