@@ -41,6 +41,7 @@ const TOOLTIPS := {
 }
 
 func _ready() -> void:
+	Global.add_version_label(self)
 	for path in TOOLTIPS:
 		var n = get_node_or_null(path)
 		if n != null:

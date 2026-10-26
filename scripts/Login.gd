@@ -255,6 +255,7 @@ func _add_backdrop() -> void:
 	motto.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 28)
 	motto.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_backdrop.add_child(motto)
+	Global.add_version_label(_backdrop)
 
 # Печать клуба водяным знаком: те же кольцо, шахматные отрезки и молния, но одной золотой линией
 # с малой прозрачностью — фон не спорит с карточкой входа.

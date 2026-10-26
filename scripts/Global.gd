@@ -162,8 +162,24 @@ const CLUB_ORG_FULL := "МЕСТНАЯ ОБЩЕСТВЕННАЯ ОРГАНИЗА
 signal update_ready # на сайте вышла новая сборка (см. AppUpdate)
 var update_available := false
 var app_update: AppUpdate
+var app_version := "" # номер сборки, например «1.12» (res://build_id.txt, ставит web/build.ps1)
+
+# Мелкая надпись «Версия N» в правом нижнем углу — чтобы видеть, обновилась ли игра.
+func add_version_label(parent: Control) -> void:
+	if app_version == "":
+		return
+	var l := Label.new()
+	l.text = "Версия " + app_version
+	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_color_override("font_color", Color(0.75, 0.78, 0.9, 0.55))
+	l.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 8)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.z_index = 5
+	parent.add_child(l)
 
 func _ready() -> void:
+	if FileAccess.file_exists("res://build_id.txt"):
+		app_version = FileAccess.get_file_as_string("res://build_id.txt").strip_edges()
 	app_update = AppUpdate.new()
 	add_child(app_update)
 	get_window().title = CLUB_NAME # заголовок окна и вкладки; имя проекта (chessoff) не меняем: от него зависит папка профилей

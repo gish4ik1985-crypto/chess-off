@@ -22,7 +22,7 @@ func _ready() -> void:
 		set_process(false)
 		set_process_input(false)
 		return
-	my_build = FileAccess.get_file_as_string("res://build_id.txt").strip_edges()
+	my_build = FileAccess.get_file_as_string("res://build_id.txt").strip_edges() # «1.12»: тот же номер, что показан в углу меню
 	_ask_site.call_deferred()
 
 func _input(event: InputEvent) -> void:
