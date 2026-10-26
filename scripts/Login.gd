@@ -505,6 +505,11 @@ func _finish_online_login(nm: String, registered: bool, age: String, status: Lab
 				# на этом устройстве профиля нет, а облачный не скачался: пустой не отправляем поверх него
 				Cloud.push_blocked = true
 	Profile.switch_user(nm)
+	Cloud.synced_saved = -1
+	Profile.merge_replaced_backup()
+	if not registered:
+		# и при «локальный новее» облачный прогресс вливается, а не теряется
+		await Cloud.sync_profile()
 	if not existed_local:
 		Profile.age_group = age
 		Profile.save_profile()

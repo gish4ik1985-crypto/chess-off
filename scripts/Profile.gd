@@ -1537,6 +1537,96 @@ func export_profile(dest_path: String) -> bool:
 	return DirAccess.copy_absolute(src, dest_path) == OK
 
 # Содержимое файла профиля (для скачивания из браузера, где нет файловых диалогов).
+# --- объединение профилей с разных устройств ----------------------------------------------------
+# Один аккаунт открывают на планшете и на компьютере. Раньше облачная копия просто заменялась тем
+# профилем, который сохранился последним, и устройство со старыми данными стирало решённое на другом
+# (вилки 0/5 после пяти решённых, пропавший прогресс). Теперь копии объединяются: счётчики — по
+# максимуму, списки и словари (решённые задачи, пройденные узлы карты, награды, партии) — объединением,
+# а то, что нельзя сложить (рейтинг, анкета, текущая партия, настройки), берётся у более свежей копии.
+
+# section/key, значения которых целиком берутся у более свежей копии.
+const MERGE_NEWER := ["rating", "about", "meta", "session", "stats/win_streak", "tourney/rating",
+	"tourney/real_rating", "tourney/rd", "tourney/volatility", "tourney/active", "tourney/prep",
+	"tourney/bots", "tourney/world_events", "journal/recent_blunders", "journal/recent_best",
+	"puzzles/streak_count", "puzzles/streak_last_day", "homework/base", "notebook/items"]
+
+static func _merge_newer(path: String) -> bool:
+	return path in MERGE_NEWER or path.get_slice("/", 0) in MERGE_NEWER
+
+static func _merge_value(path: String, a: Variant, b: Variant, b_newer: bool) -> Variant:
+	if _merge_newer(path):
+		return b if b_newer else a
+	var ta := typeof(a)
+	var tb := typeof(b)
+	if (ta == TYPE_INT or ta == TYPE_FLOAT) and (tb == TYPE_INT or tb == TYPE_FLOAT):
+		return a if a >= b else b # счётчики только растут
+	if ta == TYPE_DICTIONARY and tb == TYPE_DICTIONARY:
+		var r: Dictionary = (a as Dictionary).duplicate(true)
+		for k in b:
+			r[k] = _merge_value(path + "/*", r[k], b[k], b_newer) if r.has(k) else b[k]
+		return r
+	if ta == TYPE_ARRAY and tb == TYPE_ARRAY:
+		var r: Array = (a as Array).duplicate(true)
+		for x in b:
+			if not r.has(x):
+				r.append(x)
+		return r
+	return b if b_newer else a
+
+# Вливает other в local. true — если local изменился.
+static func merge_cfg(local: ConfigFile, other: ConfigFile) -> bool:
+	var lt := int(local.get_value("meta", "last_played_unix", 0))
+	var ot := int(other.get_value("meta", "last_played_unix", 0))
+	var other_newer := ot > lt
+	var changed := false
+	for sec in other.get_sections():
+		for key in other.get_section_keys(sec):
+			var ov: Variant = other.get_value(sec, key)
+			if not local.has_section_key(sec, key):
+				local.set_value(sec, key, ov)
+				changed = true
+				continue
+			var lv: Variant = local.get_value(sec, key)
+			var nv: Variant = _merge_value(sec + "/" + key, lv, ov, other_newer)
+			if typeof(nv) != typeof(lv) or nv != lv:
+				local.set_value(sec, key, nv)
+				changed = true
+	return changed
+
+# Вливает облачную копию (байты .cfg) в профиль текущего игрока и перечитывает его. true — если что-то
+# добавилось. Прежний файл сохраняется рядом (.before_merge) — на случай разбора.
+func merge_profile_bytes(bytes: PackedByteArray) -> bool:
+	if current_user == "" or _load_failed or bytes.is_empty():
+		return false
+	save_profile()
+	var path := USERS_DIR + current_user + ".cfg"
+	var local := ConfigFile.new()
+	if local.load(path) != OK:
+		return false
+	var other := ConfigFile.new()
+	if other.parse(bytes.get_string_from_utf8()) != OK:
+		return false
+	if not merge_cfg(local, other):
+		return false
+	DirAccess.copy_absolute(path, USERS_DIR + current_user + ".before_merge")
+	if local.save(path) != OK:
+		return false
+	load_profile()
+	save_profile()
+	return true
+
+# Копия, которую при входе подменил облачный профиль (.replaced, с версии 1.13): вливаем её обратно
+# один раз — так возвращается решённое, что затёрла старая облачная копия.
+func merge_replaced_backup() -> bool:
+	if current_user == "":
+		return false
+	var bak := USERS_DIR + current_user + ".replaced"
+	if not FileAccess.file_exists(bak):
+		return false
+	var changed := merge_profile_bytes(FileAccess.get_file_as_bytes(bak))
+	DirAccess.rename_absolute(bak, bak + ".merged")
+	return changed
+
 func export_profile_bytes() -> PackedByteArray:
 	if current_user == "":
 		return PackedByteArray()

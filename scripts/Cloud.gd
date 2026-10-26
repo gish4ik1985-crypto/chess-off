@@ -36,11 +36,15 @@ var _push_pending := false
 var _pushing := false
 var push_blocked := false # вход без загруженной облачной копии: пустой локальный профиль не должен её затереть
 var last_error := ""
+var synced_saved := -1 # метка «saved» облачной копии, уже влитой в локальный профиль
+signal profile_merged # в локальный профиль влились данные с другого устройства
 
 func _ready() -> void:
 	_load_config()
 	if enabled:
 		_restore_session()
+		if signed_in:
+			_startup_sync.call_deferred()
 
 func _load_config() -> void:
 	if not FileAccess.file_exists(CONFIG_PATH):
@@ -494,6 +498,16 @@ func push_profile() -> Dictionary:
 	if _pushing:
 		return {"ok": false, "error": "Уже отправляется."}
 	_pushing = true
+	# сначала забираем облачную копию: если её обновило другое устройство — вливаем, а не затираем
+	var cloud := await pull_profile()
+	if not cloud.ok:
+		_pushing = false
+		last_error = "Облако недоступно — профиль отправится позже: %s" % cloud.error
+		return {"ok": false, "error": last_error}
+	if cloud.found and int(cloud.saved) != synced_saved:
+		if Profile.merge_profile_bytes(cloud.bytes):
+			profile_merged.emit()
+		synced_saved = int(cloud.saved)
 	var res := await set_doc("players/" + uid, public_card())
 	if not res.ok:
 		# правила базы ещё старые (без новых полей анкеты) — отправляем короткую карточку
@@ -504,10 +518,13 @@ func push_profile() -> Dictionary:
 	if res.ok:
 		var bytes := Profile.export_profile_bytes()
 		if bytes.size() > 0 and bytes.size() <= MAX_PRIVATE_BYTES:
+			var saved := int(Profile.last_played_unix)
 			res = await set_doc("private/" + uid, {
 				"blob": Marshalls.raw_to_base64(bytes),
-				"saved": int(Profile.last_played_unix),
+				"saved": saved,
 			})
+			if res.ok:
+				synced_saved = saved
 	_pushing = false
 	last_error = String(res.get("error", ""))
 	return res
@@ -520,6 +537,38 @@ func note_saved() -> void:
 	get_tree().create_timer(PUSH_DELAY).timeout.connect(func():
 		_push_pending = false
 		push_profile())
+
+# Забирает облачную копию и вливает в локальный профиль, если её с прошлой синхронизации обновило
+# другое устройство. Зовётся при запуске (вход восстановлен из прошлого сеанса), при входе и в меню.
+var _last_sync_ms := -100000
+
+func sync_profile(min_interval_ms := 0) -> bool:
+	if not enabled or not signed_in or Profile.current_user == "" or Profile.current_user != Profile.sanitize_key(nick):
+		return false
+	if _pushing or Time.get_ticks_msec() - _last_sync_ms < min_interval_ms:
+		return false
+	_last_sync_ms = Time.get_ticks_msec()
+	var r := await pull_profile()
+	if not r.ok:
+		return false
+	push_blocked = false # облако отвечает — отправлять снова можно
+	if not r.found or int(r.saved) == synced_saved:
+		return false
+	var changed := Profile.merge_profile_bytes(r.bytes)
+	synced_saved = int(r.saved)
+	if changed:
+		profile_merged.emit()
+		# экраны, которые показывают прогресс, перерисовываем; партии и задачи не трогаем
+		var sc := get_tree().current_scene
+		if sc != null and sc.name in ["Menu", "Map", "PuzzleHub", "RoadHome", "Diary", "TrophyRoom"]:
+			get_tree().reload_current_scene()
+	return changed
+
+func _startup_sync() -> void:
+	await get_tree().create_timer(1.0).timeout
+	if Profile.merge_replaced_backup():
+		note_saved() # вернувшийся прогресс — сразу в облако
+	await sync_profile()
 
 # Приватная копия профиля: {ok, found, bytes, saved, error}.
 func pull_profile() -> Dictionary:

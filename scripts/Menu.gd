@@ -42,6 +42,7 @@ const TOOLTIPS := {
 
 func _ready() -> void:
 	Global.add_version_label(self)
+	Cloud.sync_profile(30000) # прогресс с другого устройства (не чаще раза в 30 с)
 	for path in TOOLTIPS:
 		var n = get_node_or_null(path)
 		if n != null:
