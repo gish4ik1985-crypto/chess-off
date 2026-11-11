@@ -108,6 +108,7 @@ func _build_school_panel() -> void:
 	_hw_button = _school_item(vb, "📚 Домашние задания", "res://scenes/Homework.tscn")
 	_school_item(vb, "🏫 Турниры школы — онлайн", "res://scenes/ClubTourneys.tscn")
 	_chat_button = _school_item(vb, "💬 Чат школы", "res://scenes/Chat.tscn")
+	_chat_button.visible = SchoolData.chat_enabled
 	if Roles.can(Profile.role, "open_admin"):
 		_school_item(vb, "📒 Задачник учителя", "res://scenes/Planner.tscn")
 
@@ -124,6 +125,7 @@ func _update_school_badges() -> void:
 		var n := SchoolData.unread_announcements().size() if SchoolData.loaded else 0
 		_ann_button.text = "📢 Объявления" + ("  · новых: %d" % n if n > 0 else "")
 	if _chat_button != null:
+		_chat_button.visible = SchoolData.chat_enabled
 		_chat_button.text = "💬 Чат школы" + ("  · новые сообщения" if ChatScreen.has_unread() else "")
 	if _lobby != null:
 		var total := (SchoolData.unread_announcements().size() if SchoolData.loaded else 0) + (Homework.pending().size() if Homework.loaded else 0)
@@ -187,8 +189,9 @@ func _refresh_role() -> void:
 	await Homework.load_all()
 	await Homework.auto_submit_done()
 	await ClubTourney.load_mine()
-	await ChatScreen.check_unread()
 	await SchoolData.load_all()
+	if SchoolData.chat_enabled:
+		await ChatScreen.check_unread() # чат выключен — не тратим обращения к базе
 	if is_inside_tree():
 		_update_profile_bar()
 		_update_bell()
@@ -491,7 +494,7 @@ func _notifications() -> Array:
 			out.append({"text": "Объявление: «%s»." % String(a.get("title", "")), "go": "res://scenes/Announcements.tscn"})
 		for ev in SchoolData.upcoming(3).slice(0, 3):
 			out.append({"text": "Скоро: %s — %s%s." % [SchoolData.fmt_date(String(ev.get("date", ""))), String(ev.get("title", "")), (", " + String(ev.get("place", ""))) if String(ev.get("place", "")) != "" else ""], "go": "res://scenes/Schedule.tscn"})
-	if ChatScreen.has_unread():
+	if SchoolData.chat_enabled and ChatScreen.has_unread():
 		out.append({"text": "Новые сообщения в чате школы.", "go": "res://scenes/Chat.tscn"})
 	if ClubTourney.my_turn_games.size() > 0:
 		out.append({"text": "Ваш ход в турнирной партии (%d)." % ClubTourney.my_turn_games.size(), "go": "res://scenes/ClubTourneys.tscn"})

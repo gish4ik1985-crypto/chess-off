@@ -49,6 +49,7 @@ func _ready() -> void:
 	_status.add_theme_font_size_override("font_size", 13)
 	_body.add_child(_status)
 	if Roles.can(Profile.role, "game_settings"):
+		_build_school_settings()
 		_build_game_settings()
 	_build_players()
 	_build_roles_legend()
@@ -105,6 +106,37 @@ func _build_game_settings() -> void:
 			return
 		Profile.set_real_rating(v)
 		msg.text = "Сохранено. Турнирный рейтинг: %d." % int(Profile.tournament_rating) if v > 0 else "Настоящий рейтинг убран.")
+
+# Общие настройки школы (хранятся в облаке, действуют на всех учеников).
+func _build_school_settings() -> void:
+	_body.add_child(_section("Школа"))
+	var c := CheckButton.new()
+	c.text = "Чат школы"
+	c.disabled = true
+	_body.add_child(c)
+	var note := _note("Выключен: чата у учеников нет, остаются объявления учителя. Настройка общая для всей школы.")
+	_body.add_child(note)
+	if not (Cloud.enabled and Cloud.signed_in):
+		note.text = "Чат школы включается здесь после онлайн-входа."
+		return
+	await SchoolData.load_all()
+	if not is_instance_valid(c):
+		return
+	c.button_pressed = SchoolData.chat_enabled
+	c.disabled = false
+	c.toggled.connect(func(v: bool):
+		SchoolData.chat_enabled = v
+		c.disabled = true
+		var r: Dictionary = await SchoolData.save_settings()
+		if not is_instance_valid(c):
+			return
+		c.disabled = false
+		if r.ok:
+			note.text = "Сохранено: чат %s для всей школы. У учеников изменится при следующем запуске игры." % ("включён" if v else "выключен")
+		else:
+			SchoolData.chat_enabled = not v
+			c.set_pressed_no_signal(not v)
+			note.text = "Не сохранилось: %s" % String(r.get("error", "")))
 
 func _toggle(caption: String, hint: String, value: bool, apply: Callable) -> void:
 	var c := CheckButton.new()

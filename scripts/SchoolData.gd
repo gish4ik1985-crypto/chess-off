@@ -78,7 +78,16 @@ static func load_all() -> bool:
 	if not e.ok:
 		return false
 	events = e.docs
-	announcements = a.docs if a.ok else []
+	announcements = []
+	chat_enabled = false
+	for d in (a.docs if a.ok else []):
+		if String(d.get("title", "")) == SETTINGS_TITLE:
+			# служебная запись с настройками школы (см. save_settings), не объявление
+			var js = JSON.parse_string(String(d.get("text", "")))
+			if js is Dictionary:
+				chat_enabled = bool(js.get("chat", false))
+		else:
+			announcements.append(d)
 	loaded = true
 	return true
 
@@ -112,6 +121,20 @@ static func upcoming(days: int) -> Array:
 	return out
 
 # ---- объявления ----
+
+# --- настройки школы -----------------------------------------------------------------------------
+# Общие для всех переключатели (сейчас один — чат) лежат служебной записью среди объявлений: их и так
+# читает каждый вошедший, а пишет только учитель, так что новые правила базы и лишние обращения не нужны.
+# «until» в прошлом — чтобы версии игры до 1.18 не показали запись как объявление; «at» в будущем —
+# чтобы она всегда попадала в выборку последних объявлений.
+const SETTINGS_TITLE := "_settings"
+static var chat_enabled := false # пока администратор не включил, чата нет: остаются объявления учителя
+
+static func save_settings() -> Dictionary:
+	var r: Dictionary = await Cloud.set_doc("announcements/_settings", {
+		"title": SETTINGS_TITLE, "text": JSON.stringify({"chat": chat_enabled}), "group": "", "pinned": false,
+		"until": 1, "by": Cloud.uid, "by_name": Profile.shown_name(), "at": 4000000000})
+	return r
 
 static func visible_announcements() -> Array:
 	var out := []

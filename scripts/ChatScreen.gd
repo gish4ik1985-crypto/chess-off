@@ -103,6 +103,11 @@ func _ready() -> void:
 		_input.editable = false
 		_title.text = "Чат школы"
 		return
+	if not SchoolData.chat_enabled:
+		_status.text = "Чат отключён администратором школы. Сообщения учителя — в разделе «Объявления»."
+		_input.editable = false
+		_title.text = "Чат школы"
+		return
 	_build_rooms()
 	_open_room("school", "Общий чат школы")
 	_load_players()
@@ -168,6 +173,8 @@ func _process(delta: float) -> void:
 		_poll()
 
 func _poll() -> void:
+	if not SchoolData.chat_enabled:
+		return
 	if _busy:
 		return
 	_busy = true
