@@ -164,6 +164,24 @@ var update_available := false
 var app_update: AppUpdate
 var app_version := "" # номер сборки, например «1.12» (res://build_id.txt, ставит web/build.ps1)
 
+# Номер версии числом для сравнения в правилах базы: «1.19» -> 1019. 0 — версия неизвестна.
+func version_code() -> int:
+	# у пробной сборки номер вида «1.20-beta»: берём только цифры в начале каждой части
+	var parts := app_version.split(".")
+	if parts.size() < 2:
+		return 0
+	var major := parts[0].to_int()
+	var minor := 0
+	for ch in parts[1]:
+		if ch < "0" or ch > "9":
+			break
+		minor = minor * 10 + int(ch)
+	return major * 1000 + minor if major > 0 else 0
+
+# Пробная площадка (сборка web/build.ps1 -Beta): та же игра по адресу .../beta/ для проверки до выпуска.
+func is_beta() -> bool:
+	return app_version.ends_with("-beta")
+
 # Мелкая надпись «Версия N» в правом нижнем углу — чтобы видеть, обновилась ли игра.
 func add_version_label(parent: Control) -> void:
 	if app_version == "":
@@ -174,6 +192,11 @@ func add_version_label(parent: Control) -> void:
 	l.text = "Версия " + app_version
 	l.add_theme_font_size_override("font_size", 13)
 	l.add_theme_color_override("font_color", Color(0.75, 0.78, 0.9, 0.55))
+	if is_beta():
+		# пробную сборку нельзя спутать с основной: надпись заметная, золотом
+		l.text = "ПРОБНАЯ ВЕРСИЯ " + app_version.trim_suffix("-beta")
+		l.add_theme_font_size_override("font_size", 15)
+		l.add_theme_color_override("font_color", Color(0.95, 0.76, 0.31, 0.95))
 	l.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 8)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.z_index = 5
@@ -181,7 +204,7 @@ func add_version_label(parent: Control) -> void:
 
 func _ready() -> void:
 	if FileAccess.file_exists("res://build_id.txt"):
-		app_version = FileAccess.get_file_as_string("res://build_id.txt").strip_edges()
+		app_version = FileAccess.get_file_as_string("res://build_id.txt").strip_edges().get_slice(" ", 0) # у пробной сборки после номера идёт метка времени
 	app_update = AppUpdate.new()
 	add_child(app_update)
 	get_window().title = CLUB_NAME # заголовок окна и вкладки; имя проекта (chessoff) не меняем: от него зависит папка профилей
@@ -198,10 +221,14 @@ const MIN_LAYOUT_HEIGHT := 600
 const FULL_LAYOUT_HEIGHT := 800
 const TARGET_UI_SCALE := 0.75
 const PORTRAIT_MIN_LAYOUT_WIDTH := 800
+# Телефон вертикально (экран уже 600 точек): холст ещё уже, иначе всё вдвое мельче, чем на планшете.
+# Экраны, которые умеют перестраиваться под 480, получают крупный текст; остальным подгонка под
+# содержимое расширит холст — они будут мельче, но откроются.
+const PHONE_MAX_CSS_WIDTH := 600.0
+const PHONE_MIN_LAYOUT_WIDTH := 480
+var phone_portrait := false
 const TOUCH_UI_SCALE := 1.2 # на сенсорных экранах: сколько CSS-пикселей в одной единице раскладки
 const PORTRAIT_PLAY_WIDTH := 784 # ширина раскладки доски в вертикали: доска 704 + поля
-var _rotate_layer: CanvasLayer
-var _rotate_label: Label
 
 # Размер экрана в CSS-пикселях. Берём размер самого холста игры (он всегда актуален), а не
 # window.innerWidth/innerHeight: при повороте планшета браузер обновляет их с опозданием, и игра
@@ -370,6 +397,7 @@ func _apply_small_screen_scaling(force := true) -> void:
 	small_screen = css.y < 700.0
 	var win := get_window()
 	var portrait := css.y > css.x
+	phone_portrait = portrait and css.x < PHONE_MAX_CSS_WIDTH
 	# на сенсорных экранах (планшет, телефон) интерфейс крупнее: пальцем попадать сложнее, чем мышью
 	var ui_scale := TOUCH_UI_SCALE if DisplayServer.is_touchscreen_available() else TARGET_UI_SCALE
 	var sc := _current_play_scene()
@@ -399,7 +427,8 @@ func _apply_small_screen_scaling(force := true) -> void:
 		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 		if portrait:
 			# портрет: масштаб задаёт ширина экрана, иначе холст 1.6:1 сжимает всё до крошечного
-			var layout_w := clampi(roundi(css.x / ui_scale), PORTRAIT_MIN_LAYOUT_WIDTH, FULL_LAYOUT_HEIGHT * 2)
+			var min_w := PHONE_MIN_LAYOUT_WIDTH if phone_portrait else PORTRAIT_MIN_LAYOUT_WIDTH
+			var layout_w := clampi(roundi(css.x / ui_scale), min_w, FULL_LAYOUT_HEIGHT * 2)
 			win.content_scale_size = Vector2i(layout_w, roundi(layout_w * css.y / css.x))
 		else:
 			var layout_h := clampi(roundi(css.y / ui_scale), MIN_LAYOUT_HEIGHT, FULL_LAYOUT_HEIGHT)
@@ -408,7 +437,6 @@ func _apply_small_screen_scaling(force := true) -> void:
 	if sc != null or own_portrait or _current_scene_is_fixed():
 		_fit_token += 1 # у доски и карты своя раскладка — подгонка от прошлого экрана не нужна
 		_fit_running = false
-	_update_rotate_hint(css)
 
 # Экраны партии и задач, у которых есть вертикальная раскладка (доска + боковая панель).
 func _current_scene_node() -> Node:
@@ -434,6 +462,10 @@ func _layout_play_scene(sc: Node, portrait: bool, view_h: int) -> void:
 		bg.offset_bottom = maxf(840.0, view_h + 40.0)
 	if panel == null:
 		return
+	if portrait and phone_portrait and not sc.has_meta("phone_boosted"):
+		# холст доски — 784 единицы на ~390 точек экрана: обычный текст панели был бы высотой 7 точек
+		sc.set_meta("phone_boosted", true)
+		boost_fonts(panel, 1.8, 88.0)
 	if portrait:
 		panel.offset_left = 24.0
 		panel.offset_top = 784.0
@@ -452,38 +484,29 @@ func _layout_play_scene(sc: Node, portrait: bool, view_h: int) -> void:
 			content.custom_minimum_size.x = 452.0
 
 # Укрупняет шрифты и кнопки внутри node (боковые панели на телефоне). Размер читаем с учётом темы.
-func boost_fonts(node: Node, factor: float) -> void:
+func boost_fonts(node: Node, factor: float, min_button := 52.0) -> void:
 	if node is Control:
 		var c := node as Control
 		for kind in ["font_size", "normal_font_size"]:
 			if c.has_theme_font_size(kind):
 				c.add_theme_font_size_override(kind, roundi(c.get_theme_font_size(kind) * factor))
 		if c is Button:
-			c.custom_minimum_size.y = maxf(c.custom_minimum_size.y, 52.0)
+			c.custom_minimum_size.y = maxf(c.custom_minimum_size.y, min_button)
 	for ch in node.get_children():
-		boost_fonts(ch, factor)
+		boost_fonts(ch, factor, min_button)
 
-# Узкий телефон в портрете: поле не помещается, просим повернуть устройство.
-func _update_rotate_hint(css: Vector2) -> void:
-	var need := css.x < 600.0 and css.y > css.x
-	if need and _rotate_layer == null:
-		_rotate_layer = CanvasLayer.new()
-		_rotate_layer.layer = 100
-		var bg := ColorRect.new()
-		bg.color = Color(0.02, 0.02, 0.05, 0.96)
-		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-		_rotate_layer.add_child(bg)
-		_rotate_label = Label.new()
-		_rotate_label.text = "Поверните телефон горизонтально\nИгра рассчитана на широкий экран"
-		_rotate_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_rotate_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_rotate_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_rotate_label.add_theme_font_size_override("font_size", 28)
-		_rotate_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-		bg.add_child(_rotate_label)
-		add_child(_rotate_layer)
-	if _rotate_layer != null:
-		_rotate_layer.visible = need
+# Ширина узла «не больше max_w, но и не шире экрана»: экраны с колонкой жёсткой ширины (задания,
+# объявления, расписание) на телефоне сужаются вместе с экраном, а не заставляют всё мельчить.
+func fit_width(c: Control, max_w: float, margin := 64.0) -> void:
+	var apply := func():
+		if is_instance_valid(c) and c.is_inside_tree():
+			c.custom_minimum_size.x = minf(max_w, maxf(280.0, c.get_viewport_rect().size.x - margin))
+	apply.call()
+	c.ready.connect(apply)
+	c.tree_entered.connect(func(): c.get_viewport().size_changed.connect(apply), CONNECT_ONE_SHOT)
+	if c.is_inside_tree():
+		c.get_viewport().size_changed.connect(apply)
+
 
 # Applies the current fullscreen/resolution choice to the actual OS window.
 # Windowed mode gets re-centered on the screen after resizing so the game

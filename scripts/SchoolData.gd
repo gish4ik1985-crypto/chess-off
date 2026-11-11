@@ -70,11 +70,26 @@ static func group_ok(g: String) -> bool:
 
 # ---- загрузка ----
 
-static func load_all() -> bool:
+# full = false (главное меню): объявления, занятия по расписанию и события начиная со вчера — этого
+# хватает для уведомлений. full = true (экраны расписания и годового плана): всё расписание целиком.
+# Раньше каждый вход скачивал всё расписание и годовой план — до 600 чтений.
+static func load_all(full := false) -> bool:
 	if not (Cloud.enabled and Cloud.signed_in):
 		return false
-	var e: Dictionary = await Cloud.query_top("events", "date", 600)
-	var a: Dictionary = await Cloud.query_top("announcements", "at", 60)
+	var a: Dictionary = await Cloud.query_top("announcements", "at", 30)
+	var e: Dictionary
+	if full:
+		e = await Cloud.query_top("events", "date", 600)
+	else:
+		e = await Cloud.query("events", {"eq": {"kind": "lesson"}, "limit": 60})
+		if e.ok:
+			var near: Dictionary = await Cloud.query("events", {"ge": ["date", add_days(today_iso(), -1)], "asc": true, "limit": 40})
+			if near.ok:
+				for d in near.docs:
+					if String(d.get("kind", "")) != "lesson":
+						e.docs.append(d)
+	if not e.ok and not full:
+		e = await Cloud.query_top("events", "date", 600) # страховка: база отказала в узком запросе
 	if not e.ok:
 		return false
 	events = e.docs

@@ -52,14 +52,46 @@ func apply_portrait(on: bool, view: Vector2) -> void:
 		(l as Label).custom_minimum_size.x = 130.0 if on else (230.0 if l.name == "ActLabel" else 0.0)
 	$UI/TopBar.offset_left = 16.0 if on else 24.0
 	$UI/TopBar.offset_right = -16.0 if on else -24.0
+	# телефон: холст 800 единиц на ~390 точек экрана — карту рисуем в полтора раза крупнее (узлы легче
+	# нажать, подписи читаются), верхнюю полосу и окно этапа тоже укрупняем
+	var phone: bool = on and Global.phone_portrait
+	if phone and not has_meta("phone_boosted"):
+		set_meta("phone_boosted", true)
+		Global.boost_fonts($UI/TopBar, 1.7, 84.0)
+		detail_panel.pivot_offset = Vector2(240, 160)
+		detail_panel.scale = Vector2(1.6, 1.6)
+	var k := 1.5 if phone else 1.0
+	map_draw.scale = Vector2(k, k) if on else Vector2.ONE
+	_label_size = 14 if phone else 11
+	_label_w = 118.0 if phone else 140.0
+	_col_step = 120.0 if phone else 170.0
+	_px0 = 85.0 if phone else 145.0
+	# на телефоне в полосе остаются только акт и «В меню»; счёт и ближайшая тема — строкой под полосой
+	$UI/TopBar/HBox/ProgressLabel.visible = not phone
+	$UI/TopBar/HBox/NextThemeLabel.visible = not phone
+	$UI/TopBar/HBox/ActLabel.custom_minimum_size.x = 300.0 if phone else (130.0 if on else 230.0)
+	$UI/TopBar/HBox/ActLabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL if phone else Control.SIZE_FILL
+	_phone = phone
+	var top := 350.0 if phone else 210.0
+	_py0 = top / k
+	_pstep = clampf((view.y - top - (200.0 if phone else 120.0)) / 4.0, 180.0, 320.0) / k
 	map_draw.queue_redraw()
+
+# раскладка вертикали (в единицах карты): шаг столбцов и строк, левый верхний узел, подписи
+var _col_step := 170.0
+var _px0 := 145.0
+var _py0 := 210.0
+var _pstep := 180.0
+var _label_size := 11
+var _label_w := 140.0
+var _phone := false
 
 # Где рисовать узел: в вертикали координаты меняются местами (x — строка, y — столбец).
 func _p(c: Dictionary) -> Vector2:
 	var pos: Vector2 = c["pos"]
 	if not portrait:
 		return pos
-	return Vector2(pos.y + 5.0, (pos.x - 150.0) * 0.95 + 210.0)
+	return Vector2((pos.y - 140.0) / 170.0 * _col_step + _px0, (pos.x - 150.0) / 200.0 * _pstep + _py0)
 
 func _act_nodes() -> Array:
 	var out := []
@@ -233,6 +265,12 @@ func _draw_soft_backdrop(center: Vector2, palette: Dictionary) -> void:
 		map_draw.draw_circle(center, r, col)
 
 func _on_map_draw() -> void:
+	if _phone:
+		# строка состояния под верхней полосой (на планшете и компьютере она в самой полосе)
+		var line: String = progress_label.text
+		if next_theme_label.text != "":
+			line += "  ·  " + next_theme_label.text
+		map_draw.draw_string(ThemeDB.fallback_font, Vector2(0, _py0 - 86.0), line, HORIZONTAL_ALIGNMENT_CENTER, 800.0 / 1.5, 15, Themes.ink(Color(1, 0.65, 0.95)))
 	var nodes = _act_nodes()
 	# region backdrops first (behind everything)
 	for c in nodes:
@@ -290,7 +328,7 @@ func _on_map_draw() -> void:
 			map_draw.draw_polyline(PackedVector2Array([p1, p2, p3]), check_col, 3.0, true)
 
 		var font = ThemeDB.fallback_font
-		var name_pos = _p(c) + Vector2(-70, NODE_RADIUS + 20)
+		var name_pos = _p(c) + Vector2(-_label_w / 2.0, NODE_RADIUS + 20)
 		var label_col = Themes.ink(Color(0.9, 0.95, 1.0)) if unlocked else Themes.ink(Color(0.5, 0.5, 0.55))
 		var label_text = c.name
 
@@ -303,7 +341,7 @@ func _on_map_draw() -> void:
 			var prog = min(raw, int(c.get("required", 0)))
 			label_text += "\n%d/%d" % [prog, int(c.get("required", 0))]
 
-		map_draw.draw_multiline_string(font, name_pos, label_text, HORIZONTAL_ALIGNMENT_CENTER, 140, 11, 3, label_col)
+		map_draw.draw_multiline_string(font, name_pos, label_text, HORIZONTAL_ALIGNMENT_CENTER, _label_w, _label_size, 3, label_col)
 
 		if c.get("is_boss", false) and unlocked and not defeated:
 			var crown_pos = _p(c) + Vector2(0, -NODE_RADIUS - 16)

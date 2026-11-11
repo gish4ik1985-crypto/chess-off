@@ -4,7 +4,11 @@ extends Control
 # проверяет, не сходил ли соперник. Часы, сдача, ничья по согласию, запись партии для разбора.
 # Документ партии: cgames/{id}. Ходит только тот, чей ход; записывает ход тоже только он.
 
-const POLL := 2.0
+# Как часто перечитывать партию из базы (каждое чтение расходует дневной лимит школы):
+const POLL := 2.0 # жду хода соперника — часто, чтобы ход появлялся сразу
+const POLL_MY_TURN := 10.0 # мой ход: с доской ничего не случится, проверяем только сдачу и ничью
+const POLL_WATCH := 5.0 # зритель
+const POLL_DONE := 60.0 # партия закончена
 
 var gid := ""
 var _doc: Dictionary = {}
@@ -66,7 +70,7 @@ func _ready() -> void:
 	title.position = Vector2(24, 16)
 	add_child(title)
 	if not (Cloud.enabled and Cloud.signed_in) or gid == "":
-		_status.text = "Нужен онлайн-вход и выбранная партия."
+		_status.text = "Нужны вход в школу и выбранная партия."
 		return
 	_status.text = "Загружаю партию…"
 	await _sync()
@@ -90,9 +94,16 @@ func _process(delta: float) -> void:
 		return
 	_update_clocks()
 	_timer += delta
-	if _timer >= POLL and not _busy:
+	if _timer >= _poll_interval() and not _busy:
 		_timer = 0.0
 		_sync()
+
+func _poll_interval() -> float:
+	if String(_doc.get("status", "")) != "play":
+		return POLL_DONE
+	if _my_color == "":
+		return POLL_WATCH
+	return POLL_MY_TURN if String(_doc.get("turn", "w")) == _my_color else POLL
 
 # ---- часы ----
 

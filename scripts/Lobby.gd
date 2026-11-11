@@ -10,6 +10,9 @@ const W := 974.0
 
 var _menu: Node
 var _school_badge: Label
+var _hero_btn: Control
+var _cont_btn: Control
+var _tiles: Array = []
 
 func build(menu: Node) -> void:
 	_menu = menu
@@ -22,8 +25,10 @@ func build(menu: Node) -> void:
 	row1.add_theme_constant_override("h_separation", 18)
 	row1.add_theme_constant_override("v_separation", 18)
 	add_child(row1)
-	row1.add_child(_hero())
-	row1.add_child(_continue_card())
+	_hero_btn = _hero()
+	_cont_btn = _continue_card()
+	row1.add_child(_hero_btn)
+	row1.add_child(_cont_btn)
 	var row2 := HFlowContainer.new()
 	row2.alignment = FlowContainer.ALIGNMENT_CENTER
 	row2.add_theme_constant_override("h_separation", 18)
@@ -35,6 +40,9 @@ func build(menu: Node) -> void:
 	_school_badge = school.get_meta("badge")
 	row2.add_child(school)
 	row2.add_child(_tile("Мой профиль", "Рейтинг, навыки, награды", "N", TILE_COLORS.profile, func(): _menu._on_profile_pressed()))
+	for t in row2.get_children():
+		_tiles.append(t)
+	_fit_width()
 	if not OS.has_feature("web"):
 		var quit := Button.new()
 		quit.text = "Выход"
@@ -48,7 +56,17 @@ func _fit_width() -> void:
 	if not is_inside_tree():
 		return
 	var vr: Vector2 = get_viewport_rect().size
-	custom_minimum_size = Vector2(W if vr.x >= vr.y else minf(W, vr.x - 40.0), 0)
+	var w := W if vr.x >= vr.y else minf(W, vr.x - 40.0)
+	custom_minimum_size = Vector2(w, 0)
+	# телефон вертикально: большие кнопки — во всю ширину, плитки — по две в ряд
+	if _hero_btn != null:
+		_hero_btn.custom_minimum_size.x = minf(478.0, w)
+		_cont_btn.custom_minimum_size.x = minf(478.0, w)
+	var tile_w := 230.0 if w >= W else clampf(floorf((w - 18.0) / 2.0), 150.0, 230.0)
+	for t in _tiles:
+		(t as Control).custom_minimum_size.x = tile_w
+		((t as Node).get_meta("pill") as Control).position.x = tile_w - 34.0
+	fit_hud(_menu.get_node_or_null("ProfileBar/HBox"), vr.x)
 
 func set_school_badge(n: int) -> void:
 	if _school_badge == null:
@@ -214,6 +232,7 @@ func _tile(title: String, caption: String, piece: String, col: Color, cb: Callab
 	var n := _brand_label("0", 14, Color.WHITE)
 	pill.add_child(n)
 	b.add_child(pill)
+	b.set_meta("pill", pill)
 	b.set_meta("badge", n)
 	return b
 
@@ -244,6 +263,7 @@ static func build_hud(menu: Node, hb: HBoxContainer) -> void:
 		sb.content_margin_right = 12
 		card.add_theme_stylebox_override(st, sb)
 	card.custom_minimum_size = Vector2(300, 62)
+	card.set_meta("hud_card", true)
 	card.pressed.connect(func(): menu._on_profile_pressed())
 	hb.add_child(card)
 	hb.move_child(card, 0)
@@ -281,6 +301,7 @@ static func build_hud(menu: Node, hb: HBoxContainer) -> void:
 	var nm := _hud_label(Profile.shown_name() + (("  " + role_icon) if role_icon != "" else ""), 18, Themes.color("heading"), true)
 	nm.clip_text = true
 	nm.custom_minimum_size = Vector2(200, 0)
+	card.set_meta("hud_name", nm)
 	v.add_child(nm)
 	var r := float(Profile.tournament_rating)
 	var lo := 0.0
@@ -292,6 +313,7 @@ static func build_hud(menu: Node, hb: HBoxContainer) -> void:
 	v.add_child(_hud_label("%s · Ступень %d" % [Profile.rating_title(), Profile.clean_step()], 12, Themes.color("dim"), false))
 	var bar := ProgressBar.new()
 	bar.custom_minimum_size = Vector2(200, 8)
+	card.set_meta("hud_bar", bar)
 	bar.show_percentage = false
 	bar.min_value = lo
 	bar.max_value = hi
@@ -327,8 +349,24 @@ static func build_hud(menu: Node, hb: HBoxContainer) -> void:
 		pill.add_theme_stylebox_override("panel", psb)
 		pill.set_meta("brand", true)
 		pill.tooltip_text = chip[2]
+		pill.set_meta("hud_chip", true)
 		pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		pill.add_child(_hud_label("%s %s" % [chip[0], chip[1]], 17, Themes.color("text"), true))
 		hb.add_child(pill)
 		hb.move_child(pill, idx)
 		idx += 1
+	fit_hud(hb, hb.get_viewport_rect().size.x if hb.is_inside_tree() else 1280.0)
+
+# Узкий экран (телефон вертикально): в верхней полосе остаются карточка игрока, колокольчик и настройки;
+# «ресурсы» (рейтинг, серия, достижения) прячутся — они есть в профиле.
+static func fit_hud(hb: Node, view_w: float) -> void:
+	if hb == null:
+		return
+	var narrow := view_w < 700.0
+	for ch in hb.get_children():
+		if ch.has_meta("hud_chip"):
+			(ch as CanvasItem).visible = not narrow
+		elif ch.has_meta("hud_card"):
+			(ch as Control).custom_minimum_size.x = 230.0 if narrow else 300.0
+			(ch.get_meta("hud_name") as Control).custom_minimum_size.x = 140.0 if narrow else 200.0
+			(ch.get_meta("hud_bar") as Control).custom_minimum_size.x = 140.0 if narrow else 200.0

@@ -183,8 +183,12 @@ service cloud.firestore {
     }
 
     // Полный профиль (статистика ходов, сильные и слабые стороны): только хозяин.
+    // Запись — только от версий игры 1.19 и новее (поле v = 1019+): более старые не объединяли прогресс
+    // с разных устройств, а затирали облачную копию своей. Им запись закрыта, пока не обновятся.
     match /private/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.get('v', 0) >= 1019;
     }
   }
 }

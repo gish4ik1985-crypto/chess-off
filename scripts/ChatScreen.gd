@@ -4,7 +4,12 @@ extends Control
 # Чат школы: общий, по группе и личные сообщения. Сообщения лежат в облаке (chat/{комната}/msgs),
 # экран раз в 4 секунды проверяет новые. Учитель может удалять сообщения (режим модератора).
 
-const POLL := 4.0
+# Чат читает базу экономно (каждое полученное сообщение — одно чтение из дневного лимита школы):
+# при открытии комнаты — последние FIRST_LOAD сообщений, дальше только новые; пока тихо, проверки реже.
+const POLL := 10.0 # секунд между проверками, пока в чате пишут
+const POLL_IDLE := 30.0 # когда давно тихо
+const FIRST_LOAD := 40
+const OVERLAP := 15 # сек: перечитываем самый хвост — часы на устройствах идут чуть по-разному
 const MAX_LEN := 300
 
 var _room := "school"
@@ -99,7 +104,7 @@ func _ready() -> void:
 	send.pressed.connect(_send)
 	send_row.add_child(send)
 	if not (Cloud.enabled and Cloud.signed_in):
-		_status.text = "Чат работает через облако: войдите онлайн."
+		_status.text = "Чат работает через облако: на экране входа нажмите «Войти в школу»."
 		_input.editable = false
 		_title.text = "Чат школы"
 		return
@@ -123,7 +128,7 @@ func _build_rooms() -> void:
 		mod.text = "Режим модератора"
 		mod.toggled.connect(func(v):
 			_mod_mode = v
-			_shown_ids = []
+			_full = true
 			_poll())
 		_rooms_box.add_child(mod)
 	var l := Label.new()
@@ -160,15 +165,20 @@ func _open_room(room: String, title: String) -> void:
 	_title.text = title
 	_shown_ids = []
 	_newest = 0
+	_full = true
+	_interval = POLL
 	for ch in _list.get_children():
 		ch.queue_free()
 	_poll()
+
+var _interval := POLL
+var _full := true # следующая проверка — полная перезагрузка комнаты (открытие, удаление, режим модератора)
 
 func _process(delta: float) -> void:
 	if not (Cloud.enabled and Cloud.signed_in):
 		return
 	_timer += delta
-	if _timer >= POLL:
+	if _timer >= _interval:
 		_timer = 0.0
 		_poll()
 
@@ -179,27 +189,40 @@ func _poll() -> void:
 		return
 	_busy = true
 	var room := _room
-	var r: Dictionary = await Cloud.query_sub("chat/" + room, "msgs", "at", 80)
+	var full := _full or _newest == 0
+	var r: Dictionary
+	if full:
+		r = await Cloud.query_sub("chat/" + room, "msgs", "at", FIRST_LOAD)
+	else:
+		r = await Cloud.query("msgs", {"parent": "chat/" + room, "ge": ["at", _newest - OVERLAP], "limit": FIRST_LOAD})
 	_busy = false
 	if not is_inside_tree() or room != _room:
 		return
 	if not r.ok:
 		_status.text = String(r.error)
+		_full = true # в следующий раз — обычная полная загрузка
 		return
 	_status.text = ""
 	var docs: Array = r.docs
 	docs.reverse() # от старых к новым
-	var ids := []
+	if full:
+		_full = false
+		_shown_ids = []
+		for ch in _list.get_children():
+			ch.queue_free()
+	var added := 0
 	for d in docs:
-		ids.append(String(d.get("_id", "")))
-	if ids == _shown_ids:
-		return
-	_shown_ids = ids
-	for ch in _list.get_children():
-		ch.queue_free()
-	for d in docs:
+		var id := String(d.get("_id", ""))
+		if id in _shown_ids:
+			continue
+		_shown_ids.append(id)
 		_list.add_child(_bubble(d))
 		_newest = maxi(_newest, int(d.get("at", 0)))
+		added += 1
+	# пишут — проверяем чаще, тихо — всё реже
+	_interval = POLL if added > 0 else minf(_interval + 5.0, POLL_IDLE)
+	if added == 0:
+		return
 	Profile.chat_seen[room] = _newest
 	Profile.request_save()
 	await get_tree().process_frame
@@ -233,7 +256,7 @@ func _bubble(d: Dictionary) -> Control:
 		del.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		del.pressed.connect(func():
 			await Cloud.del_doc("chat/%s/msgs/%s" % [_room, String(d.get("_id", ""))])
-			_shown_ids = []
+			_full = true
 			_poll())
 		row.add_child(del)
 	return panel
@@ -249,12 +272,12 @@ func _send() -> void:
 	_input.text = ""
 	var id := "%d%04d" % [now, randi() % 10000]
 	var r: Dictionary = await Cloud.set_doc("chat/%s/msgs/%s" % [_room, id], {
-		"uid": Cloud.uid, "name": Profile.shown_name(), "text": text.left(MAX_LEN), "at": now})
+		"uid": Cloud.uid, "name": Profile.shown_name(), "text": text.left(MAX_LEN), "at": maxi(now, _newest + 1)})
 	if not r.ok:
 		_status.text = "Не отправилось: %s" % String(r.error)
 		_input.text = text
 		return
-	_shown_ids = []
+	_interval = POLL
 	_poll()
 
 # ---- для главного экрана: есть ли новые сообщения в общем чате и в группе ----

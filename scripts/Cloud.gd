@@ -36,7 +36,7 @@ var _push_pending := false
 var _pushing := false
 var push_blocked := false # вход без загруженной облачной копии: пустой локальный профиль не должен её затереть
 var last_error := ""
-var synced_saved := -1 # метка «saved» облачной копии, уже влитой в локальный профиль
+var synced_rev := "" # метка версии облачной копии, уже влитой в локальный профиль (у каждой отправки своя)
 signal profile_merged # в локальный профиль влились данные с другого устройства
 
 func _ready() -> void:
@@ -365,17 +365,37 @@ func get_doc(path: String) -> Dictionary:
 		return {"ok": true, "found": false, "data": {}, "error": ""}
 	if not r.ok:
 		return {"ok": false, "found": false, "data": {}, "error": _friendly(r)}
+	_note_reads(1)
 	return {"ok": true, "found": true, "data": _fields_to_dict(r.data.get("fields", {})), "error": ""}
 
-# Все документы коллекции, отсортированные по полю (по убыванию). Возвращает {ok, docs, error}.
-func query_top(collection: String, order_field: String, limit: int) -> Dictionary:
-	if not await _ensure_token():
-		return {"ok": false, "docs": [], "error": "Нет входа в облако."}
-	var url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:runQuery" % _project
-	var q := {"structuredQuery": {
-		"from": [{"collectionId": collection}],
-		"orderBy": [{"field": {"fieldPath": order_field}, "direction": "DESCENDING"}],
-		"limit": limit}}
+# --- учёт обращений к базе ----------------------------------------------------------------------
+# Бесплатный тариф Firestore — 50 000 чтений в сутки на всю школу, и каждый документ в ответе запроса
+# считается отдельным чтением (пустой ответ — одним). Считаем чтения с этого устройства: число видно в
+# панели управления, по нему заметно, если какой-то экран стал расточительным.
+var reads_session := 0
+var reads_today := 0
+var _reads_day := ""
+var _reads_dirty := 0
+const READS_PATH := "user://cloud_reads.cfg"
+
+func _note_reads(n: int) -> void:
+	var day := Time.get_date_string_from_system()
+	if _reads_day != day:
+		var cfg := ConfigFile.new()
+		cfg.load(READS_PATH)
+		reads_today = int(cfg.get_value("reads", "count", 0)) if String(cfg.get_value("reads", "day", "")) == day else 0
+		_reads_day = day
+	reads_session += n
+	reads_today += n
+	_reads_dirty += n
+	if _reads_dirty >= 20:
+		_reads_dirty = 0
+		var out := ConfigFile.new()
+		out.set_value("reads", "day", day)
+		out.set_value("reads", "count", reads_today)
+		out.save(READS_PATH)
+
+func _run_query(url: String, q: Dictionary) -> Dictionary:
 	var r := await _http(HTTPClient.METHOD_POST, url, q, true)
 	if not r.ok:
 		return {"ok": false, "docs": [], "error": _friendly(r)}
@@ -386,7 +406,49 @@ func query_top(collection: String, order_field: String, limit: int) -> Dictionar
 				var d := _fields_to_dict(item.document.get("fields", {}))
 				d["_id"] = String(item.document.get("name", "")).get_file()
 				docs.append(d)
+	_note_reads(maxi(1, docs.size()))
 	return {"ok": true, "docs": docs, "error": ""}
+
+# Запрос «только нужное». opts:
+#   eq     — {поле: значение}: точное совпадение (несколько полей — все сразу);
+#   ge     — [поле, значение]: поле не меньше значения (тогда сортировка идёт по этому же полю);
+#   order  — поле сортировки, asc — по возрастанию (иначе по убыванию);
+#   limit  — сколько документов самое большее;
+#   parent — путь документа-родителя для вложенной коллекции («chat/school»).
+# Не сочетайте eq с ge/order по ДРУГОМУ полю: такой запрос требует в Firestore составного индекса.
+func query(collection: String, opts: Dictionary) -> Dictionary:
+	if not await _ensure_token():
+		return {"ok": false, "docs": [], "error": "Нет входа в облако."}
+	var parent := String(opts.get("parent", ""))
+	var url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents%s:runQuery" % [_project, ("/" + parent) if parent != "" else ""]
+	var sq := {"from": [{"collectionId": collection}], "limit": int(opts.get("limit", 100))}
+	var filters := []
+	var eq: Dictionary = opts.get("eq", {})
+	for f in eq:
+		filters.append({"fieldFilter": {"field": {"fieldPath": String(f)}, "op": "EQUAL", "value": _to_fs(eq[f])}})
+	var order := String(opts.get("order", ""))
+	if opts.has("ge"):
+		var ge: Array = opts.ge
+		filters.append({"fieldFilter": {"field": {"fieldPath": String(ge[0])}, "op": "GREATER_THAN_OR_EQUAL", "value": _to_fs(ge[1])}})
+		order = String(ge[0])
+	if filters.size() == 1:
+		sq["where"] = filters[0]
+	elif filters.size() > 1:
+		sq["where"] = {"compositeFilter": {"op": "AND", "filters": filters}}
+	if order != "":
+		sq["orderBy"] = [{"field": {"fieldPath": order}, "direction": "ASCENDING" if bool(opts.get("asc", false)) else "DESCENDING"}]
+	return await _run_query(url, {"structuredQuery": sq})
+
+# Все документы коллекции, отсортированные по полю (по убыванию). Возвращает {ok, docs, error}.
+func query_top(collection: String, order_field: String, limit: int) -> Dictionary:
+	if not await _ensure_token():
+		return {"ok": false, "docs": [], "error": "Нет входа в облако."}
+	var url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:runQuery" % _project
+	var q := {"structuredQuery": {
+		"from": [{"collectionId": collection}],
+		"orderBy": [{"field": {"fieldPath": order_field}, "direction": "DESCENDING"}],
+		"limit": limit}}
+	return await _run_query(url, q)
 
 # --- роли ---------------------------------------------------------------------------------------
 
@@ -433,17 +495,7 @@ func query_eq(collection: String, field: String, value: String, limit: int) -> D
 		"from": [{"collectionId": collection}],
 		"where": {"fieldFilter": {"field": {"fieldPath": field}, "op": "EQUAL", "value": {"stringValue": value}}},
 		"limit": limit}}
-	var r := await _http(HTTPClient.METHOD_POST, url, q, true)
-	if not r.ok:
-		return {"ok": false, "docs": [], "error": _friendly(r)}
-	var docs := []
-	if typeof(r.raw) == TYPE_ARRAY:
-		for item in r.raw:
-			if typeof(item) == TYPE_DICTIONARY and item.has("document"):
-				var d := _fields_to_dict(item.document.get("fields", {}))
-				d["_id"] = String(item.document.get("name", "")).get_file()
-				docs.append(d)
-	return {"ok": true, "docs": docs, "error": ""}
+	return await _run_query(url, q)
 
 # Документы вложенной коллекции: parent — путь документа-родителя («chat/school»), sub — имя коллекции («msgs»).
 func query_sub(parent: String, sub: String, order_field: String, limit: int) -> Dictionary:
@@ -454,17 +506,7 @@ func query_sub(parent: String, sub: String, order_field: String, limit: int) -> 
 		"from": [{"collectionId": sub}],
 		"orderBy": [{"field": {"fieldPath": order_field}, "direction": "DESCENDING"}],
 		"limit": limit}}
-	var r := await _http(HTTPClient.METHOD_POST, url, q, true)
-	if not r.ok:
-		return {"ok": false, "docs": [], "error": _friendly(r)}
-	var docs := []
-	if typeof(r.raw) == TYPE_ARRAY:
-		for item in r.raw:
-			if typeof(item) == TYPE_DICTIONARY and item.has("document"):
-				var d := _fields_to_dict(item.document.get("fields", {}))
-				d["_id"] = String(item.document.get("name", "")).get_file()
-				docs.append(d)
-	return {"ok": true, "docs": docs, "error": ""}
+	return await _run_query(url, q)
 
 # --- профиль игрока ---------------------------------------------------------------------------
 
@@ -504,10 +546,10 @@ func push_profile() -> Dictionary:
 		_pushing = false
 		last_error = "Облако недоступно — профиль отправится позже: %s" % cloud.error
 		return {"ok": false, "error": last_error}
-	if cloud.found and int(cloud.saved) != synced_saved:
+	if cloud.found and String(cloud.rev) != synced_rev:
 		if Profile.merge_profile_bytes(cloud.bytes):
 			profile_merged.emit()
-		synced_saved = int(cloud.saved)
+		synced_rev = String(cloud.rev)
 	var res := await set_doc("players/" + uid, public_card())
 	if not res.ok:
 		# правила базы ещё старые (без новых полей анкеты) — отправляем короткую карточку
@@ -519,12 +561,15 @@ func push_profile() -> Dictionary:
 		var bytes := Profile.export_profile_bytes()
 		if bytes.size() > 0 and bytes.size() <= MAX_PRIVATE_BYTES:
 			var saved := int(Profile.last_played_unix)
+			var rev := "%d-%d" % [saved, randi()] # у двух отправок в одну секунду метки всё равно разные
 			res = await set_doc("private/" + uid, {
 				"blob": Marshalls.raw_to_base64(bytes),
 				"saved": saved,
+				"rev": rev,
+				"v": Global.version_code(), # правила базы не принимают копию от версий старше MIN (они затирали прогресс)
 			})
 			if res.ok:
-				synced_saved = saved
+				synced_rev = rev
 	_pushing = false
 	last_error = String(res.get("error", ""))
 	return res
@@ -552,10 +597,10 @@ func sync_profile(min_interval_ms := 0) -> bool:
 	if not r.ok:
 		return false
 	push_blocked = false # облако отвечает — отправлять снова можно
-	if not r.found or int(r.saved) == synced_saved:
+	if not r.found or String(r.rev) == synced_rev:
 		return false
 	var changed := Profile.merge_profile_bytes(r.bytes)
-	synced_saved = int(r.saved)
+	synced_rev = String(r.rev)
 	if changed:
 		profile_merged.emit()
 		# экраны, которые показывают прогресс, перерисовываем; партии и задачи не трогаем
@@ -574,7 +619,7 @@ func _startup_sync() -> void:
 func pull_profile() -> Dictionary:
 	var r := await get_doc("private/" + uid)
 	if not r.ok or not r.found:
-		return {"ok": r.ok, "found": false, "bytes": PackedByteArray(), "saved": 0, "error": r.error}
+		return {"ok": r.ok, "found": false, "bytes": PackedByteArray(), "saved": 0, "rev": "", "error": r.error}
 	return {"ok": true, "found": true,
 		"bytes": Marshalls.base64_to_raw(String(r.data.get("blob", ""))),
-		"saved": int(r.data.get("saved", 0)), "error": ""}
+		"saved": int(r.data.get("saved", 0)), "rev": String(r.data.get("rev", str(int(r.data.get("saved", 0))))), "error": ""}

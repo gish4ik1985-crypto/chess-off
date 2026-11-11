@@ -27,7 +27,7 @@ func _ready() -> void:
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(center)
 	_root = VBoxContainer.new()
-	_root.custom_minimum_size = Vector2(760, 0)
+	Global.fit_width(_root, 760.0)
 	_root.add_theme_constant_override("separation", 12)
 	center.add_child(_root)
 	Global.add_floating_back(self, func(): Global.go_back())
@@ -60,10 +60,10 @@ func _ready() -> void:
 		_status.text = "Задачник доступен тренеру, модератору и администратору."
 		return
 	if not (Cloud.enabled and Cloud.signed_in):
-		_status.text = "Задачник хранится в облаке: войдите онлайн."
+		_status.text = "Задачник хранится в облаке: на экране входа нажмите «Войти в школу»."
 		return
 	_status.text = "Загружаю…"
-	await SchoolData.load_all()
+	await SchoolData.load_all(true)
 	var r: Dictionary = await Cloud.query_eq("tnotes", "owner", Cloud.uid, 400)
 	if not is_inside_tree():
 		return

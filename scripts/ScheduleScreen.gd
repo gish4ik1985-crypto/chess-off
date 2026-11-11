@@ -27,7 +27,7 @@ func _ready() -> void:
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(center)
 	_root = VBoxContainer.new()
-	_root.custom_minimum_size = Vector2(780, 0)
+	Global.fit_width(_root, 780.0)
 	_root.add_theme_constant_override("separation", 12)
 	center.add_child(_root)
 	Global.add_floating_back(self, func(): Global.go_back())
@@ -58,10 +58,10 @@ func _ready() -> void:
 	_week_start = SchoolData.monday_of(SchoolData.today_iso())
 	_plan_year = SchoolData.school_year_of(SchoolData.today_iso())
 	if not (Cloud.enabled and Cloud.signed_in):
-		_status.text = "Расписание приходит из облака: войдите онлайн."
+		_status.text = "Расписание приходит из облака: на экране входа нажмите «Войти в школу»."
 		return
 	_status.text = "Загружаю…"
-	var ok := await SchoolData.load_all()
+	var ok := await SchoolData.load_all(true)
 	if not is_inside_tree():
 		return
 	_status.text = "" if ok else "Не удалось загрузить расписание. Проверьте интернет."

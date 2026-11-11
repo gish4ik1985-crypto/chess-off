@@ -28,7 +28,7 @@ func _ready() -> void:
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(center)
 	_root = VBoxContainer.new()
-	_root.custom_minimum_size = Vector2(780, 0)
+	Global.fit_width(_root, 780.0)
 	_root.add_theme_constant_override("separation", 12)
 	center.add_child(_root)
 	Global.add_floating_back(self, _on_back)
@@ -46,7 +46,7 @@ func _ready() -> void:
 	_view.add_theme_constant_override("separation", 10)
 	_root.add_child(_view)
 	if not (Cloud.enabled and Cloud.signed_in):
-		_status.text = "Турниры школы идут через облако: войдите онлайн."
+		_status.text = "Турниры школы идут через облако: на экране входа нажмите «Войти в школу»."
 		return
 	_reload()
 
@@ -62,17 +62,24 @@ func _is_teacher() -> bool:
 
 func _reload() -> void:
 	_status.text = "Загружаю…"
-	var t: Dictionary = await Cloud.query_top("ctourneys", "created", 60)
-	var e: Dictionary = await Cloud.query_top("centries", "at", 800)
-	var g: Dictionary = await Cloud.query_top("cgames", "at", 1500)
+	var t: Dictionary = await Cloud.query_top("ctourneys", "created", 30)
 	if not is_inside_tree():
 		return
 	if not t.ok:
 		_status.text = String(t.error)
 		return
 	_tourneys = t.docs
-	_entries = e.docs if e.ok else []
-	_games = g.docs if g.ok else []
+	# заявки и партии — только идущих турниров и открытого; завершённые догружаются при открытии
+	# (раньше каждый заход скачивал заявки и партии всех турниров за всё время — до 2300 чтений)
+	_entries = []
+	_games = []
+	_loaded_tids = {}
+	for tt in _tourneys:
+		var id := String(tt.get("_id", ""))
+		if String(tt.get("status", "")) in ["reg", "run"] or id == _open_id:
+			await _load_tourney(id)
+			if not is_inside_tree():
+				return
 	_status.text = ""
 	if _open_id != "" and _find(_open_id).is_empty():
 		_open_id = ""
@@ -80,6 +87,26 @@ func _reload() -> void:
 		_show_detail(_find(_open_id))
 	else:
 		_show_list()
+
+var _loaded_tids := {}
+
+func _load_tourney(tid: String) -> void:
+	if tid == "" or _loaded_tids.has(tid):
+		return
+	_loaded_tids[tid] = true
+	var e: Dictionary = await Cloud.query("centries", {"eq": {"tid": tid}, "limit": 100})
+	var g: Dictionary = await Cloud.query("cgames", {"eq": {"tid": tid}, "limit": 400})
+	if not e.ok or not g.ok:
+		# страховка: база отказала в узком запросе — один раз берём по-старому всё
+		e = await Cloud.query_top("centries", "at", 800)
+		g = await Cloud.query_top("cgames", "at", 1500)
+		_entries = e.docs if e.ok else []
+		_games = g.docs if g.ok else []
+		for tt in _tourneys:
+			_loaded_tids[String(tt.get("_id", ""))] = true
+		return
+	_entries.append_array(e.docs)
+	_games.append_array(g.docs)
 
 func _find(id: String) -> Dictionary:
 	for t in _tourneys:
@@ -169,7 +196,10 @@ func _tourney_card(t: Dictionary) -> Control:
 	var open := _btn("Открыть", 120)
 	open.pressed.connect(func():
 		_open_id = tid
-		_show_detail(t))
+		open.disabled = true
+		await _load_tourney(tid)
+		if is_inside_tree():
+			_show_detail(t))
 	row.add_child(open)
 	return panel
 

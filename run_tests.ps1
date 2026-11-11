@@ -34,6 +34,7 @@ function Find-Godot {
 $tests = @(
 	@{ Name = "Сцены компилируются (TestScenes)";        Scene = "TestScenes";       Pass = "ошибок 0 ===" },
 	@{ Name = "Облако: кодирование и ник (TestCloud)";   Scene = "TestCloud";      Pass = "ИТОГО ошибок: 0" },
+	@{ Name = "Синхронизация двух устройств (TestSync)"; Scene = "TestSync";       Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Навигация «Назад» (TestNav)";            Scene = "TestNav";          Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Задания, роли, доска (TestHomework)";     Scene = "TestHomework";     Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Школа: что изменилось, 3 уровня (TestSpotLevels)"; Scene = "TestSpotLevels"; Pass = "ИТОГО ошибок: 0" },
@@ -57,6 +58,7 @@ $tests = @(
 	@{ Name = "Интерфейс: наложения, кнопки (AuditUI)";  Scene = "AuditUI";          Pass = "ИТОГО проблем: 0"; Slow = $true },
 	@{ Name = "Интерфейс: планшет вертикально (AuditUI)"; Scene = "AuditUI"; Args = @("size=800x1067"); Pass = "ИТОГО проблем: 0"; Slow = $true },
 	@{ Name = "Интерфейс: низкий экран (AuditUI)";        Scene = "AuditUI"; Args = @("size=960x600");  Pass = "ИТОГО проблем: 0"; Slow = $true },
+	@{ Name = "Интерфейс: телефон вертикально (AuditUI)"; Scene = "AuditUI"; Args = @("size=480x1039"); Pass = "ИТОГО проблем: 0"; Slow = $true },
 	@{ Name = "«Дорога домой» (test_dynamic_road)";      Script = "res://scripts/tools/test_dynamic_road.gd"; Pass = "ALL DYNAMIC ROAD TESTS PASSED" },
 	@{ Name = "Сохранение профиля (test_profile_safety)"; Script = "res://scripts/tools/test_profile_safety.gd"; Pass = "ИТОГО ошибок: 0" },
 	@{ Name = "Турниры (test_tournaments)";              Script = "res://scripts/tools/test_tournaments.gd";  Pass = "ALL TOURNAMENT TESTS PASSED" }

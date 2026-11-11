@@ -85,8 +85,11 @@ static var loaded := false
 static func load_all() -> bool:
 	if not (Cloud.enabled and Cloud.signed_in):
 		return false
-	var a: Dictionary = await Cloud.query_top("assignments", "created", 100)
-	var s: Dictionary = await Cloud.query_top("submissions", "at", 500)
+	var a: Dictionary = await Cloud.query_top("assignments", "created", 60)
+	# только свои сдачи: раньше скачивались сдачи всей школы (до 500 чтений на каждый вход)
+	var s: Dictionary = await Cloud.query("submissions", {"eq": {"uid": Cloud.uid}, "limit": 200})
+	if not s.ok:
+		s = await Cloud.query_top("submissions", "at", 500) # страховка: база отказала в узком запросе
 	if not a.ok:
 		return false
 	assignments = a.docs

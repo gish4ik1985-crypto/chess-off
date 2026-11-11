@@ -6,12 +6,71 @@ extends Control
 func _ready() -> void:
 	_refresh_list()
 	if Cloud.enabled:
-		var online := Button.new()
-		online.text = "Онлайн-вход (школа, любой компьютер)"
-		online.custom_minimum_size = Vector2(0, 48)
-		online.pressed.connect(_open_online_window)
-		$CenterPanel/VBox.add_child(online)
+		_build_school_entry()
 	_brand_header() # последним: подпись организации оказывается под всеми кнопками
+	_fit_card()
+	get_viewport().size_changed.connect(_fit_card)
+
+# Карточка входа — не шире экрана (телефон вертикально).
+func _fit_card() -> void:
+	var half := minf(250.0, (get_viewport_rect().size.x - 24.0) / 2.0)
+	$CenterPanel.offset_left = -half
+	$CenterPanel.offset_right = half
+
+# Школа настроена: главный и единственный заметный путь — вход по почте (прогресс в облаке, виден на
+# любом устройстве). Игра без регистрации остаётся, но мелкой ссылкой и с предупреждением: локальный
+# профиль живёт только в этом браузере, и раньше ученики теряли прогресс, не понимая разницы.
+func _build_school_entry() -> void:
+	var vbox: VBoxContainer = $CenterPanel/VBox
+	var online := Button.new()
+	online.name = "SchoolLoginButton"
+	online.text = "Войти в школу"
+	online.theme_type_variation = "PrimaryButton"
+	online.custom_minimum_size = Vector2(0, 56)
+	online.pressed.connect(_open_online_window)
+	vbox.add_child(online)
+	vbox.move_child(online, $CenterPanel/VBox/HSeparator.get_index() + 1)
+	var hint := Label.new()
+	hint.text = "По почте и паролю. Прогресс хранится в облаке и открывается на любом устройстве."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.custom_minimum_size = Vector2(200, 0)
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.add_theme_color_override("font_color", Color("#9DA3C4"))
+	hint.set_meta("brand", true)
+	vbox.add_child(hint)
+	vbox.move_child(hint, online.get_index() + 1)
+	empty_label.text = "На этом устройстве ещё никто не играл."
+	$CenterPanel/VBox/StorageNote.visible = false
+	var local: Button = $CenterPanel/VBox/NewUserButton
+	local.text = "Играть без регистрации"
+	local.flat = true
+	local.add_theme_font_size_override("font_size", 13)
+	local.set_meta("brand", true)
+	for st in ["font_color", "font_focus_color"]:
+		local.add_theme_color_override(st, Color("#9DA3C4"))
+	for st in ["font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+		local.add_theme_color_override(st, Color("#F4EFE0"))
+	local.custom_minimum_size.y = 40
+	local.pressed.disconnect(_open_new_user_window)
+	local.pressed.connect(_confirm_local_play)
+
+func _confirm_local_play() -> void:
+	var dlg := ConfirmationDialog.new()
+	dlg.title = "Игра без регистрации"
+	dlg.ok_button_text = "Всё равно играть"
+	dlg.cancel_button_text = "Назад"
+	var l := Label.new()
+	l.text = "Без регистрации прогресс хранится только в этом браузере на этом устройстве.\n\n• Он пропадёт, если очистить данные браузера.\n• На другом устройстве его не будет.\n• Задания, турниры и объявления школы недоступны.\n\nЧтобы ничего не терять, войдите в школу по почте."
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(420, 0)
+	dlg.add_child(l)
+	dlg.confirmed.connect(func():
+		dlg.queue_free()
+		_open_new_user_window())
+	dlg.canceled.connect(dlg.queue_free)
+	add_child(dlg)
+	dlg.popup_centered()
 
 func _refresh_list() -> void:
 	for c in user_list.get_children():
@@ -57,7 +116,13 @@ func _build_user_row(u: Dictionary) -> Control:
 
 	var sub_label = Label.new()
 	sub_label.text = "Турнирный рейтинг %d · партий: %d" % [int(round(float(u.rating))), int(u.games)]
+	if Cloud.enabled:
+		# сразу видно, какой профиль в облаке, а какой живёт только здесь
+		var school := Cloud.signed_in and String(u.get("key", "")) == Profile.sanitize_key(Cloud.nick)
+		sub_label.text += " · школьный аккаунт" if school else " · только на этом устройстве"
 	sub_label.add_theme_font_size_override("font_size", 12)
+	sub_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART # на телефоне длинная подпись переносится
+	sub_label.custom_minimum_size = Vector2(120, 0)
 	sub_label.add_theme_color_override("font_color", Color("#9DA3C4"))
 	sub_label.set_meta("brand", true)
 	info_vbox.add_child(sub_label)
@@ -325,7 +390,7 @@ func _open_online_window() -> void:
 	box.custom_minimum_size = Vector2(440, 0)
 	panel.add_child(box)
 	var title := Label.new()
-	title.text = "Онлайн-вход в школу"
+	title.text = "Вход в школу"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 22)
 	box.add_child(title)
@@ -505,7 +570,7 @@ func _finish_online_login(nm: String, registered: bool, age: String, status: Lab
 				# на этом устройстве профиля нет, а облачный не скачался: пустой не отправляем поверх него
 				Cloud.push_blocked = true
 	Profile.switch_user(nm)
-	Cloud.synced_saved = -1
+	Cloud.synced_rev = ""
 	Profile.merge_replaced_backup()
 	if not registered:
 		# и при «локальный новее» облачный прогресс вливается, а не теряется

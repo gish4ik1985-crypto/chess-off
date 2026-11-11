@@ -23,7 +23,7 @@ func _ready() -> void:
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(center)
 	_body = VBoxContainer.new()
-	_body.custom_minimum_size = Vector2(720, 0)
+	Global.fit_width(_body, 720.0)
 	_body.add_theme_constant_override("separation", 14)
 	center.add_child(_body)
 	Global.add_floating_back(self, func(): Global.go_back())
@@ -116,12 +116,16 @@ func _build_school_settings() -> void:
 	_body.add_child(c)
 	var note := _note("Выключен: чата у учеников нет, остаются объявления учителя. Настройка общая для всей школы.")
 	_body.add_child(note)
+	# расход бесплатного лимита базы с этого устройства (см. Cloud._note_reads)
+	var reads := _note("")
+	_body.add_child(reads)
 	if not (Cloud.enabled and Cloud.signed_in):
-		note.text = "Чат школы включается здесь после онлайн-входа."
+		note.text = "Чат школы включается здесь после входа в школу."
 		return
 	await SchoolData.load_all()
 	if not is_instance_valid(c):
 		return
+	reads.text = "Обращений к базе с этого устройства: сегодня %d, за этот запуск %d. Бесплатный лимит школы — 50 000 в сутки на всех." % [Cloud.reads_today, Cloud.reads_session]
 	c.button_pressed = SchoolData.chat_enabled
 	c.disabled = false
 	c.toggled.connect(func(v: bool):
@@ -173,7 +177,7 @@ func _load_players() -> void:
 	for ch in _players_box.get_children():
 		ch.queue_free()
 	if not (Cloud.enabled and Cloud.signed_in):
-		_status.text = "Список игроков доступен после онлайн-входа."
+		_status.text = "Список игроков доступен после входа в школу."
 		return
 	_status.text = "Загружаю игроков…"
 	var pl: Dictionary = await Cloud.query_top("players", "rating", 200)

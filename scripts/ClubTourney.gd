@@ -169,10 +169,19 @@ static func load_mine() -> void:
 	my_turn_games = []
 	if not (Cloud.enabled and Cloud.signed_in):
 		return
-	var g: Dictionary = await Cloud.query_top("cgames", "at", 800)
-	if not g.ok:
-		return
-	for d in g.docs:
+	# только свои идущие партии (белыми и чёрными): раньше скачивались все партии школы — до 800 чтений
+	var docs := []
+	for side in ["wuid", "buid"]:
+		var g: Dictionary = await Cloud.query("cgames", {"eq": {side: Cloud.uid, "status": "play"}, "limit": 20})
+		if not g.ok:
+			# страховка: база отказала в узком запросе — берём по-старому все партии и выходим из цикла
+			g = await Cloud.query_top("cgames", "at", 800)
+			if not g.ok:
+				return
+			docs = g.docs
+			break
+		docs.append_array(g.docs)
+	for d in docs:
 		if String(d.get("status", "")) != "play":
 			continue
 		var turn := String(d.get("turn", "w"))

@@ -150,7 +150,7 @@ func _row(r: Dictionary, mine: bool) -> Control:
 
 func _load_school(box: VBoxContainer) -> void:
 	if not (Cloud.enabled and Cloud.signed_in):
-		box.add_child(_lbl("Появятся после онлайн-входа.", 13, Color(0.55, 0.6, 0.7)))
+		box.add_child(_lbl("Появятся после входа в школу.", 13, Color(0.55, 0.6, 0.7)))
 		return
 	var r: Dictionary = await Cloud.query_top("gamebook", "at", 100)
 	if not is_instance_valid(box):
@@ -456,7 +456,7 @@ func _on_save() -> void:
 
 func _on_share() -> void:
 	if not (Cloud.enabled and Cloud.signed_in):
-		_ed_status.text = "Чтобы поделиться, войдите онлайн."
+		_ed_status.text = "Чтобы поделиться, на экране входа нажмите «Войти в школу»."
 		return
 	_on_save()
 	var pgn := _pgn()

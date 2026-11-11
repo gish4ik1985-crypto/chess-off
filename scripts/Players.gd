@@ -69,7 +69,7 @@ func _load() -> void:
 		_status.text = "Облако не настроено: заполните res://firebase_config.json (см. docs/firebase-setup.md)."
 		return
 	if not Cloud.signed_in:
-		_status.text = "Чтобы видеть игроков школы, войдите онлайн: на экране выбора игрока — «Онлайн-вход»."
+		_status.text = "Чтобы видеть игроков школы, на экране входа нажмите «Войти в школу»."
 		return
 	_status.text = "Загружаю…"
 	await Cloud.push_profile() # свежая карточка — чтобы свой рейтинг в таблице был актуален

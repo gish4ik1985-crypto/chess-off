@@ -13,6 +13,12 @@ extends Control
 
 func _ready() -> void:
 	_build()
+	_fit_columns()
+	get_viewport().size_changed.connect(_fit_columns)
+
+# Телефон вертикально: карточки режимов по две в ряд вместо четырёх.
+func _fit_columns() -> void:
+	grid.columns = 2 if get_viewport_rect().size.x < 640.0 else 4
 
 func _build() -> void:
 	for c in grid.get_children():

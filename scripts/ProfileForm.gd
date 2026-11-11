@@ -39,7 +39,7 @@ func _ready() -> void:
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(center)
 	var col := VBoxContainer.new()
-	col.custom_minimum_size = Vector2(640, 0)
+	Global.fit_width(col, 640.0)
 	col.add_theme_constant_override("separation", 14)
 	center.add_child(col)
 
@@ -167,7 +167,7 @@ func _ready() -> void:
 func _account_text() -> String:
 	if Cloud.enabled and Cloud.signed_in:
 		return "Онлайн-аккаунт: %s. Профиль хранится в облаке и открывается с любого устройства." % Cloud.email
-	return "Профиль хранится только на этом устройстве. Чтобы он открывался и на других, войдите онлайн."
+	return "Профиль хранится только на этом устройстве. Чтобы он открывался и на других, на экране входа нажмите «Войти в школу»."
 
 func _age_index() -> int:
 	for i in range(AGE_GROUPS.size()):

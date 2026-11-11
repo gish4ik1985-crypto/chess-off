@@ -45,11 +45,15 @@ func _add(node: Node) -> void:
 		add_child(node)
 		return
 	_vp.size = Vector2i(int(W), int(H))
+	# у доски и карты в вертикали своя ширина холста (как в Global._apply_small_screen_scaling)
+	if portrait_play:
+		var pw := float(Global.PORTRAIT_MIN_LAYOUT_WIDTH if node.has_method("apply_portrait") else Global.PORTRAIT_PLAY_WIDTH)
+		_vp.size = Vector2i(int(pw), int(round(pw * H / W)))
 	_vp.add_child(node)
 	if portrait_play and node.has_method("apply_portrait"):
-		node.apply_portrait(true, Vector2(W, H))
+		node.apply_portrait(true, Vector2(_vp.size))
 	elif portrait_play:
-		Global._layout_play_scene(node, true, int(H))
+		Global._layout_play_scene(node, true, _vp.size.y)
 
 # Подгонка холста под содержимое — то же, что делает Global._fit_to_content в игре.
 func _fit(node: Node) -> void:
@@ -128,7 +132,7 @@ func _scan_spill(root: Node, n: Node, out: Array) -> void:
 	if n is ScrollContainer or n is GameBackdrop:
 		return # живой фон повторяет размер своей подложки, которая может выходить за экран
 	# декоративные фоны намеренно выходят за края экрана — их не считаем
-	if n is Control and n.visible and not (n is Label) \
+	if n is Control and n.is_visible_in_tree() and not (n is Label) \
 			and not (n is ColorRect) and not (n is TextureRect):
 		var r := Rect2(n.global_position, n.size)
 		var vs: Vector2 = n.get_viewport().get_visible_rect().size

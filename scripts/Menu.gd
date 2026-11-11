@@ -573,7 +573,7 @@ func _add_players_button() -> void:
 	var b := Button.new()
 	b.text = "Игроки школы — общий рейтинг"
 	b.custom_minimum_size = Vector2(0, 48)
-	b.tooltip_text = "Таблица игроков школы с турнирными рейтингами (нужен онлайн-вход)."
+	b.tooltip_text = "Таблица игроков школы с турнирными рейтингами (нужен вход в школу)."
 	b.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Players.tscn"))
 	vb.add_child(b)
 	vb.move_child(b, vb.get_child_count() - 2) # перед «← Назад»
